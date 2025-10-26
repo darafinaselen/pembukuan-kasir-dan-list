@@ -5,8 +5,7 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client"
-  output   = "../node_modules/.prisma/client"
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -42,19 +41,19 @@ enum PaymentStatus {
 
 // Modul 2.5: Manajemen Paket Jasa
 model Package {
-  id                      String        @id @default(uuid())
-  package_name            String
-  package_type            PackageType
-  description             String?
-  default_price           Int
-  default_duration_hours  Int
-  default_overtime_rate   Int
-  
-  // Relasi: Satu paket bisa digunakan di banyak transaksi
-  transactions            Transaction[] 
+  id                     String      @id @default(uuid())
+  package_name           String
+  package_type           PackageType
+  description            String?
+  default_price          Int
+  default_duration_hours Int
+  default_overtime_rate  Int
 
-  createdAt               DateTime      @default(now())
-  updatedAt               DateTime      @updatedAt
+  // Relasi: Satu paket bisa digunakan di banyak transaksi
+  transactions Transaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("packages")
 }
@@ -68,12 +67,12 @@ model Armada {
   status        ArmadaStatus @default(READY)
 
   // Relasi: Satu armada bisa ada di banyak transaksi
-  transactions  Transaction[]
+  transactions Transaction[]
   // Relasi: Satu armada bisa memiliki banyak catatan pengeluaran (servis, dll)
-  expenses      Expense[]     
+  expenses     Expense[]
 
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("armadas")
 }
@@ -87,14 +86,13 @@ model Driver {
   status       DriverStatus @default(READY)
 
   // Relasi: Satu sopir bisa ditugaskan di banyak transaksi
-  transactions Transaction[] 
+  transactions Transaction[]
 
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("drivers")
 }
-
 
 // 4. Model Database (Data Transaksional - Milik Developer A)
 
@@ -102,55 +100,55 @@ model Driver {
 model Expense {
   id          String   @id @default(uuid())
   date        DateTime @db.Date
-  category    String   // Misal: "Servis", "Biaya Kantor", "Gaji Admin"
+  category    String // Misal: "Servis", "Biaya Kantor", "Gaji Admin"
   description String
   amount      Int
 
   // Relasi: Pengeluaran ini (opsional) terkait dengan armada mana
-  armadaId    String?
-  armada      Armada?  @relation(fields: [armadaId], references: [id], onDelete: SetNull)
+  armadaId String?
+  armada   Armada? @relation(fields: [armadaId], references: [id], onDelete: SetNull)
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime     @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("expenses")
 }
 
 // Modul 2: Manajemen Transaksi
 model Transaction {
-  id                      String        @id @default(uuid())
-  invoice_code            String        @unique
-  customer_name           String
-  customer_phone          String
-  booking_date            DateTime      @db.Date
-  checkout_datetime       DateTime      // Waktu mobil keluar
-  checkin_datetime        DateTime      // Waktu mobil kembali
-  
+  id                String   @id @default(uuid())
+  invoice_code      String   @unique
+  customer_name     String
+  customer_phone    String
+  booking_date      DateTime @db.Date
+  checkout_datetime DateTime // Waktu mobil keluar
+  checkin_datetime  DateTime // Waktu mobil kembali
+
   // Data Keuangan
-  all_in_rate             Int           // Tarif sewa
-  overtime_rate_per_hour  Int
-  fuel_cost               Int           // Biaya BBM (dicatat per transaksi)
-  driver_fee              Int           // Biaya Gaji Sopir (dicatat per transaksi)
-  payment_status          PaymentStatus @default(UNPAID)
+  all_in_rate            Int // Tarif sewa
+  overtime_rate_per_hour Int
+  fuel_cost              Int // Biaya BBM (dicatat per transaksi)
+  driver_fee             Int // Biaya Gaji Sopir (dicatat per transaksi)
+  payment_status         PaymentStatus @default(UNPAID)
 
   // --- Relasi (Foreign Keys) ---
 
   // Relasi: Transaksi ini (opsional) menggunakan paket apa
-  packageId               String?
-  package                 Package?      @relation(fields: [packageId], references: [id], onDelete: SetNull)
+  packageId String?
+  package   Package? @relation(fields: [packageId], references: [id], onDelete: SetNull)
 
   // Relasi: Transaksi ini (wajib) menggunakan armada apa
   // onDelete: Restrict -> Mencegah armada dihapus jika masih punya riwayat transaksi
-  armadaId                String
-  armada                  Armada        @relation(fields: [armadaId], references: [id], onDelete: Restrict)
+  armadaId String
+  armada   Armada @relation(fields: [armadaId], references: [id], onDelete: Restrict)
 
   // Relasi: Transaksi ini (wajib) menggunakan sopir siapa
   // onDelete: Restrict -> Mencegah sopir dihapus jika masih punya riwayat transaksi
-  driverId                String
-  driver                  Driver        @relation(fields: [driverId], references: [id], onDelete: Restrict)
+  driverId String
+  driver   Driver @relation(fields: [driverId], references: [id], onDelete: Restrict)
 
-  createdAt               DateTime      @default(now())
-  updatedAt               DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("transactions")
 }

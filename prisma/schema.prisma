@@ -6,7 +6,10 @@
 
 generator client {
   provider = "prisma-client"
-  output   = "../app/generated/prisma"
+  # Output to the Next.js app folder under `src` so imports like
+  # `import { PrismaClient } from '../../app/generated/prisma'` resolve.
+  # Adjusted to point to `src/app/generated/prisma` (relative to `prisma/`).
+  output   = "../src/app/generated/prisma"
 }
 
 datasource db {

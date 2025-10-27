@@ -2,41 +2,9 @@
 
 import React, { useState, useEffect } from "react";
 
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  CardAction,
-} from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TableCaption,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Breadcrumb,
-  BreadcrumbList,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Separator } from "@/components/ui/separator";
-import { SidebarTrigger } from "@/components/ui/sidebar";
+import SopirCard from "@/components/sopir/SopirCard";
+import SopirTopHeader from "@/components/sopir/SopirTopHeader";
+import SopirDialog from "@/components/sopir/SopirDialog";
 
 export default function SopirPage() {
   const [drivers, setDrivers] = useState([]);
@@ -46,8 +14,10 @@ export default function SopirPage() {
     driver_name: "",
     phone_number: "",
     address: "",
+    nik: "",
     status: "READY",
   });
+  const [searchTerm, setSearchTerm] = useState("");
 
   async function fetchDrivers() {
     const response = await fetch("/api/sopir");
@@ -63,6 +33,8 @@ export default function SopirPage() {
     const { id, value } = e.target;
     setFormData((prev) => ({ ...prev, [id]: value }));
   };
+
+  const handleSearchChange = (e) => setSearchTerm(e.target.value);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -89,10 +61,26 @@ export default function SopirPage() {
     setFormData({
       driver_name: driver.driver_name,
       phone_number: driver.phone_number,
+      nik: driver.nik || "",
       address: driver.address,
       status: driver.status,
     });
     setIsDialogOpen(true);
+  };
+
+  const handleSetStatus = async (driver, newStatus) => {
+    try {
+      const payload = { ...driver, status: newStatus };
+      const res = await fetch(`/api/sopir/${driver.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error("status update failed");
+      await fetchDrivers();
+    } catch (err) {
+      console.error("Failed to update driver status", err);
+    }
   };
 
   const handleDelete = async (id) => {
@@ -118,148 +106,44 @@ export default function SopirPage() {
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <header className="flex h-16 shrink-0 items-center gap-2">
-        <div className="flex items-center gap-2 px-4">
-          <SidebarTrigger className="-ml-1" />
-          <Separator
-            orientation="vertical"
-            className="mr-2 data-[orientation=vertical]:h-4"
-          />
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem className="hidden md:block">
-                <BreadcrumbLink href="#">Manajemen</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator className="hidden md:block" />
-              <BreadcrumbItem>
-                <BreadcrumbPage>Sopir</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </div>
-      </header>
-
+    <div>
       <div className="flex flex-col gap-4 p-4 pt-0">
-        <Card>
-          <CardHeader>
-            <CardTitle>Manajemen Sopir</CardTitle>
-            <CardAction>
-              <Button onClick={openNewDriverDialog}>Tambah Sopir</Button>
-            </CardAction>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-4 mb-4">
-              <Input
-                placeholder="Cari nama atau no. HP..."
-                className="max-w-sm"
-              />
-            </div>
+        <SopirTopHeader
+          onAdd={openNewDriverDialog}
+          searchValue={searchTerm}
+          onSearchChange={handleSearchChange}
+        />
+        <div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {drivers
+              .filter((d) => {
+                const q = searchTerm.trim().toLowerCase();
+                return (
+                  !q ||
+                  (d.driver_name && d.driver_name.toLowerCase().includes(q)) ||
+                  (d.phone_number && d.phone_number.toLowerCase().includes(q))
+                );
+              })
+              .map((driver) => (
+                <SopirCard
+                  key={driver.id}
+                  driver={driver}
+                  onEdit={handleEdit}
+                  onSetStatus={handleSetStatus}
+                  onDelete={handleDelete}
+                />
+              ))}
+          </div>
+        </div>
 
-            <Table>
-              <TableCaption>Daftar sopir yang terdaftar</TableCaption>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nama Sopir</TableHead>
-                  <TableHead>No. HP</TableHead>
-                  <TableHead>Alamat</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {drivers.map((driver) => (
-                  <TableRow key={driver.id}>
-                    <TableCell className="font-medium">
-                      {driver.driver_name}
-                    </TableCell>
-                    <TableCell>{driver.phone_number}</TableCell>
-                    <TableCell>{driver.address}</TableCell>
-                    <TableCell>{driver.status}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEdit(driver)}
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleDelete(driver.id)}
-                        >
-                          Hapus
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {editingDriver ? "Edit Sopir" : "Tambah Sopir Baru"}
-              </DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="driver_name">Nama Sopir</Label>
-                <Input
-                  id="driver_name"
-                  value={formData.driver_name}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="phone_number">No. HP</Label>
-                <Input
-                  id="phone_number"
-                  value={formData.phone_number}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="address">Alamat</Label>
-                <Input
-                  id="address"
-                  value={formData.address}
-                  onChange={handleInputChange}
-                />
-              </div>
-              <div>
-                <Label htmlFor="status">Status</Label>
-                <select
-                  id="status"
-                  value={formData.status}
-                  onChange={handleInputChange}
-                  className="w-full p-2 border rounded"
-                >
-                  <option value="READY">Ready</option>
-                  <option value="ON_TRIP">On Trip</option>
-                  <option value="OFF_DUTY">Off / Libur</option>
-                </select>
-              </div>
-              <div className="flex gap-2 justify-end">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsDialogOpen(false)}
-                >
-                  Batal
-                </Button>
-                <Button type="submit">Simpan</Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <SopirDialog
+          open={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          editingDriver={editingDriver}
+          formData={formData}
+          handleInputChange={handleInputChange}
+          handleSubmit={handleSubmit}
+        />
       </div>
     </div>
   );

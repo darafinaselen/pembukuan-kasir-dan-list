@@ -81,6 +81,7 @@ model Armada {
 model Driver {
   id           String       @id @default(uuid())
   driver_name  String
+  nik          String?
   phone_number String
   address      String?
   status       DriverStatus @default(READY)

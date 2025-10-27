@@ -37,17 +37,27 @@ enum PaymentStatus {
   PAID
 }
 
-// 3. Model Database (Master Data - Milik Developer B)
-
 // Modul 2.5: Manajemen Paket Jasa
-model Package {
-  id                     String      @id @default(uuid())
-  package_name           String
-  package_type           PackageType
-  description            String?
-  default_price          Int
-  default_duration_hours Int
-  default_overtime_rate  Int
+model ServicePackage {
+  id                String      @id @default(uuid())
+  name              String
+  type              PackageType
+  description       String?
+  includes          String[]
+  excludes          String[]
+  isCustomizable    Boolean     @default(false)
+  customizableItems String[]
+
+  // Fields for CAR_RENTAL type
+  price         Int?
+  durationHours Int?
+  overtimeRate  Int?
+
+  // Fields for TOUR_PACKAGE type
+  durationDays   Int?
+  durationNights Int?
+  hotelTiers     HotelTier[]
+  itineraries    ItineraryDay[]
 
   // Relasi: Satu paket bisa digunakan di banyak transaksi
   transactions Transaction[]
@@ -55,8 +65,49 @@ model Package {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("packages")
+  @@map("service_packages")
 }
+
+model HotelTier {
+  id               String   @id @default(uuid())
+  starRating       Int
+  pricePerPax      Int
+  servicePackageId String
+  servicePackage   ServicePackage @relation(fields: [servicePackageId], references: [id], onDelete: Cascade)
+  hotels           Hotel[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("hotel_tiers")
+}
+
+model Hotel {
+  id          String    @id @default(uuid())
+  name        String
+  hotelTierId String
+  hotelTier   HotelTier @relation(fields: [hotelTierId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("hotels")
+}
+
+model ItineraryDay {
+  id               String   @id @default(uuid())
+  day              Int
+  title            String
+  description      String?
+  servicePackageId String
+  servicePackage   ServicePackage @relation(fields: [servicePackageId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("itinerary_days")
+}
+
 
 // Modul 3: Manajemen Armada
 model Armada {
@@ -136,7 +187,7 @@ model Transaction {
 
   // Relasi: Transaksi ini (opsional) menggunakan paket apa
   packageId String?
-  package   Package? @relation(fields: [packageId], references: [id], onDelete: SetNull)
+  package   ServicePackage? @relation(fields: [packageId], references: [id], onDelete: SetNull)
 
   // Relasi: Transaksi ini (wajib) menggunakan armada apa
   // onDelete: Restrict -> Mencegah armada dihapus jika masih punya riwayat transaksi

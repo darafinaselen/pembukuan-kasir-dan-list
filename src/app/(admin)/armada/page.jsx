@@ -92,7 +92,7 @@ export default function ArmadaPage() {
   };
 
   const handleEdit = (armada) => {
-    const known = ["Innova Reborn", "Hi-Ace", "Xenia"];
+    const known = ["Innova Reborn", "Hi-Ace"];
     setEditingArmada(armada);
     // model holds the 'Tipe' (Innova, Hi-Ace). If it's not in known list, treat as custom
     setIsCustomModel(Boolean(armada.model && !known.includes(armada.model)));
@@ -101,7 +101,6 @@ export default function ArmadaPage() {
       brand: armada.brand || "",
       model: armada.model || "",
       status: armada.status || "READY",
-      description: armada.description || "",
     });
     setIsDialogOpen(true);
   };
@@ -114,6 +113,22 @@ export default function ArmadaPage() {
       await fetchArmadas();
     } catch (err) {
       console.error("Failed to delete", err);
+    }
+  };
+
+  const handleMaintenance = async (armada) => {
+    try {
+      // Set status to MAINTENANCE (align with Prisma enum)
+      const payload = { ...armada, status: "MAINTENANCE" };
+      const res = await fetch(`/api/armada/${armada.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error("maintenance update failed");
+      await fetchArmadas();
+    } catch (err) {
+      console.error("Failed to update maintenance status", err);
     }
   };
 
@@ -172,6 +187,7 @@ export default function ArmadaPage() {
                 armada={a}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
+                onMaintenance={handleMaintenance}
               />
             ))}
           </div>

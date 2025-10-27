@@ -106,35 +106,31 @@ export default function ArmadaDialog({
                 />
               </div>
             )}
-          </div>
 
-          <div>
-            <Label className="pb-1" htmlFor="model">
-              Tipe / Keterangan
-            </Label>
-            <Input
-              id="model"
-              placeholder="Contoh: 2.0 G MT"
-              value={formData.model}
-              onChange={handleInputChange}
-            />
-          </div>
-
-          <div>
-            <Label className="pb-1" htmlFor="notes">
-              Catatan
-            </Label>
-            <textarea
-              id="description"
-              placeholder="Catatan singkat (opsional)"
-              value={formData.description ?? ""}
-              onChange={(e) =>
-                handleInputChange({
-                  target: { id: "description", value: e.target.value },
-                })
-              }
-              className="w-full min-h-[80px] border rounded px-3 py-2"
-            />
+            <div className="mt-2">
+              <Label className="pb-1" htmlFor="status">
+                Status
+              </Label>
+              <Select
+                value={formData.status}
+                onValueChange={(val) =>
+                  handleInputChange({ target: { id: "status", value: val } })
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Pilih status armada" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectLabel>Status Armada</SelectLabel>
+                    <SelectItem value="READY">READY</SelectItem>
+                    <SelectItem value="BOOKED">BOOKED</SelectItem>
+                    <SelectItem value="ON_TRIP">ON_TRIP</SelectItem>
+                    <SelectItem value="MAINTENANCE">MAINTENANCE</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div>

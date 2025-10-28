@@ -116,7 +116,7 @@ export function PackageList({ packages, onEdit, onDelete, onView }) {
                 </div>
 
                 <div className="flex items-center gap-2 px-3 py-2.5 bg-purple-50 rounded-lg border border-purple-100">
-                  <Clock className="h-4 w-4 text-purple-600 flex-shrink-0" />
+                  <Clock className="h-4 w-4 text-purple-600 shrink-0" />
                   <div>
                     <p className="text-purple-900">{duration}</p>
                   </div>

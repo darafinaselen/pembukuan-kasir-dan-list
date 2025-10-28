@@ -22,7 +22,7 @@ export default function SopirTopHeader({ onAdd, searchValue, onSearchChange }) {
       </div>
 
       <div className="px-4 pb-4">
-        <div className="flex items-center gap-4 mb-4">
+        <div className="flex items-end gap-4 mb-4">
           <Input
             placeholder="Cari nama atau no. HP..."
             className="max-w-sm"

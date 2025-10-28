@@ -17,8 +17,18 @@ export async function GET() {
     });
     return NextResponse.json(packages);
   } catch (error) {
+    console.error(error);
+    // If the packages table doesn't exist yet (local dev), return an empty array so UI can render.
+    if (error?.code === "P2021") {
+      return NextResponse.json([], { status: 200 });
+    }
+    // Return error details in dev for quicker debugging
     return NextResponse.json(
-      { error: "Failed to fetch packages" },
+      {
+        error: "Failed to fetch packages",
+        message: error?.message,
+        stack: error?.stack,
+      },
       { status: 500 }
     );
   }
@@ -27,27 +37,108 @@ export async function GET() {
 export async function POST(request) {
   try {
     const data = await request.json();
-    const { hotelTiers, itineraries, ...packageData } = data;
+    const {
+      tarifHotel: hotelTiers,
+      itinerary: itineraries,
+      namaPaket,
+      tipePaket,
+      deskripsi,
+      durasiHari,
+      durasiMalam,
+      isCustomizable,
+      customizableItems,
+      hargaDefault,
+      tarifOvertime,
+      include,
+      exclude,
+      ...rest
+    } = data;
+
+    // Map incoming form fields (Indonesian) to Prisma schema fields (English)
+    const type = tipePaket === "Paket Tour" ? "TOUR_PACKAGE" : "CAR_RENTAL";
+
+    const includes =
+      typeof include === "string"
+        ? include
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : Array.isArray(include)
+        ? include
+        : [];
+
+    const excludes =
+      typeof exclude === "string"
+        ? exclude
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : Array.isArray(exclude)
+        ? exclude
+        : [];
+
+    const prismaData = {
+      name: namaPaket,
+      type,
+      description: deskripsi || null,
+      includes,
+      excludes,
+      isCustomizable: !!isCustomizable,
+      customizableItems: customizableItems || [],
+      // extra rest fields will be ignored on purpose
+    };
+
+    if (type === "CAR_RENTAL") {
+      prismaData.price =
+        typeof hargaDefault === "number"
+          ? hargaDefault
+          : hargaDefault
+          ? Number(hargaDefault)
+          : null;
+      prismaData.overtimeRate =
+        typeof tarifOvertime === "number"
+          ? tarifOvertime
+          : tarifOvertime
+          ? Number(tarifOvertime)
+          : null;
+    } else if (type === "TOUR_PACKAGE") {
+      prismaData.durationDays = durasiHari ? Number(durasiHari) : null;
+      prismaData.durationNights = durasiMalam ? Number(durasiMalam) : null;
+
+      if (hotelTiers && Array.isArray(hotelTiers) && hotelTiers.length > 0) {
+        prismaData.hotelTiers = {
+          create: hotelTiers.map((tier) => ({
+            starRating: (() => {
+              // tier.tingkat is like "Bintang 3"
+              const m = String(tier.tingkat || "").match(/\d+/);
+              return m ? Number(m[0]) : tier.starRating || 0;
+            })(),
+            pricePerPax: tier.tarifPerPax ? Number(tier.tarifPerPax) : 0,
+            hotels:
+              tier.daftarHotel && Array.isArray(tier.daftarHotel)
+                ? {
+                    create: tier.daftarHotel.map((hotelName) => ({
+                      name: String(hotelName),
+                    })),
+                  }
+                : undefined,
+          })),
+        };
+      }
+
+      if (itineraries && Array.isArray(itineraries) && itineraries.length > 0) {
+        prismaData.itineraries = {
+          create: itineraries.map((it) => ({
+            day: it.hari ? Number(it.hari) : 0,
+            title: it.aktivitas || String(it.title || ""),
+            description: it.deskripsi || null,
+          })),
+        };
+      }
+    }
 
     const newPackage = await prisma.servicePackage.create({
-      data: {
-        ...packageData,
-        hotelTiers: {
-          create: hotelTiers?.map((tier) => ({
-            ...tier,
-            hotels: {
-              create: tier.hotels?.map((hotel) => ({
-                name: hotel.name,
-              })),
-            },
-          })),
-        },
-        itineraries: {
-          create: itineraries?.map((itinerary) => ({
-            ...itinerary,
-          })),
-        },
-      },
+      data: prismaData,
       include: {
         hotelTiers: {
           include: {

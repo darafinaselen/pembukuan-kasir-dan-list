@@ -1,15 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui";
-import { PlusCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import PackageHeader from "@/components/packages/PackageHeader";
 import { PackageForm } from "@/components/packages/package-form";
 import { PackageList } from "@/components/packages/package-list";
 import { PackageDetail } from "@/components/packages/package-detail";
@@ -23,9 +16,34 @@ export default function PackagesPage() {
   const [selectedPackage, setSelectedPackage] = useState(null);
 
   const fetchPackages = async () => {
-    const res = await fetch("/api/packages");
-    const data = await res.json();
-    setPackages(data);
+    try {
+      const res = await fetch("/api/packages");
+      if (!res.ok) {
+        const text = await res.text().catch(() => "<no body>");
+        console.error("Failed to fetch packages:", res.status, text);
+        setPackages([]);
+        return;
+      }
+
+      const data = await res.json().catch((err) => {
+        console.error("Failed to parse /api/packages response as JSON", err);
+        return null;
+      });
+
+      if (!Array.isArray(data)) {
+        console.warn(
+          "/api/packages returned unexpected payload, expected array.",
+          data
+        );
+        setPackages([]);
+        return;
+      }
+
+      setPackages(data);
+    } catch (err) {
+      console.error("Error fetching packages:", err);
+      setPackages([]);
+    }
   };
 
   useEffect(() => {
@@ -34,37 +52,46 @@ export default function PackagesPage() {
 
   const handleFormSubmit = async (data) => {
     const method = selectedPackage && selectedPackage.id ? "PUT" : "POST";
-    const url = selectedPackage && selectedPackage.id
-      ? `/api/packages/${selectedPackage.id}`
-      : "/api/packages";
+    const url =
+      selectedPackage && selectedPackage.id
+        ? `/api/packages/${selectedPackage.id}`
+        : "/api/packages";
 
-    const res = await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
 
-    if (res.ok) {
-      setIsFormOpen(false);
-      setSelectedPackage(null);
-      fetchPackages();
-    } else {
-      console.error("Failed to save package");
+      if (res.ok) {
+        setIsFormOpen(false);
+        setSelectedPackage(null);
+        fetchPackages();
+      } else {
+        console.error("Failed to save package");
+      }
+    } catch (err) {
+      console.error("Failed to save package", err);
     }
   };
 
   const handleDelete = async () => {
     if (!selectedPackage) return;
-    const res = await fetch(`/api/packages/${selectedPackage.id}`, {
-      method: "DELETE",
-    });
+    try {
+      const res = await fetch(`/api/packages/${selectedPackage.id}`, {
+        method: "DELETE",
+      });
 
-    if (res.ok) {
-      setIsDeleteConfirmOpen(false);
-      setSelectedPackage(null);
-      fetchPackages();
-    } else {
-      console.error("Failed to delete package");
+      if (res.ok) {
+        setIsDeleteConfirmOpen(false);
+        setSelectedPackage(null);
+        fetchPackages();
+      } else {
+        console.error("Failed to delete package");
+      }
+    } catch (err) {
+      console.error("Failed to delete package", err);
     }
   };
 
@@ -89,48 +116,54 @@ export default function PackagesPage() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Manajemen Paket Jasa</h2>
-          <p className="text-muted-foreground">
-            Buat dan kelola data master untuk paket sewa atau tour.
-          </p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button onClick={openCreateForm}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Tambah Paket
-          </Button>
-        </div>
-      </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Daftar Paket</CardTitle>
-          <CardDescription>
-            Berikut adalah daftar semua paket yang sudah dibuat.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+    <div>
+      <PackageHeader onAdd={openCreateForm} />
+
+      <div className="p-4">
+        {packages === null ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div
+                key={i}
+                className="animate-pulse rounded-lg border bg-white p-4"
+              >
+                <div className="h-36 bg-slate-100 rounded mb-3" />
+                <div className="h-4 bg-slate-100 rounded w-1/2 mb-2" />
+                <div className="h-3 bg-slate-100 rounded w-1/3" />
+              </div>
+            ))}
+          </div>
+        ) : packages.length === 0 ? (
+          <div className="rounded-lg border-dashed border-2 border-slate-200 p-6 text-center">
+            <p className="text-lg font-medium mb-2">Belum ada paket jasa</p>
+            <p className="text-sm text-muted-foreground mb-4">
+              Tambahkan paket jasa pertama Anda untuk mulai mencatat layanan.
+            </p>
+            <Button onClick={openCreateForm}>Tambah Paket</Button>
+          </div>
+        ) : (
           <PackageList
             packages={packages}
             onEdit={openEditForm}
             onDelete={openDeleteConfirm}
             onView={openDetailView}
           />
-        </CardContent>
-      </Card>
+        )}
+      </div>
+
       <PackageForm
         open={isFormOpen}
         onOpenChange={setIsFormOpen}
         onSubmit={handleFormSubmit}
         defaultValues={selectedPackage}
       />
+
       <PackageDetail
         open={isDetailOpen}
         onOpenChange={setIsDetailOpen}
         pkg={selectedPackage}
       />
+
       <DeleteConfirmation
         open={isDeleteConfirmOpen}
         onOpenChange={setIsDeleteConfirmOpen}

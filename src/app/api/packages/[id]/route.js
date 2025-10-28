@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
+  request,
+  { params }
 ) {
   try {
     const packageData = await prisma.servicePackage.findUnique({
@@ -34,8 +34,8 @@ export async function GET(
 }
 
 export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
+  request,
+  { params }
 ) {
   try {
     const data = await request.json();
@@ -57,17 +57,17 @@ export async function PUT(
       data: {
         ...packageData,
         hotelTiers: {
-          create: hotelTiers?.map((tier: any) => ({
+          create: hotelTiers?.map((tier) => ({
             ...tier,
             hotels: {
-              create: tier.hotels?.map((hotel: any) => ({
+              create: tier.hotels?.map((hotel) => ({
                 name: hotel.name,
               })),
             },
           })),
         },
         itineraries: {
-          create: itineraries?.map((itinerary: any) => ({
+          create: itineraries?.map((itinerary) => ({
             ...itinerary,
           })),
         },
@@ -93,8 +93,8 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
+  request,
+  { params }
 ) {
   try {
     await prisma.servicePackage.delete({

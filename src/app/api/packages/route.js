@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
@@ -24,7 +24,7 @@ export async function GET() {
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request) {
   try {
     const data = await request.json();
     const { hotelTiers, itineraries, ...packageData } = data;
@@ -33,17 +33,17 @@ export async function POST(request: NextRequest) {
       data: {
         ...packageData,
         hotelTiers: {
-          create: hotelTiers?.map((tier: any) => ({
+          create: hotelTiers?.map((tier) => ({
             ...tier,
             hotels: {
-              create: tier.hotels?.map((hotel: any) => ({
+              create: tier.hotels?.map((hotel) => ({
                 name: hotel.name,
               })),
             },
           })),
         },
         itineraries: {
-          create: itineraries?.map((itinerary: any) => ({
+          create: itineraries?.map((itinerary) => ({
             ...itinerary,
           })),
         },

@@ -57,7 +57,12 @@ export async function PUT(request, { params }) {
     const durasiMalam = (durasi && durasi.malam) || data.durasiMalam || null;
 
     // Map incoming form fields (Indonesian) to Prisma schema fields (English)
-    const type = tipePaket === "Paket Tour" ? "TOUR_PACKAGE" : "CAR_RENTAL";
+    const type =
+      tipePaket === "Paket Tour"
+        ? "TOUR_PACKAGE"
+        : tipePaket === "Full Day Trip"
+        ? "FULL_DAY_TRIP"
+        : "CAR_RENTAL";
 
     const includes =
       typeof include === "string"
@@ -65,31 +70,26 @@ export async function PUT(request, { params }) {
             .split(",")
             .map((s) => s.trim())
             .filter(Boolean)
-        : Array.isArray(include)
-        ? include
-        : [];
-
+        : include;
     const excludes =
       typeof exclude === "string"
         ? exclude
             .split(",")
             .map((s) => s.trim())
             .filter(Boolean)
-        : Array.isArray(exclude)
-        ? exclude
-        : [];
+        : exclude;
 
     const updateData = {
       name: namaPaket,
       type,
       description: deskripsi || null,
-      includes,
-      excludes,
+      includes: includes || [],
+      excludes: excludes || [],
       isCustomizable: !!isCustomizable,
       customizableItems: customizableItems || [],
     };
 
-    if (type === "CAR_RENTAL") {
+    if (type === "CAR_RENTAL" || type === "FULL_DAY_TRIP") {
       updateData.price =
         typeof hargaDefault === "number"
           ? hargaDefault
@@ -102,58 +102,97 @@ export async function PUT(request, { params }) {
           : tarifOvertime
           ? Number(tarifOvertime)
           : null;
-    } else if (type === "TOUR_PACKAGE") {
-      updateData.durationDays = durasiHari ? Number(durasiHari) : null;
-      updateData.durationNights = durasiMalam ? Number(durasiMalam) : null;
-
-      // prepare nested creates for hotel tiers and itineraries
-      if (hotelTiers && Array.isArray(hotelTiers) && hotelTiers.length > 0) {
-        updateData.hotelTiers = {
-          create: hotelTiers.map((tier) => ({
-            starRating: (() => {
-              const m = String(tier.tingkat || "").match(/\d+/);
-              return m ? Number(m[0]) : tier.starRating || 0;
-            })(),
-            pricePerPax: tier.tarifPerPax ? Number(tier.tarifPerPax) : 0,
-            hotels:
-              tier.daftarHotel && Array.isArray(tier.daftarHotel)
-                ? {
-                    create: tier.daftarHotel.map((hotelName) => ({
-                      name: String(hotelName),
-                    })),
-                  }
-                : undefined,
-          })),
-        };
-      }
-
-      if (itineraries && Array.isArray(itineraries) && itineraries.length > 0) {
-        updateData.itineraries = {
-          create: itineraries.map((it) => ({
-            day: it.hari ? Number(it.hari) : 0,
-            title: it.aktivitas || String(it.title || ""),
-            description: it.deskripsi || null,
-          })),
-        };
-      }
     }
 
-    // unwrap params and remove existing nested rows first to simplify update
+    if (type === "TOUR_PACKAGE") {
+      updateData.durationDays = durasiHari ? Number(durasiHari) : null;
+      updateData.durationNights = durasiMalam ? Number(durasiMalam) : null;
+    }
+
     const { id } = await params;
 
-    await prisma.hotel.deleteMany({
-      where: { hotelTier: { servicePackageId: id } },
-    });
-    await prisma.hotelTier.deleteMany({
-      where: { servicePackageId: id },
-    });
-    await prisma.itineraryDay.deleteMany({
-      where: { servicePackageId: id },
-    });
+    // Smartly update hotel tiers and itineraries
+    const tx = [];
 
-    const updatedPackage = await prisma.servicePackage.update({
+    // Delete old data first
+    tx.push(
+      prisma.hotel.deleteMany({
+        where: { hotelTier: { servicePackageId: id } },
+      })
+    );
+    tx.push(
+      prisma.hotelTier.deleteMany({
+        where: { servicePackageId: id },
+      })
+    );
+    tx.push(
+      prisma.itineraryDay.deleteMany({
+        where: { servicePackageId: id },
+      })
+    );
+
+    // Then, update the main package data
+    tx.push(
+      prisma.servicePackage.update({
+        where: { id },
+        data: updateData,
+      })
+    );
+
+    // Then, create new hotel tiers and itineraries if they exist
+    if (
+      type === "TOUR_PACKAGE" &&
+      hotelTiers &&
+      Array.isArray(hotelTiers) &&
+      hotelTiers.length > 0
+    ) {
+      tx.push(
+        ...hotelTiers.map((tier) =>
+          prisma.hotelTier.create({
+            data: {
+              servicePackageId: id,
+              starRating: (() => {
+                const m = String(tier.tingkat || "").match(/\d+/);
+                return m ? Number(m[0]) : tier.starRating || 0;
+              })(),
+              pricePerPax: tier.tarifPerPax ? Number(tier.tarifPerPax) : 0,
+              hotels:
+                tier.daftarHotel && Array.isArray(tier.daftarHotel)
+                  ? {
+                      create: tier.daftarHotel.map((hotelName) => ({
+                        name: String(hotelName),
+                      })),
+                    }
+                  : undefined,
+            },
+          })
+        )
+      );
+    }
+
+    if (
+      (type === "TOUR_PACKAGE" || type === "FULL_DAY_TRIP") &&
+      itineraries &&
+      Array.isArray(itineraries) &&
+      itineraries.length > 0
+    ) {
+      tx.push(
+        ...itineraries.map((it) =>
+          prisma.itineraryDay.create({
+            data: {
+              servicePackageId: id,
+              day: it.hari ? Number(it.hari) : 0,
+              title: it.aktivitas || String(it.title || ""),
+              description: it.deskripsi || null,
+            },
+          })
+        )
+      );
+    }
+    const updatedPackage = await prisma.$transaction(tx);
+
+    const result = await prisma.servicePackage.findUnique({
       where: { id },
-      data: updateData,
       include: {
         hotelTiers: {
           include: {
@@ -164,7 +203,7 @@ export async function PUT(request, { params }) {
       },
     });
 
-    return NextResponse.json(updatedPackage);
+    return NextResponse.json(result);
   } catch (error) {
     console.error(error);
     return NextResponse.json(

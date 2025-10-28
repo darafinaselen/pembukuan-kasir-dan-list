@@ -16,6 +16,7 @@ datasource db {
 enum PackageType {
   CAR_RENTAL
   TOUR_PACKAGE
+  FULL_DAY_TRIP
 }
 
 enum ArmadaStatus {

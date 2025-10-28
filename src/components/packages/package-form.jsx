@@ -262,7 +262,7 @@ export function PackageForm({
                 rules={{ required: "Tipe paket harus dipilih" }}
                 render={({ field }) => (
                   <Select onValueChange={field.onChange} value={field.value}>
-                    <SelectTrigger>
+                    <SelectTrigger id="tipePaket">
                       <SelectValue placeholder="Pilih tipe paket" />
                     </SelectTrigger>
                     <SelectContent>

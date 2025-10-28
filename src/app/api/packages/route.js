@@ -55,7 +55,12 @@ export async function POST(request) {
     } = data;
 
     // Map incoming form fields (Indonesian) to Prisma schema fields (English)
-    const type = tipePaket === "Paket Tour" ? "TOUR_PACKAGE" : "CAR_RENTAL";
+    const type =
+      tipePaket === "Paket Tour"
+        ? "TOUR_PACKAGE"
+        : tipePaket === "Full Day Trip"
+        ? "FULL_DAY_TRIP"
+        : "CAR_RENTAL";
 
     const includes =
       typeof include === "string"
@@ -63,18 +68,13 @@ export async function POST(request) {
             .split(",")
             .map((s) => s.trim())
             .filter(Boolean)
-        : Array.isArray(include)
-        ? include
         : [];
-
     const excludes =
       typeof exclude === "string"
         ? exclude
             .split(",")
             .map((s) => s.trim())
             .filter(Boolean)
-        : Array.isArray(exclude)
-        ? exclude
         : [];
 
     const prismaData = {
@@ -88,7 +88,7 @@ export async function POST(request) {
       // extra rest fields will be ignored on purpose
     };
 
-    if (type === "CAR_RENTAL") {
+    if (type === "CAR_RENTAL" || type === "FULL_DAY_TRIP") {
       prismaData.price =
         typeof hargaDefault === "number"
           ? hargaDefault
@@ -101,7 +101,9 @@ export async function POST(request) {
           : tarifOvertime
           ? Number(tarifOvertime)
           : null;
-    } else if (type === "TOUR_PACKAGE") {
+    }
+
+    if (type === "TOUR_PACKAGE") {
       prismaData.durationDays = durasiHari ? Number(durasiHari) : null;
       prismaData.durationNights = durasiMalam ? Number(durasiMalam) : null;
 
@@ -125,7 +127,9 @@ export async function POST(request) {
           })),
         };
       }
+    }
 
+    if (type === "TOUR_PACKAGE" || type === "FULL_DAY_TRIP") {
       if (itineraries && Array.isArray(itineraries) && itineraries.length > 0) {
         prismaData.itineraries = {
           create: itineraries.map((it) => ({

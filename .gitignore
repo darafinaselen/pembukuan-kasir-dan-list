@@ -12,3 +12,6 @@
 # Local Environment
 .env
 .env.local
+
+.gemini/
+.vscode/

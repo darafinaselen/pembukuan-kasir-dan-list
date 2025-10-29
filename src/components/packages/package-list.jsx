@@ -46,17 +46,52 @@ export function PackageList({ packages, onEdit, onDelete, onView }) {
         </div>
       ) : (
         packages.map((pkg) => {
-          const tipe = pkg.type ?? pkg.tipePaket;
+          const typeMap = {
+            CAR_RENTAL: "Sewa Mobil",
+            FULL_DAY_TRIP: "Full Day Trip",
+            TOUR_PACKAGE: "Paket Tour",
+            "Sewa Mobil": "Sewa Mobil",
+            "Full Day Trip": "Full Day Trip",
+            "Paket Tour": "Paket Tour",
+          };
+
+          const rawTipe = pkg.type ?? pkg.tipePaket;
+          const tipe = typeMap[rawTipe] ?? rawTipe ?? "-";
           const title = pkg.name ?? pkg.namaPaket;
           const description = pkg.description ?? pkg.deskripsi ?? "-";
-          const duration =
-            pkg.durationDays != null
-              ? `${pkg.durationDays} Hari ${pkg.durationNights ?? 0} Malam`
-              : pkg.durationHours
-              ? `${pkg.durationHours} Jam`
-              : pkg.durasi
-              ? `${pkg.durasi.hari} Hari ${pkg.durasi.malam ?? 0} Malam`
-              : "-";
+          let duration = "-";
+
+          // Display rules:
+          // - Sewa Mobil => 12 Jam
+          // - Full Day Trip => 1 Hari
+          // - Paket Tour => use package's duration (hari/malam)
+          if (tipe === "Sewa Mobil") {
+            duration = "12 Jam";
+          } else if (tipe === "Full Day Trip") {
+            duration = "1 Hari";
+          } else if (tipe === "Paket Tour") {
+            if (pkg.durationDays != null) {
+              duration = `${pkg.durationDays} Hari ${
+                pkg.durationNights ?? 0
+              } Malam`;
+            } else if (pkg.durasi) {
+              duration = `${pkg.durasi.hari} Hari ${
+                pkg.durasi.malam ?? 0
+              } Malam`;
+            } else {
+              duration = "-";
+            }
+          } else {
+            // fallback for other/unknown shapes
+            duration =
+              pkg.durationDays != null
+                ? `${pkg.durationDays} Hari ${pkg.durationNights ?? 0} Malam`
+                : pkg.durationHours
+                ? `${pkg.durationHours} Jam`
+                : pkg.durasi
+                ? `${pkg.durasi.hari} Hari ${pkg.durasi.malam ?? 0} Malam`
+                : "-";
+          }
 
           const price = pkg.price ?? pkg.hargaDefault ?? 0;
           const overtime = pkg.overtimeRate ?? pkg.tarifOvertime;

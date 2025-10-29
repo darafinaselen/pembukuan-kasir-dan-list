@@ -18,6 +18,7 @@ export default function PackagesPage() {
   const fetchPackages = async () => {
     try {
       const res = await fetch("/api/packages");
+      console.log("Fetch /api/packages response:", res);
       if (!res.ok) {
         const text = await res.text().catch(() => "<no body>");
         console.error("Failed to fetch packages:", res.status, text);

@@ -61,10 +61,6 @@ export function PackageList({ packages, onEdit, onDelete, onView }) {
           const description = pkg.description ?? pkg.deskripsi ?? "-";
           let duration = "-";
 
-          // Display rules:
-          // - Sewa Mobil => 12 Jam
-          // - Full Day Trip => 1 Hari
-          // - Paket Tour => use package's duration (hari/malam)
           if (tipe === "Sewa Mobil") {
             duration = "12 Jam";
           } else if (tipe === "Full Day Trip") {
@@ -167,14 +163,18 @@ export function PackageList({ packages, onEdit, onDelete, onView }) {
                         <p className="text-blue-900">{fmt(price)}</p>
                       </div>
                     </div>
-                    {overtime && overtime > 0 && (
-                      <div className="px-3 py-2.5 bg-orange-50 rounded-lg border border-orange-100">
-                        <div className="flex items-center justify-between">
-                          <p className="text-orange-600">Overtime</p>
-                          <p className="text-orange-900">{fmt(overtime)}/jam</p>
+                    {(tipe === "Sewa Mobil" || tipe === "CAR_RENTAL") &&
+                      overtime &&
+                      overtime > 0 && (
+                        <div className="px-3 py-2.5 bg-orange-50 rounded-lg border border-orange-100">
+                          <div className="flex items-center justify-between">
+                            <p className="text-orange-600">Overtime</p>
+                            <p className="text-orange-900">
+                              {fmt(overtime)}/jam
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
                   </div>
                 ) : (
                   <div className="space-y-2">

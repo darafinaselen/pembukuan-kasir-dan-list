@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
+import { validatePriceRangesForTier } from "@/lib/utils";
 
 const prisma = new PrismaClient();
 
@@ -10,6 +11,7 @@ export async function GET() {
         hotelTiers: {
           include: {
             hotels: true,
+            priceRanges: true,
           },
         },
         itineraries: true,
@@ -108,6 +110,24 @@ export async function POST(request) {
       prismaData.durationNights = durasiMalam ? Number(durasiMalam) : null;
 
       if (hotelTiers && Array.isArray(hotelTiers) && hotelTiers.length > 0) {
+        // validate priceRanges for each tier
+        for (let i = 0; i < hotelTiers.length; i++) {
+          const tier = hotelTiers[i];
+          if (tier.priceRanges) {
+            const v = validatePriceRangesForTier(tier.priceRanges);
+            if (!v.ok) {
+              return NextResponse.json(
+                {
+                  error: `Validasi priceRanges gagal di tingkat ke-${i + 1}: ${
+                    v.message
+                  }`,
+                },
+                { status: 400 }
+              );
+            }
+          }
+        }
+
         prismaData.hotelTiers = {
           create: hotelTiers.map((tier) => ({
             starRating: (() => {
@@ -121,6 +141,16 @@ export async function POST(request) {
                 ? {
                     create: tier.daftarHotel.map((hotelName) => ({
                       name: String(hotelName),
+                    })),
+                  }
+                : undefined,
+            priceRanges:
+              tier.priceRanges && Array.isArray(tier.priceRanges)
+                ? {
+                    create: tier.priceRanges.map((r) => ({
+                      minPax: Number(r.minPax || 0),
+                      maxPax: Number(r.maxPax || 0),
+                      price: Number(r.price || 0),
                     })),
                   }
                 : undefined,
@@ -147,6 +177,7 @@ export async function POST(request) {
         hotelTiers: {
           include: {
             hotels: true,
+            priceRanges: true,
           },
         },
         itineraries: true,

@@ -31,6 +31,15 @@ export function PackageDetail({ open, onOpenChange, pkg }) {
   const hotelTiers = pkg.hotelTiers || pkg.tarifHotel || [];
   const itineraries = pkg.itineraries || pkg.itinerary || [];
 
+  // Truncate long text to a few words and append ellipsis
+  const takeWords = (text, limit = 20) => {
+    if (text == null) return "-";
+    const s = String(text).trim();
+    if (!s) return "-";
+    const words = s.split(/\s+/);
+    return words.length > limit ? words.slice(0, limit).join(" ") + "..." : s;
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
@@ -48,7 +57,7 @@ export function PackageDetail({ open, onOpenChange, pkg }) {
           <div>
             <h3 className="text-gray-500 mb-2">Deskripsi</h3>
             <p className="text-gray-900">
-              {pkg.description ?? pkg.deskripsi ?? "-"}
+              {takeWords(pkg.description ?? pkg.deskripsi, 20)}
             </p>
           </div>
 
@@ -124,50 +133,77 @@ export function PackageDetail({ open, onOpenChange, pkg }) {
               </TabsList>
 
               <TabsContent value="hotel" className="space-y-3 mt-4">
-                <div className="grid gap-4">
-                  {hotelTiers.map((tier, index) => (
-                    <div
-                      key={tier.id ?? index}
-                      className="p-4 bg-amber-50 rounded-lg border border-amber-100 space-y-3"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Hotel className="h-5 w-5 text-amber-600" />
+                {pkg.type === "TOUR_PACKAGE" ||
+                pkg.tipePaket === "Paket Tour" ? (
+                  <div className="grid gap-4">
+                    {hotelTiers.map((tier, index) => (
+                      <div
+                        key={tier.id ?? index}
+                        className="p-4 bg-amber-50 rounded-lg border border-amber-100 space-y-3"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Hotel className="h-5 w-5 text-amber-600" />
+                            <p className="text-amber-900">
+                              {tier.starRating
+                                ? `Bintang ${tier.starRating}`
+                                : tier.tingkat}
+                            </p>
+                          </div>
                           <p className="text-amber-900">
-                            {tier.starRating
-                              ? `Bintang ${tier.starRating}`
-                              : tier.tingkat}
+                            {formatCurrency(
+                              tier.pricePerPax ?? tier.tarifPerPax
+                            )}{" "}
+                            / PAX
                           </p>
                         </div>
-                        <p className="text-amber-900">
-                          {formatCurrency(tier.pricePerPax ?? tier.tarifPerPax)}{" "}
-                          / PAX
-                        </p>
-                      </div>
-                      {(tier.hotels || tier.daftarHotel) &&
-                        (tier.hotels || tier.daftarHotel).length > 0 && (
+                        {(tier.hotels || tier.daftarHotel) &&
+                          (tier.hotels || tier.daftarHotel).length > 0 && (
+                            <div>
+                              <p className="text-amber-700 mb-2">
+                                Pilihan Hotel:
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                {(tier.hotels || tier.daftarHotel).map(
+                                  (h, hi) => (
+                                    <Badge
+                                      key={hi}
+                                      variant="secondary"
+                                      className="bg-white text-amber-800 border border-amber-200"
+                                    >
+                                      {h.name ?? h}
+                                    </Badge>
+                                  )
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        {tier.priceRanges && tier.priceRanges.length > 0 && (
                           <div>
-                            <p className="text-amber-700 mb-2">
-                              Pilihan Hotel:
+                            <p className="text-amber-700 mt-2 mb-2">
+                              Harga per Rentang Pax:
                             </p>
-                            <div className="flex flex-wrap gap-2">
-                              {(tier.hotels || tier.daftarHotel).map(
-                                (h, hi) => (
-                                  <Badge
-                                    key={hi}
-                                    variant="secondary"
-                                    className="bg-white text-amber-800 border border-amber-200"
-                                  >
-                                    {h.name ?? h}
-                                  </Badge>
-                                )
-                              )}
+                            <div className="space-y-1">
+                              {tier.priceRanges.map((r) => (
+                                <div
+                                  key={r.id ?? `${r.minPax}-${r.maxPax}`}
+                                  className="text-amber-800 text-sm"
+                                >
+                                  {r.minPax}-{r.maxPax} pax —{" "}
+                                  {formatCurrency(r.price)}
+                                </div>
+                              ))}
                             </div>
                           </div>
                         )}
-                    </div>
-                  ))}
-                </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-500">
+                    Tarif hotel hanya tersedia untuk paket tour.
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="itinerary" className="space-y-3 mt-4">

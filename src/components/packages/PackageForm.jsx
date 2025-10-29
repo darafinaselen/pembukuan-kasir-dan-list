@@ -28,6 +28,10 @@ import {
 import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Trash2, Hotel, Map, Settings } from "lucide-react";
+import {
+  validatePriceRangesForTier,
+  getPriceRangeConflicts,
+} from "@/lib/utils";
 import { HotelListInput } from "./HotelListInput";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +50,10 @@ export function PackageForm({
     reset,
     control,
     watch,
+    setValue,
+    getValues,
+    setError,
+    clearErrors,
     formState: { errors },
   } = useForm({
     defaultValues: {
@@ -85,6 +93,8 @@ export function PackageForm({
   const tipePaket = watch("tipePaket");
   const isCustomizable = watch("isCustomizable");
   const [newCustomItem, setNewCustomItem] = useState("");
+  const [pendingType, setPendingType] = useState(null);
+  const [showTypeConfirm, setShowTypeConfirm] = useState(false);
 
   useEffect(() => {
     const pkg = package_ ?? defaultValues;
@@ -102,7 +112,7 @@ export function PackageForm({
       };
 
       const rawTipe = pkg.type ?? pkg.tipePaket ?? "Sewa Mobil";
-      const tipePaket = typeMap[rawTipe] ?? rawTipe ?? "-";
+      const mappedTipe = typeMap[rawTipe] ?? rawTipe ?? "-";
       const deskripsi = pkg.deskripsi ?? pkg.description ?? "";
       const durasiHari =
         pkg.durasi?.hari ?? pkg.durationDays ?? pkg.durationHours ?? 1;
@@ -119,33 +129,66 @@ export function PackageForm({
       const itineraryVal =
         pkg.itinerary ?? pkg.itineraries ?? pkg.itinerary ?? [];
 
-      reset({
+      // Build reset payload depending on package type so we don't prefill irrelevant data
+      const base = {
         namaPaket,
-        tipePaket,
+        tipePaket: mappedTipe,
         deskripsi,
-        durasiHari,
-        durasiMalam,
         isCustomizable: isCustom,
         customizableItems: customizableItems || [],
-        hargaDefault: hargaDefault || 0,
-        tarifOvertime: tarifOvertime || 0,
         include,
         exclude,
-        tarifHotel:
-          Array.isArray(tarifHotelVal) && tarifHotelVal.length > 0
-            ? tarifHotelVal
-            : [
-                {
-                  tingkat: "Bintang 3",
-                  tarifPerPax: 0,
-                  daftarHotel: [],
-                },
-              ],
-        itinerary:
-          Array.isArray(itineraryVal) && itineraryVal.length > 0
-            ? itineraryVal
-            : [{ hari: 1, aktivitas: "" }],
-      });
+      };
+
+      if (mappedTipe === "Paket Tour") {
+        // Tour: include hotel tiers and itinerary
+        reset({
+          ...base,
+          durasiHari: durasiHari || 1,
+          durasiMalam: durasiMalam || 0,
+          hargaDefault: 0,
+          tarifOvertime: 0,
+          tarifHotel:
+            Array.isArray(tarifHotelVal) && tarifHotelVal.length > 0
+              ? tarifHotelVal
+              : [
+                  {
+                    tingkat: "Bintang 3",
+                    tarifPerPax: 0,
+                    daftarHotel: [],
+                  },
+                ],
+          itinerary:
+            Array.isArray(itineraryVal) && itineraryVal.length > 0
+              ? itineraryVal
+              : [{ hari: 1, aktivitas: "" }],
+        });
+      } else if (mappedTipe === "Full Day Trip") {
+        // Full day: include price/overtime and itinerary; clear hotel tiers
+        reset({
+          ...base,
+          durasiHari: durasiHari || 1,
+          durasiMalam: durasiMalam || 0,
+          hargaDefault: hargaDefault || 0,
+          tarifOvertime: tarifOvertime || 0,
+          tarifHotel: [],
+          itinerary:
+            Array.isArray(itineraryVal) && itineraryVal.length > 0
+              ? itineraryVal
+              : [{ hari: 1, aktivitas: "" }],
+        });
+      } else {
+        // Sewa Mobil / default: include price/overtime; clear tour-specific fields
+        reset({
+          ...base,
+          durasiHari: durasiHari || 1,
+          durasiMalam: durasiMalam || 0,
+          hargaDefault: hargaDefault || 0,
+          tarifOvertime: tarifOvertime || 0,
+          tarifHotel: [],
+          itinerary: [{ hari: 1, aktivitas: "" }],
+        });
+      }
     } else {
       reset({
         namaPaket: "",
@@ -159,19 +202,129 @@ export function PackageForm({
         tarifOvertime: 0,
         include: "",
         exclude: "",
-        tarifHotel: [
-          {
-            tingkat: "Bintang 3",
-            tarifPerPax: 0,
-            daftarHotel: [],
-          },
-        ],
+        tarifHotel: [],
         itinerary: [{ hari: 1, aktivitas: "" }],
       });
     }
   }, [package_, defaultValues, reset, open]);
 
+  // When the user changes the package type in the form, clear or set fields
+  // that are not relevant for the selected type to avoid accidental edits.
+  useEffect(() => {
+    if (!open) return;
+
+    if (tipePaket === "Paket Tour") {
+      const currentHotel = getValues("tarifHotel");
+      if (!Array.isArray(currentHotel) || currentHotel.length === 0) {
+        setValue("tarifHotel", [
+          { tingkat: "Bintang 3", tarifPerPax: 0, daftarHotel: [] },
+        ]);
+      }
+      const it = getValues("itinerary");
+      if (!Array.isArray(it) || it.length === 0) {
+        setValue("itinerary", [{ hari: 1, aktivitas: "" }]);
+      }
+      // clear price fields
+      setValue("hargaDefault", 0);
+      setValue("tarifOvertime", 0);
+    } else if (tipePaket === "Full Day Trip") {
+      // ensure price fields present, clear hotel tiers
+      setValue("hargaDefault", getValues("hargaDefault") ?? 0);
+      setValue("tarifOvertime", getValues("tarifOvertime") ?? 0);
+      setValue("tarifHotel", []);
+      if (
+        !Array.isArray(getValues("itinerary")) ||
+        getValues("itinerary").length === 0
+      ) {
+        setValue("itinerary", [{ hari: 1, aktivitas: "" }]);
+      }
+    } else {
+      // Sewa Mobil or other: clear tour-specific data
+      setValue("tarifHotel", []);
+      setValue("itinerary", [{ hari: 1, aktivitas: "" }]);
+      setValue("hargaDefault", getValues("hargaDefault") ?? 0);
+      setValue("tarifOvertime", getValues("tarifOvertime") ?? 0);
+    }
+  }, [tipePaket, open, setValue, getValues]);
+
+  // Live validation: watch tarifHotel priceRanges and validate on change
+  const watchedTarifHotel = watch("tarifHotel");
+  useEffect(() => {
+    if (!watchedTarifHotel || !Array.isArray(watchedTarifHotel)) return;
+    watchedTarifHotel.forEach((tier, i) => {
+      // clear any previous nested errors for this tier
+      clearErrors(`tarifHotel.${i}.priceRanges`);
+
+      if (
+        tier?.priceRanges &&
+        Array.isArray(tier.priceRanges) &&
+        tier.priceRanges.length > 0
+      ) {
+        const detail = getPriceRangeConflicts(tier.priceRanges);
+
+        // field-level validation errors (min/max invalid)
+        if (Array.isArray(detail.errors) && detail.errors.length > 0) {
+          detail.errors.forEach((err) => {
+            // set error on minPax field of that range (will show next to inputs)
+            setError(`tarifHotel.${i}.priceRanges.${err.index}.minPax`, {
+              type: "manual",
+              message: err.message,
+            });
+            setError(`tarifHotel.${i}.priceRanges.${err.index}.maxPax`, {
+              type: "manual",
+              message: err.message,
+            });
+          });
+        }
+
+        // overlaps: mark both ranges involved
+        if (Array.isArray(detail.overlaps) && detail.overlaps.length > 0) {
+          detail.overlaps.forEach((ov) => {
+            const aMsg = `Overlap dengan rentang ${ov.b.min}-${ov.b.max}`;
+            const bMsg = `Overlap dengan rentang ${ov.a.min}-${ov.a.max}`;
+            setError(`tarifHotel.${i}.priceRanges.${ov.aIndex}.minPax`, {
+              type: "manual",
+              message: aMsg,
+            });
+            setError(`tarifHotel.${i}.priceRanges.${ov.aIndex}.maxPax`, {
+              type: "manual",
+              message: aMsg,
+            });
+            setError(`tarifHotel.${i}.priceRanges.${ov.bIndex}.minPax`, {
+              type: "manual",
+              message: bMsg,
+            });
+            setError(`tarifHotel.${i}.priceRanges.${ov.bIndex}.maxPax`, {
+              type: "manual",
+              message: bMsg,
+            });
+          });
+        }
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedTarifHotel]);
+
   const onSubmit = (data) => {
+    // client-side validation for priceRanges when Paket Tour
+    if (data.tipePaket === "Paket Tour" && Array.isArray(data.tarifHotel)) {
+      for (let i = 0; i < data.tarifHotel.length; i++) {
+        const tier = data.tarifHotel[i];
+        if (tier.priceRanges) {
+          const v = validatePriceRangesForTier(tier.priceRanges);
+          if (!v.ok) {
+            // set form error on the nested field and abort submit
+            setError(`tarifHotel.${i}.priceRanges`, {
+              type: "manual",
+              message: v.message,
+            });
+            return;
+          } else {
+            clearErrors(`tarifHotel.${i}.priceRanges`);
+          }
+        }
+      }
+    }
     const packageData = {
       namaPaket: data.namaPaket,
       tipePaket: data.tipePaket,
@@ -263,25 +416,232 @@ export function PackageForm({
                     name="tipePaket"
                     control={control}
                     rules={{ required: "Tipe paket harus dipilih" }}
-                    render={({ field }) => (
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <SelectTrigger id="tipePaket">
-                          <SelectValue placeholder="Pilih tipe paket" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Sewa Mobil">Sewa Mobil</SelectItem>
-                          <SelectItem value="Full Day Trip">
-                            Full Day Trip (1 Hari)
-                          </SelectItem>
-                          <SelectItem value="Paket Tour">
-                            Paket Tour (Multi Hari)
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
+                    render={({ field }) => {
+                      const willCauseDataLoss = (oldType, newType) => {
+                        if (!oldType || oldType === newType) return false;
+                        const tarifHotel = getValues("tarifHotel") || [];
+                        const itinerary = getValues("itinerary") || [];
+                        const price = Number(getValues("hargaDefault") || 0);
+                        const overtime = Number(
+                          getValues("tarifOvertime") || 0
+                        );
+
+                        // Tour -> switching away will remove hotel tiers + itineraries
+                        if (
+                          oldType === "Paket Tour" &&
+                          newType !== "Paket Tour" &&
+                          ((Array.isArray(tarifHotel) &&
+                            tarifHotel.length > 0) ||
+                            (Array.isArray(itinerary) && itinerary.length > 0))
+                        )
+                          return true;
+
+                        // Sewa Mobil -> switching away may remove price/overtime
+                        if (
+                          oldType === "Sewa Mobil" &&
+                          newType !== "Sewa Mobil" &&
+                          (price > 0 || overtime > 0)
+                        )
+                          return true;
+
+                        // Full Day Trip -> switching away may remove itinerary or price
+                        if (
+                          oldType === "Full Day Trip" &&
+                          newType !== "Full Day Trip" &&
+                          ((Array.isArray(itinerary) && itinerary.length > 0) ||
+                            price > 0 ||
+                            overtime > 0)
+                        )
+                          return true;
+
+                        return false;
+                      };
+
+                      const handleTypeChange = (val) => {
+                        const old = field.value || getValues("tipePaket");
+                        if (willCauseDataLoss(old, val)) {
+                          setPendingType(val);
+                          setShowTypeConfirm(true);
+                        } else {
+                          field.onChange(val);
+                        }
+                      };
+
+                      const confirmChange = () => {
+                        if (pendingType) {
+                          // apply the pending type
+                          setValue("tipePaket", pendingType);
+                        }
+                        setPendingType(null);
+                        setShowTypeConfirm(false);
+                      };
+
+                      const cancelChange = () => {
+                        setPendingType(null);
+                        setShowTypeConfirm(false);
+                      };
+
+                      // compute details for the confirmation dialog
+                      const tarifHotelVals = getValues("tarifHotel") || [];
+                      const hotelTierCount = Array.isArray(tarifHotelVals)
+                        ? tarifHotelVals.length
+                        : 0;
+                      const hotelCount = Array.isArray(tarifHotelVals)
+                        ? tarifHotelVals.reduce(
+                            (acc, t) =>
+                              acc +
+                              (Array.isArray(t.daftarHotel)
+                                ? t.daftarHotel.length
+                                : Array.isArray(t.hotels)
+                                ? t.hotels.length
+                                : 0),
+                            0
+                          )
+                        : 0;
+                      const itineraryVals = getValues("itinerary") || [];
+                      const itineraryCount = Array.isArray(itineraryVals)
+                        ? itineraryVals.length
+                        : 0;
+                      const priceVal = Number(getValues("hargaDefault") || 0);
+                      const overtimeVal = Number(
+                        getValues("tarifOvertime") || 0
+                      );
+                      const fmt = (v) => {
+                        try {
+                          return new Intl.NumberFormat("id-ID", {
+                            style: "currency",
+                            currency: "IDR",
+                            maximumFractionDigits: 0,
+                          }).format(v);
+                        } catch (e) {
+                          return String(v);
+                        }
+                      };
+
+                      return (
+                        <>
+                          <Select
+                            onValueChange={handleTypeChange}
+                            value={field.value}
+                          >
+                            <SelectTrigger id="tipePaket">
+                              <SelectValue placeholder="Pilih tipe paket" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Sewa Mobil">
+                                Sewa Mobil
+                              </SelectItem>
+                              <SelectItem value="Full Day Trip">
+                                Full Day Trip (1 Hari)
+                              </SelectItem>
+                              <SelectItem value="Paket Tour">
+                                Paket Tour (Multi Hari)
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+
+                          <Dialog
+                            open={showTypeConfirm}
+                            onOpenChange={setShowTypeConfirm}
+                          >
+                            <DialogContent className="sm:max-w-[420px]">
+                              <div className="space-y-4">
+                                <h3 className="text-lg font-semibold">
+                                  Konfirmasi Perubahan Tipe
+                                </h3>
+                                <p>
+                                  Anda akan mengubah tipe paket dari{" "}
+                                  <strong>{field.value}</strong> ke{" "}
+                                  <strong>{pendingType}</strong>.
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  Perubahan berikut akan terjadi jika Anda
+                                  melanjutkan:
+                                </p>
+                                <ul className="list-disc pl-5 text-sm space-y-1">
+                                  {field.value === "Paket Tour" &&
+                                    pendingType !== "Paket Tour" && (
+                                      <>
+                                        <li>
+                                          Menghapus {hotelTierCount} tingkat
+                                          hotel (total {hotelCount} hotel)
+                                        </li>
+                                        <li>
+                                          Menghapus {itineraryCount} hari
+                                          itinerary
+                                        </li>
+                                      </>
+                                    )}
+
+                                  {field.value === "Sewa Mobil" &&
+                                    pendingType !== "Sewa Mobil" &&
+                                    (priceVal > 0 || overtimeVal > 0) && (
+                                      <>
+                                        {priceVal > 0 && (
+                                          <li>
+                                            Menghapus Harga Default:{" "}
+                                            {fmt(priceVal)}
+                                          </li>
+                                        )}
+                                        {overtimeVal > 0 && (
+                                          <li>
+                                            Menghapus Tarif Overtime:{" "}
+                                            {fmt(overtimeVal)}/jam
+                                          </li>
+                                        )}
+                                      </>
+                                    )}
+
+                                  {field.value === "Full Day Trip" &&
+                                    pendingType !== "Full Day Trip" && (
+                                      <>
+                                        {itineraryCount > 0 && (
+                                          <li>
+                                            Menghapus {itineraryCount} hari
+                                            itinerary
+                                          </li>
+                                        )}
+                                        {priceVal > 0 && (
+                                          <li>
+                                            Menghapus Harga Default:{" "}
+                                            {fmt(priceVal)}
+                                          </li>
+                                        )}
+                                        {overtimeVal > 0 && (
+                                          <li>
+                                            Menghapus Tarif Overtime:{" "}
+                                            {fmt(overtimeVal)}/jam
+                                          </li>
+                                        )}
+                                      </>
+                                    )}
+
+                                  <li className="text-gray-600">
+                                    Data lain yang relevan dengan tipe saat ini
+                                    akan dihapus atau dikosongkan.
+                                  </li>
+                                </ul>
+
+                                <div className="flex justify-end gap-2">
+                                  <Button
+                                    variant="outline"
+                                    onClick={cancelChange}
+                                  >
+                                    Batal
+                                  </Button>
+                                  <Button
+                                    onClick={confirmChange}
+                                    className="bg-red-600 hover:bg-red-700"
+                                  >
+                                    Lanjutkan
+                                  </Button>
+                                </div>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                        </>
+                      );
+                    }}
                   />
                 </FormControl>
                 {errors.tipePaket && (
@@ -732,6 +1092,123 @@ export function PackageForm({
                           </FormControl>
                         </FormItem>
                       </FormField>
+
+                      <FormField>
+                        <FormItem>
+                          <FormLabel>Price Ranges (per Pax)</FormLabel>
+                          <FormControl>
+                            <div className="space-y-2">
+                              {(
+                                getValues(`tarifHotel.${index}.priceRanges`) ||
+                                []
+                              ).map((r, ri) => {
+                                const fieldError =
+                                  errors?.tarifHotel?.[index]?.priceRanges?.[ri]
+                                    ?.minPax?.message ||
+                                  errors?.tarifHotel?.[index]?.priceRanges?.[ri]
+                                    ?.maxPax?.message ||
+                                  errors?.tarifHotel?.[index]?.priceRanges?.[ri]
+                                    ?.price?.message;
+                                return (
+                                  <div
+                                    key={ri}
+                                    className="flex gap-2 items-center"
+                                  >
+                                    <Input
+                                      type="number"
+                                      className={`w-24 ${
+                                        fieldError ? "border-red-500" : ""
+                                      }`}
+                                      {...register(
+                                        `tarifHotel.${index}.priceRanges.${ri}.minPax`,
+                                        { valueAsNumber: true }
+                                      )}
+                                      placeholder="min"
+                                    />
+                                    <span className="text-sm">-</span>
+                                    <Input
+                                      type="number"
+                                      className={`w-24 ${
+                                        fieldError ? "border-red-500" : ""
+                                      }`}
+                                      {...register(
+                                        `tarifHotel.${index}.priceRanges.${ri}.maxPax`,
+                                        { valueAsNumber: true }
+                                      )}
+                                      placeholder="max"
+                                    />
+                                    <Input
+                                      type="number"
+                                      className={`w-36 ${
+                                        fieldError ? "border-red-500" : ""
+                                      }`}
+                                      {...register(
+                                        `tarifHotel.${index}.priceRanges.${ri}.price`,
+                                        { valueAsNumber: true }
+                                      )}
+                                      placeholder="price"
+                                    />
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="icon"
+                                      onClick={() => {
+                                        const arr =
+                                          getValues(
+                                            `tarifHotel.${index}.priceRanges`
+                                          ) || [];
+                                        const next = arr.filter(
+                                          (_, i) => i !== ri
+                                        );
+                                        setValue(
+                                          `tarifHotel.${index}.priceRanges`,
+                                          next
+                                        );
+                                      }}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                    {fieldError && (
+                                      <p className="text-red-600 text-sm ml-2">
+                                        {fieldError}
+                                      </p>
+                                    )}
+                                  </div>
+                                );
+                              })}
+
+                              <div>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const arr =
+                                      getValues(
+                                        `tarifHotel.${index}.priceRanges`
+                                      ) || [];
+                                    setValue(
+                                      `tarifHotel.${index}.priceRanges`,
+                                      [
+                                        ...arr,
+                                        { minPax: 1, maxPax: 1, price: 0 },
+                                      ]
+                                    );
+                                  }}
+                                >
+                                  <Plus className="mr-2 h-4 w-4" />
+                                  Tambah Rentang
+                                </Button>
+                              </div>
+                              {errors?.tarifHotel?.[index]?.priceRanges && (
+                                <p className="text-red-600 text-sm mt-1">
+                                  {errors.tarifHotel[index].priceRanges.message}
+                                </p>
+                              )}
+                            </div>
+                          </FormControl>
+                        </FormItem>
+                      </FormField>
                     </div>
                   ))}
                   <Button
@@ -744,6 +1221,7 @@ export function PackageForm({
                         tingkat: "Bintang 3",
                         tarifPerPax: 0,
                         daftarHotel: [],
+                        priceRanges: [],
                       })
                     }
                   >

@@ -3,10 +3,10 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import PackageHeader from "@/components/packages/PackageHeader";
-import { PackageForm } from "@/components/packages/package-form";
-import { PackageList } from "@/components/packages/package-list";
-import { PackageDetail } from "@/components/packages/package-detail";
-import { DeleteConfirmation } from "@/components/packages/delete-confirmation";
+import { PackageForm } from "@/components/packages/PackageForm";
+import { PackageList } from "@/components/packages/PackageList";
+import { PackageDetail } from "@/components/packages/PackageDetail";
+import { DeleteConfirmation } from "@/components/packages/DeleteConfirmation";
 
 export default function PackagesPage() {
   const [packages, setPackages] = useState([]);
@@ -30,7 +30,7 @@ export default function PackagesPage() {
         console.error("Failed to parse /api/packages response as JSON", err);
         return null;
       });
-
+      
       if (!Array.isArray(data)) {
         console.warn(
           "/api/packages returned unexpected payload, expected array.",

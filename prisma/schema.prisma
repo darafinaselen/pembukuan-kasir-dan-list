@@ -70,12 +70,13 @@ model ServicePackage {
 }
 
 model HotelTier {
-  id               String   @id @default(uuid())
+  id               String            @id @default(uuid())
   starRating       Int
   pricePerPax      Int
   servicePackageId String
-  servicePackage   ServicePackage @relation(fields: [servicePackageId], references: [id], onDelete: Cascade)
+  servicePackage   ServicePackage    @relation(fields: [servicePackageId], references: [id], onDelete: Cascade)
   hotels           Hotel[]
+  priceRanges      HotelPriceRange[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -95,8 +96,22 @@ model Hotel {
   @@map("hotels")
 }
 
+model HotelPriceRange {
+  id          String    @id @default(uuid())
+  minPax      Int
+  maxPax      Int
+  price       Int
+  hotelTierId String
+  hotelTier   HotelTier @relation(fields: [hotelTierId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("hotel_price_ranges")
+}
+
 model ItineraryDay {
-  id               String   @id @default(uuid())
+  id               String         @id @default(uuid())
   day              Int
   title            String
   description      String?
@@ -108,7 +123,6 @@ model ItineraryDay {
 
   @@map("itinerary_days")
 }
-
 
 // Modul 3: Manajemen Armada
 model Armada {

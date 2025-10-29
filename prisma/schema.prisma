@@ -5,11 +5,7 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client"
-  # Output to the Next.js app folder under `src` so imports like
-  # `import { PrismaClient } from '../../app/generated/prisma'` resolve.
-  # Adjusted to point to `src/app/generated/prisma` (relative to `prisma/`).
-  output   = "../src/app/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -20,6 +16,7 @@ datasource db {
 enum PackageType {
   CAR_RENTAL
   TOUR_PACKAGE
+  FULL_DAY_TRIP
 }
 
 enum ArmadaStatus {
@@ -41,25 +38,90 @@ enum PaymentStatus {
   PAID
 }
 
-// 3. Model Database (Master Data - Milik Developer B)
-
 // Modul 2.5: Manajemen Paket Jasa
-model Package {
-  id                      String        @id @default(uuid())
-  package_name            String
-  package_type            PackageType
-  description             String?
-  default_price           Int
-  default_duration_hours  Int
-  default_overtime_rate   Int
-  
+model ServicePackage {
+  id                String      @id @default(uuid())
+  name              String
+  type              PackageType
+  description       String?
+  includes          String[]
+  excludes          String[]
+  isCustomizable    Boolean     @default(false)
+  customizableItems String[]
+
+  // Fields for CAR_RENTAL type
+  price         Int?
+  durationHours Int?
+  overtimeRate  Int?
+
+  // Fields for TOUR_PACKAGE type
+  durationDays   Int?
+  durationNights Int?
+  hotelTiers     HotelTier[]
+  itineraries    ItineraryDay[]
+
   // Relasi: Satu paket bisa digunakan di banyak transaksi
-  transactions            Transaction[] 
+  transactions Transaction[]
 
-  createdAt               DateTime      @default(now())
-  updatedAt               DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  @@map("packages")
+  @@map("service_packages")
+}
+
+model HotelTier {
+  id               String            @id @default(uuid())
+  starRating       Int
+  pricePerPax      Int
+  servicePackageId String
+  servicePackage   ServicePackage    @relation(fields: [servicePackageId], references: [id], onDelete: Cascade)
+  hotels           Hotel[]
+  priceRanges      HotelPriceRange[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("hotel_tiers")
+}
+
+model Hotel {
+  id          String    @id @default(uuid())
+  name        String
+  hotelTierId String
+  hotelTier   HotelTier @relation(fields: [hotelTierId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("hotels")
+}
+
+model HotelPriceRange {
+  id          String    @id @default(uuid())
+  minPax      Int
+  maxPax      Int
+  price       Int
+  hotelTierId String
+  hotelTier   HotelTier @relation(fields: [hotelTierId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("hotel_price_ranges")
+}
+
+model ItineraryDay {
+  id               String         @id @default(uuid())
+  day              Int
+  title            String
+  description      String?
+  servicePackageId String
+  servicePackage   ServicePackage @relation(fields: [servicePackageId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("itinerary_days")
 }
 
 // Modul 3: Manajemen Armada
@@ -68,16 +130,15 @@ model Armada {
   license_plate String       @unique
   brand         String
   model         String
-  year          Int
   status        ArmadaStatus @default(READY)
 
   // Relasi: Satu armada bisa ada di banyak transaksi
-  transactions  Transaction[]
+  transactions Transaction[]
   // Relasi: Satu armada bisa memiliki banyak catatan pengeluaran (servis, dll)
-  expenses      Expense[]     
+  expenses     Expense[]
 
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("armadas")
 }
@@ -86,19 +147,19 @@ model Armada {
 model Driver {
   id           String       @id @default(uuid())
   driver_name  String
+  nik          String?
   phone_number String
   address      String?
   status       DriverStatus @default(READY)
 
   // Relasi: Satu sopir bisa ditugaskan di banyak transaksi
-  transactions Transaction[] 
+  transactions Transaction[]
 
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("drivers")
 }
-
 
 // 4. Model Database (Data Transaksional - Milik Developer A)
 
@@ -106,199 +167,55 @@ model Driver {
 model Expense {
   id          String   @id @default(uuid())
   date        DateTime @db.Date
-  category    String   // Misal: "Servis", "Biaya Kantor", "Gaji Admin"
+  category    String // Misal: "Servis", "Biaya Kantor", "Gaji Admin"
   description String
   amount      Int
 
   // Relasi: Pengeluaran ini (opsional) terkait dengan armada mana
-  armadaId    String?
-  armada      Armada?  @relation(fields: [armadaId], references: [id], onDelete: SetNull)
+  armadaId String?
+  armada   Armada? @relation(fields: [armadaId], references: [id], onDelete: SetNull)
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("expenses")
 }
 
 // Modul 2: Manajemen Transaksi
 model Transaction {
-  id                      String        @id @default(uuid())
-  invoice_code            String        @unique
-  customer_name           String
-  customer_phone          String
-  booking_date            DateTime      @db.Date
-  checkout_datetime       DateTime      // Waktu mobil keluar
-  checkin_datetime        DateTime      // Waktu mobil kembali
-  
+  id                String   @id @default(uuid())
+  invoice_code      String   @unique
+  customer_name     String
+  customer_phone    String
+  booking_date      DateTime @db.Date
+  checkout_datetime DateTime // Waktu mobil keluar
+  checkin_datetime  DateTime // Waktu mobil kembali
+
   // Data Keuangan
-  all_in_rate             Int           // Tarif sewa
-  overtime_rate_per_hour  Int
-  fuel_cost               Int           // Biaya BBM (dicatat per transaksi)
-  driver_fee              Int           // Biaya Gaji Sopir (dicatat per transaksi)
-  payment_status          PaymentStatus @default(UNPAID)
+  all_in_rate            Int // Tarif sewa
+  overtime_rate_per_hour Int
+  fuel_cost              Int // Biaya BBM (dicatat per transaksi)
+  driver_fee             Int // Biaya Gaji Sopir (dicatat per transaksi)
+  payment_status         PaymentStatus @default(UNPAID)
 
   // --- Relasi (Foreign Keys) ---
 
   // Relasi: Transaksi ini (opsional) menggunakan paket apa
-  packageId               String?
-  package                 Package?      @relation(fields: [packageId], references: [id], onDelete: SetNull)
+  packageId String?
+  package   ServicePackage? @relation(fields: [packageId], references: [id], onDelete: SetNull)
 
   // Relasi: Transaksi ini (wajib) menggunakan armada apa
   // onDelete: Restrict -> Mencegah armada dihapus jika masih punya riwayat transaksi
-  armadaId                String
-  armada                  Armada        @relation(fields: [armadaId], references: [id], onDelete: Restrict)
+  armadaId String
+  armada   Armada @relation(fields: [armadaId], references: [id], onDelete: Restrict)
 
   // Relasi: Transaksi ini (wajib) menggunakan sopir siapa
   // onDelete: Restrict -> Mencegah sopir dihapus jika masih punya riwayat transaksi
-  driverId                String
-  driver                  Driver        @relation(fields: [driverId], references: [id], onDelete: Restrict)
+  driverId String
+  driver   Driver @relation(fields: [driverId], references: [id], onDelete: Restrict)
 
-  createdAt               DateTime      @default(now())
-  updatedAt               DateTime      @updatedAt
-
-  @@map("transactions")
-}
-
-enum PackageType {
-  CAR_RENTAL
-  TOUR_PACKAGE
-}
-
-enum ArmadaStatus {
-  READY
-  BOOKED
-  ON_TRIP
-  MAINTENANCE
-}
-
-enum DriverStatus {
-  READY
-  ON_TRIP
-  OFF_DUTY
-}
-
-enum PaymentStatus {
-  UNPAID
-  DOWN_PAYMENT
-  PAID
-}
-
-// 3. Model Database (Master Data - Milik Developer B)
-
-// Modul 2.5: Manajemen Paket Jasa
-model Package {
-  id                      String        @id @default(uuid())
-  package_name            String
-  package_type            PackageType
-  description             String?
-  default_price           Int
-  default_duration_hours  Int
-  default_overtime_rate   Int
-  
-  // Relasi: Satu paket bisa digunakan di banyak transaksi
-  transactions            Transaction[] 
-
-  createdAt               DateTime      @default(now())
-  updatedAt               DateTime      @updatedAt
-
-  @@map("packages")
-}
-
-// Modul 3: Manajemen Armada
-model Armada {
-  id            String       @id @default(uuid())
-  license_plate String       @unique
-  brand         String
-  model         String
-  year          Int
-  status        ArmadaStatus @default(READY)
-
-  // Relasi: Satu armada bisa ada di banyak transaksi
-  transactions  Transaction[]
-  // Relasi: Satu armada bisa memiliki banyak catatan pengeluaran (servis, dll)
-  expenses      Expense[]     
-
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-
-  @@map("armadas")
-}
-
-// Modul 4: Manajemen Sopir
-model Driver {
-  id           String       @id @default(uuid())
-  driver_name  String
-  phone_number String
-  address      String?
-  status       DriverStatus @default(READY)
-
-  // Relasi: Satu sopir bisa ditugaskan di banyak transaksi
-  transactions Transaction[] 
-
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-
-  @@map("drivers")
-}
-
-
-// 4. Model Database (Data Transaksional - Milik Developer A)
-
-// Modul 5: Manajemen Pengeluaran Operasional
-model Expense {
-  id          String   @id @default(uuid())
-  date        DateTime @db.Date
-  category    String   // Misal: "Servis", "Biaya Kantor", "Gaji Admin"
-  description String
-  amount      Int
-
-  // Relasi: Pengeluaran ini (opsional) terkait dengan armada mana
-  armadaId    String?
-  armada      Armada?  @relation(fields: [armadaId], references: [id], onDelete: SetNull)
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@map("expenses")
-}
-
-// Modul 2: Manajemen Transaksi
-model Transaction {
-  id                      String        @id @default(uuid())
-  invoice_code            String        @unique
-  customer_name           String
-  customer_phone          String
-  booking_date            DateTime      @db.Date
-  checkout_datetime       DateTime      // Waktu mobil keluar
-  checkin_datetime        DateTime      // Waktu mobil kembali
-  
-  // Data Keuangan
-  all_in_rate             Int           // Tarif sewa
-  overtime_rate_per_hour  Int
-  fuel_cost               Int           // Biaya BBM (dicatat per transaksi)
-  driver_fee              Int           // Biaya Gaji Sopir (dicatat per transaksi)
-  payment_status          PaymentStatus @default(UNPAID)
-
-  // --- Relasi (Foreign Keys) ---
-
-  // Relasi: Transaksi ini (opsional) menggunakan paket apa
-  packageId               String?
-  package                 Package?      @relation(fields: [packageId], references: [id], onDelete: SetNull)
-
-  // Relasi: Transaksi ini (wajib) menggunakan armada apa
-  // onDelete: Restrict -> Mencegah armada dihapus jika masih punya riwayat transaksi
-  armadaId                String
-  armada                  Armada        @relation(fields: [armadaId], references: [id], onDelete: Restrict)
-
-  // Relasi: Transaksi ini (wajib) menggunakan sopir siapa
-  // onDelete: Restrict -> Mencegah sopir dihapus jika masih punya riwayat transaksi
-  driverId                String
-  driver                  Driver        @relation(fields: [driverId], references: [id], onDelete: Restrict)
-
-  createdAt               DateTime      @default(now())
-  updatedAt               DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("transactions")
 }
-
-

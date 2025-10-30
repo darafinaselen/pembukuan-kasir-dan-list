@@ -5,9 +5,9 @@ const prisma = new PrismaClient();
 
 export async function GET() {
   try {
-    const data = await prisma.pengeluaran.findMany({
+    const data = await prisma.expense.findMany({
       orderBy: {
-        tanggal: "desc",
+        date: "desc",
       },
     });
     return NextResponse.json(data);
@@ -24,19 +24,19 @@ export async function POST(request) {
   try {
     const body = await request.json();
 
-    if (!body.tanggal || !body.kategori || !body.deskripsi || !body.jumlah) {
+    if (!body.date || !body.category || !body.description || !body.amount) {
       return NextResponse.json(
         { error: "Data tidak lengkap" },
         { status: 400 }
       );
     }
 
-    const newData = await prisma.pengeluaran.create({
+    const newData = await prisma.expense.create({
       data: {
-        tanggal: body.tanggal,
-        kategori: body.kategori,
-        deskripsi: body.deskripsi,
-        jumlah: body.jumlah,
+        date: body.date,
+        category: body.category,
+        description: body.description,
+        amount: body.amount,
         armadaId: body.armadaId,
       },
     });

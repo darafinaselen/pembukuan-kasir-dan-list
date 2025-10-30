@@ -48,9 +48,9 @@ export default function PengeluaranDialog({
               Tanggal
             </Label>
             <Input
-              id="tanggal"
+              id="date"
               type="date"
-              value={formData.tanggal}
+              value={formData.date}
               onChange={handleInputChange}
               className="col-span-3"
               required
@@ -58,12 +58,12 @@ export default function PengeluaranDialog({
           </div>
 
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="kategori" className="text-right">
+            <Label htmlFor="category" className="text-right">
               Kategori
             </Label>
             <Select
-              value={formData.kategori}
-              onValueChange={(value) => handleSelectChange("kategori", value)}
+              value={formData.category}
+              onValueChange={(value) => handleSelectChange("category", value)}
               required
             >
               <SelectTrigger className="col-span-3">
@@ -83,12 +83,12 @@ export default function PengeluaranDialog({
           </div>
 
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="deskripsi" className="text-right">
+            <Label htmlFor="description" className="text-right">
               Deskripsi
             </Label>
             <Input
-              id="deskripsi"
-              value={formData.deskripsi}
+              id="description"
+              value={formData.description}
               onChange={handleInputChange}
               className="col-span-3"
               required
@@ -96,13 +96,13 @@ export default function PengeluaranDialog({
           </div>
 
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="jumlah" className="text-right">
+            <Label htmlFor="amount" className="text-right">
               Jumlah (Rp)
             </Label>
             <Input
-              id="jumlah"
+              id="amount"
               type="number"
-              value={formData.jumlah}
+              value={formData.amount}
               onChange={handleInputChange}
               className="col-span-3"
               required

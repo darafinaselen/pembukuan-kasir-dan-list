@@ -11,13 +11,13 @@ export async function PUT(request, { params }) {
 
   try {
     const body = await request.json();
-    const updatedData = await prisma.pengeluaran.update({
+    const updatedData = await prisma.expense.update({
       where: { id: idFromParams },
       data: {
-        tanggal: body.tanggal,
-        kategori: body.kategori,
-        deskripsi: body.deskripsi,
-        jumlah: body.jumlah,
+        date: body.date,
+        category: body.category,
+        description: body.description,
+        amount: body.amount,
         armadaId: body.armadaId,
       },
     });
@@ -34,7 +34,7 @@ export async function PUT(request, { params }) {
 export async function DELETE(request, { params }) {
   const { id: idFromParams } = await params;
   try {
-    await prisma.pengeluaran.delete({
+    await prisma.expense.delete({
       where: { id: idFromParams },
     });
     return NextResponse.json(

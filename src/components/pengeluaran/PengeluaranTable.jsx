@@ -106,11 +106,11 @@ export default function PengeluaranTable({
         <TableBody>
           {data.map((item) => (
             <TableRow key={item.id}>
-              <TableCell>{formatDate(item.tanggal)}</TableCell>
-              <TableCell>{item.kategori}</TableCell>
-              <TableCell>{item.deskripsi}</TableCell>
+              <TableCell>{formatDate(item.date)}</TableCell>
+              <TableCell>{item.category}</TableCell>
+              <TableCell>{item.description}</TableCell>
               <TableCell className="text-right">
-                {formatCurrency(item.jumlah)}
+                {formatCurrency(item.amount)}
               </TableCell>
               <TableCell>
                 <div className="lg:hidden">

@@ -14,10 +14,10 @@ function getTodayDateString() {
 }
 
 const INITIAL_FORM_STATE = {
-  tanggal: getTodayDateString(),
-  kategori: "",
-  deskripsi: "",
-  jumlah: "",
+  date: getTodayDateString(),
+  category: "",
+  description: "",
+  amount: "",
   armadaId: null,
 };
 
@@ -40,7 +40,7 @@ export default function PengeluaranPage() {
   async function fetchData() {
     try {
       setIsLoading(true);
-      const res = await fetch("/api/pengeluaran");
+      const res = await fetch("/api/expenses");
       if (!res.ok) throw new Error("fetch failed");
       const fetchedData = await res.json();
 
@@ -128,8 +128,8 @@ export default function PengeluaranPage() {
     setEditingData(item);
     setFormData({
       ...item,
-      tanggal: new Date(item.tanggal).toISOString().split("T")[0],
-      jumlah: item.jumlah.toString(),
+      date: new Date(item.date).toISOString().split("T")[0],
+      amount: item.amount.toString(),
     });
     setIsDialogOpen(true);
   };
@@ -138,7 +138,7 @@ export default function PengeluaranPage() {
     if (!confirm("Yakin ingin menghapus data ini?")) return;
     try {
       console.log("Menghapus data ID:", id);
-      const res = await fetch(`/api/pengeluaran/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/expenses/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("delete failed");
 
       // Optimistic UI: Hapus dari state
@@ -155,13 +155,13 @@ export default function PengeluaranPage() {
     try {
       const method = editingData ? "PUT" : "POST";
       const url = editingData
-        ? `/api/pengeluaran/${editingData.id}`
-        : "/api/pengeluaran";
+        ? `/api/expenses/${editingData.id}`
+        : "/api/expenses";
 
       const body = JSON.stringify({
         ...formData,
-        jumlah: parseInt(formData.jumlah, 10),
-        tanggal: new Date(formData.tanggal).toISOString(),
+        amount: parseInt(formData.amount, 10),
+        date: new Date(formData.date).toISOString(),
       });
 
       console.log("Submitting:", method, url, body);

@@ -18,10 +18,10 @@ import { cn } from "@/lib/utils";
 export default function PengeluaranFilters({
   searchTerm,
   onSearchChange,
-  dateRange, // Obyek { from: Date | undefined, to: Date | undefined }
-  onDateChange, // Fungsi (name: 'from' | 'to', value: Date | undefined) => void
-  quickFilter, // 'all', 'month', 'year'
-  onQuickFilterChange, // Fungsi (value: 'all' | 'month' | 'year') => void
+  dateRange,
+  onDateChange,
+  quickFilter,
+  onQuickFilterChange,
 }) {
   return (
     <div className="flex flex-wrap items-center gap-4 border-b bg-background p-4">

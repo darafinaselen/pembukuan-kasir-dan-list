@@ -124,6 +124,7 @@ export default function PengeluaranPage() {
   };
 
   const openEditDialog = (item) => {
+    console.log("Mencoba meng-edit item:", item);
     setEditingData(item);
     setFormData({
       ...item,

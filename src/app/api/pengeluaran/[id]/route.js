@@ -4,11 +4,15 @@ import { NextResponse } from "next/server";
 const prisma = new PrismaClient();
 
 export async function PUT(request, { params }) {
-  const { id } = params;
+  const { id: idFromParams } = await params;
+
+  console.log("PARAMS DITERIMA:", params);
+  console.log("ID DIDAPAT:", idFromParams);
+
   try {
     const body = await request.json();
     const updatedData = await prisma.pengeluaran.update({
-      where: { id: id },
+      where: { id: idFromParams },
       data: {
         tanggal: body.tanggal,
         kategori: body.kategori,
@@ -19,7 +23,7 @@ export async function PUT(request, { params }) {
     });
     return NextResponse.json(updatedData);
   } catch (error) {
-    console.error(`Error updating pengeluaran ${id}:`, error);
+    console.error(`Error updating pengeluaran ${idFromParams}:`, error);
     return NextResponse.json(
       { error: "Gagal mengupdate data" },
       { status: 500 }
@@ -28,10 +32,10 @@ export async function PUT(request, { params }) {
 }
 
 export async function DELETE(request, { params }) {
-  const { id } = params;
+  const { id: idFromParams } = await params;
   try {
     await prisma.pengeluaran.delete({
-      where: { id: id },
+      where: { id: idFromParams },
     });
     return NextResponse.json(
       { message: "Data berhasil dihapus" },

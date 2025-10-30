@@ -38,6 +38,32 @@ enum PaymentStatus {
   PAID
 }
 
+enum KategoriPengeluaran{
+  SERVIS_ARMADA
+  BIAYA_KANTOR
+  LISTRIK_AIR
+  TOL_PARKIR_NON_PAKET
+  GAJI_ADMIN
+  LAIN_LAIN
+}
+
+//Modul 5 Manajemen Pengeluaran Operasional
+model Pengeluaran {
+  id          String    @id @default(uuid())
+  tanggal     DateTime
+  kategori    KategoriPengeluaran
+  deskripsi   String
+  jumlah      Int    
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  armadaId    String?
+  armada      Armada?   @relation(fields: [armadaId], references: [id], onDelete: SetNull)
+
+  @@index([armadaId])
+}
+
 // Modul 2.5: Manajemen Paket Jasa
 model ServicePackage {
   id                String      @id @default(uuid())
@@ -136,6 +162,7 @@ model Armada {
   transactions Transaction[]
   // Relasi: Satu armada bisa memiliki banyak catatan pengeluaran (servis, dll)
   expenses     Expense[]
+  pengeluaran   Pengeluaran[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

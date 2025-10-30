@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { BookOpen, GalleryVerticalEnd } from "lucide-react";
+import { BookOpen, GalleryVerticalEnd, DollarSign } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
@@ -44,6 +44,17 @@ const data = {
         {
           title: "Sopir",
           url: "/drivers",
+        },
+      ],
+    },
+    {
+      title: "Laporan Keuangan",
+      icon: DollarSign,
+      isActive: false,
+      items: [
+        {
+          title: "Pengeluaran",
+          url: "/pengeluaran",
         },
       ],
     },

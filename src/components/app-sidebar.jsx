@@ -56,6 +56,10 @@ const data = {
           title: "Pengeluaran",
           url: "/pengeluaran",
         },
+        {
+          title: "Transaksi",
+          url: "/transaksi",
+        },
       ],
     },
   ],

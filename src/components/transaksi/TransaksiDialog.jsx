@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -242,42 +243,36 @@ export default function TransaksiDialog({
                 </legend>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="grid gap-1.5">
-                    <Label htmlFor="all_in_rate">Tarif Sewa (Rp)</Label>
-                    <Input
+                    <Label htmlFor="all_in_rate">Tarif Sewa</Label>
+                    <CurrencyInput
                       id="all_in_rate"
-                      type="number"
                       value={formData.all_in_rate}
                       onChange={handleInputChange}
                       required
                     />
                   </div>
                   <div className="grid gap-1.5">
-                    <Label htmlFor="overtime_rate_per_hour">
-                      Overtime/Jam (Rp)
-                    </Label>
-                    <Input
+                    <Label htmlFor="overtime_rate_per_hour">Overtime/Jam</Label>
+                    <CurrencyInput
                       id="overtime_rate_per_hour"
-                      type="number"
                       value={formData.overtime_rate_per_hour}
                       onChange={handleInputChange}
                       required
                     />
                   </div>
                   <div className="grid gap-1.5">
-                    <Label htmlFor="fuel_cost">BBM (Rp)</Label>
-                    <Input
+                    <Label htmlFor="fuel_cost">BBM</Label>
+                    <CurrencyInput
                       id="fuel_cost"
-                      type="number"
                       value={formData.fuel_cost}
                       onChange={handleInputChange}
                       required
                     />
                   </div>
                   <div className="grid gap-1.5">
-                    <Label htmlFor="driver_fee">Gaji Sopir (Rp)</Label>
-                    <Input
+                    <Label htmlFor="driver_fee">Gaji Sopir</Label>
+                    <CurrencyInput
                       id="driver_fee"
-                      type="number"
                       value={formData.driver_fee}
                       onChange={handleInputChange}
                       required

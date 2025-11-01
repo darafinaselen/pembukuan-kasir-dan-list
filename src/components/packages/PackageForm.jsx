@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -920,10 +921,9 @@ export function PackageForm({
                         <span className="text-red-500">*</span>
                       </FormLabel>
                       <FormControl>
-                        <Input
+                        <CurrencyInput
                           id="hargaDefault"
-                          type="number"
-                          placeholder="500000"
+                          placeholder="500.000"
                           {...register("hargaDefault", {
                             required:
                               tipePaket === "Sewa Mobil" ||
@@ -952,10 +952,9 @@ export function PackageForm({
                         Tarif Overtime (per Jam)
                       </FormLabel>
                       <FormControl>
-                        <Input
+                        <CurrencyInput
                           id="tarifOvertime"
-                          type="number"
-                          placeholder="50000"
+                          placeholder="50.000"
                           {...register("tarifOvertime", {
                             min: {
                               value: 0,
@@ -1085,9 +1084,8 @@ export function PackageForm({
                             <FormItem>
                               <FormLabel>Tarif per PAX</FormLabel>
                               <FormControl>
-                                <Input
-                                  type="number"
-                                  placeholder="1500000"
+                                <CurrencyInput
+                                  placeholder="1.500.000"
                                   {...register(
                                     `tarifHotel.${index}.tarifPerPax`,
                                     {
@@ -1178,16 +1176,15 @@ export function PackageForm({
                                       )}
                                       placeholder="max"
                                     />
-                                    <Input
-                                      type="number"
-                                      className={`w-36 ${
+                                    <CurrencyInput
+                                      className={`w-40 ${
                                         fieldError ? "border-red-500" : ""
                                       }`}
                                       {...register(
                                         `tarifHotel.${index}.priceRanges.${ri}.price`,
                                         { valueAsNumber: true }
                                       )}
-                                      placeholder="price"
+                                      placeholder="Harga"
                                     />
                                     <Button
                                       type="button"

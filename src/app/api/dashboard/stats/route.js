@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
+import { calculateTransactionFinancials } from "@/lib/accounting";
 
 const prisma = new PrismaClient();
 
@@ -41,7 +42,10 @@ export async function GET(request) {
       select: {
         id: true,
         booking_date: true,
+        checkout_datetime: true,
+        checkin_datetime: true,
         all_in_rate: true,
+        overtime_rate_per_hour: true,
         fuel_cost: true,
         driver_fee: true,
         payment_status: true,
@@ -51,22 +55,29 @@ export async function GET(request) {
             license_plate: true,
           },
         },
+        package: {
+          select: {
+            durationHours: true,
+          },
+        },
       },
       orderBy: {
         booking_date: "asc",
       },
     });
 
-    // Calculate totals
-    const totalRevenue = transactions.reduce(
-      (sum, t) => sum + (t.all_in_rate || 0),
-      0
-    );
-    const grossProfit = transactions.reduce(
-      (sum, t) =>
-        sum + (t.all_in_rate - (t.fuel_cost || 0) - (t.driver_fee || 0)),
-      0
-    );
+    // Calculate totals using accounting utility
+    let totalRevenue = 0;
+    let totalOperationalCosts = 0;
+    let totalGrossProfit = 0;
+
+    transactions.forEach((t) => {
+      const financials = calculateTransactionFinancials(t);
+      totalRevenue += financials.totalPendapatan;
+      totalOperationalCosts += financials.totalBiayaOps;
+      totalGrossProfit += financials.labaKotor;
+    });
+
     const transactionCount = transactions.length;
 
     // Get fleet count
@@ -85,7 +96,7 @@ export async function GET(request) {
       count: item._count.id,
     }));
 
-    // Build transaction trend
+    // Build transaction trend with correct revenue calculation
     const trendMap = new Map();
 
     transactions.forEach((t) => {
@@ -112,19 +123,23 @@ export async function GET(request) {
 
       const entry = trendMap.get(key);
       entry.count += 1;
-      entry.revenue += t.all_in_rate || 0;
+
+      // Calculate revenue including overtime
+      const financials = calculateTransactionFinancials(t);
+      entry.revenue += financials.totalPendapatan;
     });
 
     const transactionTrend = Array.from(trendMap.values()).sort((a, b) =>
       a.date.localeCompare(b.date)
     );
 
-    // Calculate fleet revenue distribution
+    // Calculate fleet revenue distribution with correct revenue
     const fleetRevenueMap = new Map();
 
     transactions.forEach((t) => {
       const licensePlate = t.armada?.license_plate || "Unknown";
-      const revenue = t.all_in_rate || 0;
+      const financials = calculateTransactionFinancials(t);
+      const revenue = financials.totalPendapatan;
 
       if (!fleetRevenueMap.has(licensePlate)) {
         fleetRevenueMap.set(licensePlate, {
@@ -145,7 +160,7 @@ export async function GET(request) {
 
     return NextResponse.json({
       totalRevenue,
-      grossProfit,
+      grossProfit: totalGrossProfit,
       transactionCount,
       fleetCount,
       transactionTrend,

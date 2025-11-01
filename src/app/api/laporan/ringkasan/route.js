@@ -2,34 +2,17 @@ import { PrismaClient } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
+import { calculateTransactionFinancials } from "@/lib/accounting";
 
 const prisma = new PrismaClient();
 
+/**
+ * Calculate financial metrics for a transaction
+ * Uses centralized accounting utility for consistency
+ * @deprecated Use calculateTransactionFinancials from @/lib/accounting instead
+ */
 function calculateTxFinancials(tx) {
-  const durasiPaketJam = tx.package?.durationHours || 12;
-  const start = new Date(tx.checkout_datetime);
-  const end = new Date(tx.checkin_datetime);
-
-  if (end <= start) {
-    return {
-      totalPendapatan: tx.all_in_rate || 0,
-      totalBiayaOps: (tx.fuel_cost || 0) + (tx.driver_fee || 0),
-      labaKotor:
-        (tx.all_in_rate || 0) - ((tx.fuel_cost || 0) + (tx.driver_fee || 0)),
-    };
-  }
-
-  const lamaSewaJam = Math.round(
-    (end.getTime() - start.getTime()) / (1000 * 60 * 60)
-  );
-  const lamaOvertimeJam = Math.max(0, lamaSewaJam - durasiPaketJam);
-
-  const totalOvertimeFee = lamaOvertimeJam * (tx.overtime_rate_per_hour || 0);
-  const totalPendapatan = (tx.all_in_rate || 0) + totalOvertimeFee;
-  const totalBiayaOps = (tx.fuel_cost || 0) + (tx.driver_fee || 0);
-  const labaKotor = totalPendapatan - totalBiayaOps;
-
-  return { totalPendapatan, totalBiayaOps, labaKotor };
+  return calculateTransactionFinancials(tx);
 }
 
 export async function GET(request) {

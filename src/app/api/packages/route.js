@@ -106,6 +106,9 @@ export async function POST(request) {
           : tarifOvertime
           ? Number(tarifOvertime)
           : null;
+      // For CAR_RENTAL and FULL_DAY_TRIP, durasiHari represents hours
+      const hours = nestedDurasiHari ?? durasiHari;
+      prismaData.durationHours = hours ? Number(hours) : null;
     }
 
     if (type === "TOUR_PACKAGE") {

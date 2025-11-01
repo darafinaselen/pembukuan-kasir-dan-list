@@ -58,6 +58,11 @@ export default function PackagesPage() {
         ? `/api/packages/${selectedPackage.id}`
         : "/api/packages";
 
+    console.log("=== Submitting package form ===");
+    console.log("Method:", method);
+    console.log("URL:", url);
+    console.log("Data:", JSON.stringify(data, null, 2));
+
     try {
       const res = await fetch(url, {
         method,
@@ -68,13 +73,23 @@ export default function PackagesPage() {
       console.log(`Submit package form response (${method} ${url}):`, res);
 
       if (res.ok) {
+        console.log("Package saved successfully");
         setIsFormOpen(false);
         setSelectedPackage(null);
-        fetchPackages();
+        await fetchPackages(); // Wait for fetch to complete
+        if (typeof window !== "undefined") {
+          window.alert("Paket berhasil disimpan!");
+        }
       } else {
         let detail = "";
+        let errorData = null;
         try {
-          detail = await res.text();
+          const text = await res.text();
+          detail = text;
+          try {
+            errorData = JSON.parse(text);
+            detail = errorData.error || errorData.details || text;
+          } catch {}
         } catch {}
         console.error("Failed to save package", res.status, detail);
         // Surface the error so users understand why it didn't save

@@ -62,7 +62,7 @@ export function PackageList({ packages, onEdit, onDelete, onView }) {
           let duration = "-";
 
           if (tipe === "Sewa Mobil") {
-            duration = "12 Jam";
+            duration = pkg.durationHours + " Jam";
           } else if (tipe === "Full Day Trip") {
             duration = "1 Hari";
           } else if (tipe === "Paket Tour") {

@@ -1,7 +1,14 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PieChart } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Car, Loader2 } from "lucide-react";
 
 export function FleetStatusChart({ data, loading }) {
   if (loading) {
@@ -9,12 +16,13 @@ export function FleetStatusChart({ data, loading }) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <PieChart className="h-5 w-5" />
+            <Loader2 className="h-5 w-5 animate-spin" />
             Status Armada
           </CardTitle>
+          <CardDescription>Memuat data...</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-[300px] bg-muted animate-pulse rounded" />
+          <div className="h-[300px] bg-muted animate-pulse rounded-lg" />
         </CardContent>
       </Card>
     );
@@ -25,13 +33,14 @@ export function FleetStatusChart({ data, loading }) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <PieChart className="h-5 w-5" />
+            <Car className="h-5 w-5 text-purple-600" />
             Status Armada
           </CardTitle>
+          <CardDescription>Tidak ada data yang tersedia</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-            Tidak ada data armada
+            Tidak ada data armada untuk periode ini
           </div>
         </CardContent>
       </Card>
@@ -41,159 +50,196 @@ export function FleetStatusChart({ data, loading }) {
   const statusConfig = {
     READY: {
       label: "Siap",
+      description: "Siap untuk booking",
       color: "bg-green-500",
+      lightColor: "bg-green-50",
       textColor: "text-green-700",
+      borderColor: "border-green-200",
     },
     BOOKED: {
       label: "Dipesan",
+      description: "Sudah dipesan customer",
       color: "bg-yellow-500",
+      lightColor: "bg-yellow-50",
       textColor: "text-yellow-700",
+      borderColor: "border-yellow-200",
     },
     ON_TRIP: {
       label: "Sedang Jalan",
+      description: "Sedang dalam perjalanan",
       color: "bg-blue-500",
+      lightColor: "bg-blue-50",
       textColor: "text-blue-700",
+      borderColor: "border-blue-200",
     },
     MAINTENANCE: {
       label: "Perawatan",
+      description: "Dalam perbaikan/service",
       color: "bg-red-500",
+      lightColor: "bg-red-50",
       textColor: "text-red-700",
+      borderColor: "border-red-200",
     },
   };
 
   const total = data.reduce((sum, item) => sum + item.count, 0);
-
-  // Calculate pie slices
-  let currentAngle = -90; // Start from top
-  const slices = data.map((item) => {
-    const percentage = (item.count / total) * 100;
-    const angle = (percentage / 100) * 360;
-    const startAngle = currentAngle;
-    currentAngle += angle;
-
-    return {
-      ...item,
-      percentage,
-      startAngle,
-      endAngle: currentAngle,
-    };
-  });
-
-  const createArcPath = (startAngle, endAngle, radius = 80) => {
-    const start = polarToCartesian(100, 100, radius, endAngle);
-    const end = polarToCartesian(100, 100, radius, startAngle);
-    const largeArc = endAngle - startAngle <= 180 ? "0" : "1";
-
-    return [
-      "M",
-      100,
-      100,
-      "L",
-      start.x,
-      start.y,
-      "A",
-      radius,
-      radius,
-      0,
-      largeArc,
-      0,
-      end.x,
-      end.y,
-      "Z",
-    ].join(" ");
-  };
-
-  const polarToCartesian = (centerX, centerY, radius, angleInDegrees) => {
-    const angleInRadians = ((angleInDegrees - 90) * Math.PI) / 180.0;
-    return {
-      x: centerX + radius * Math.cos(angleInRadians),
-      y: centerY + radius * Math.sin(angleInRadians),
-    };
-  };
+  const activeFleets =
+    (data.find((d) => d.status === "ON_TRIP")?.count || 0) +
+    (data.find((d) => d.status === "BOOKED")?.count || 0);
+  const availableFleets = data.find((d) => d.status === "READY")?.count || 0;
+  const utilization = total > 0 ? ((activeFleets / total) * 100).toFixed(1) : 0;
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <PieChart className="h-5 w-5 text-purple-600" />
+          <Car className="h-5 w-5 text-purple-600" />
           Status Armada
         </CardTitle>
+        <CardDescription>Distribusi status {total} armada</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="flex flex-col items-center justify-center gap-6">
-          {/* Pie Chart SVG */}
-          <div className="relative flex justify-center">
-            <svg width="240" height="240" viewBox="0 0 200 200">
-              {slices.map((slice, index) => {
-                const config = statusConfig[slice.status] || statusConfig.READY;
-                const colors = {
-                  READY: "#22c55e",
-                  BOOKED: "#eab308",
-                  ON_TRIP: "#3b82f6",
-                  MAINTENANCE: "#ef4444",
-                };
-
-                return (
-                  <path
-                    key={index}
-                    d={createArcPath(slice.startAngle, slice.endAngle)}
-                    fill={colors[slice.status] || "#6b7280"}
-                    stroke="white"
-                    strokeWidth="2"
-                    className="hover:opacity-80 transition-opacity cursor-pointer"
-                    title={`${config.label}: ${
-                      slice.count
-                    } (${slice.percentage.toFixed(1)}%)`}
-                  />
-                );
-              })}
-              {/* Center circle for donut effect */}
-              <circle cx="100" cy="100" r="50" fill="white" />
-              <text
-                x="100"
-                y="95"
-                textAnchor="middle"
-                className="text-2xl font-bold"
-                fill="#1f2937"
-              >
-                {total}
-              </text>
-              <text
-                x="100"
-                y="110"
-                textAnchor="middle"
-                className="text-xs"
-                fill="#6b7280"
-              >
-                Total
-              </text>
-            </svg>
-          </div>
-
-          {/* Legend */}
-          <div className="w-full grid grid-cols-2 gap-3">
+        <div className="space-y-6">
+          {/* Progress Bars */}
+          <div className="space-y-4">
             {data.map((item) => {
               const config = statusConfig[item.status] || statusConfig.READY;
               const percentage = ((item.count / total) * 100).toFixed(1);
 
               return (
-                <div
-                  key={item.status}
-                  className="flex items-center justify-between gap-2 p-2 rounded-lg hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <div className={`w-3 h-3 rounded-full ${config.color}`} />
-                    <span className="text-sm font-medium">{config.label}</span>
+                <div key={item.status} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-3 h-3 rounded-full ${config.color}`} />
+                      <div>
+                        <span className="text-sm font-medium block">
+                          {config.label}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {config.description}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm text-muted-foreground">
+                        {percentage}%
+                      </span>
+                      <Badge variant="secondary" className="font-semibold">
+                        {item.count} unit
+                      </Badge>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm font-bold">{item.count}</span>
-                    <span className="text-xs text-muted-foreground">
-                      ({percentage}%)
-                    </span>
+                  <div className="relative h-3 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className={`absolute top-0 left-0 h-full ${config.color} transition-all duration-500 ease-out rounded-full`}
+                      style={{ width: `${percentage}%` }}
+                    />
                   </div>
                 </div>
               );
             })}
+          </div>
+
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t">
+            <div
+              className={`p-4 rounded-lg border-2 ${statusConfig.READY.lightColor} ${statusConfig.READY.borderColor}`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-medium text-muted-foreground">
+                  Tersedia
+                </p>
+                <Badge
+                  variant="outline"
+                  className={`text-xs ${statusConfig.READY.textColor} bg-white`}
+                >
+                  Siap Operasi
+                </Badge>
+              </div>
+              <p
+                className={`text-3xl font-bold ${statusConfig.READY.textColor}`}
+              >
+                {availableFleets}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {total > 0 ? ((availableFleets / total) * 100).toFixed(1) : 0}%
+                dari total armada
+              </p>
+            </div>
+
+            <div
+              className={`p-4 rounded-lg border-2 ${statusConfig.ON_TRIP.lightColor} ${statusConfig.ON_TRIP.borderColor}`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-medium text-muted-foreground">
+                  Aktif
+                </p>
+                <Badge
+                  variant="outline"
+                  className={`text-xs ${statusConfig.ON_TRIP.textColor} bg-white`}
+                >
+                  Produktif
+                </Badge>
+              </div>
+              <p
+                className={`text-3xl font-bold ${statusConfig.ON_TRIP.textColor}`}
+              >
+                {activeFleets}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Sedang beroperasi atau dipesan
+              </p>
+            </div>
+
+            <div
+              className={`p-4 rounded-lg border-2 ${
+                utilization >= 70
+                  ? "bg-green-50 border-green-200"
+                  : utilization >= 50
+                  ? "bg-yellow-50 border-yellow-200"
+                  : "bg-red-50 border-red-200"
+              }`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-medium text-muted-foreground">
+                  Utilisasi
+                </p>
+                <Badge
+                  variant="outline"
+                  className={`text-xs bg-white ${
+                    utilization >= 70
+                      ? "text-green-700 border-green-300"
+                      : utilization >= 50
+                      ? "text-yellow-700 border-yellow-300"
+                      : "text-red-700 border-red-300"
+                  }`}
+                >
+                  {utilization >= 70
+                    ? "Optimal"
+                    : utilization >= 50
+                    ? "Normal"
+                    : "Rendah"}
+                </Badge>
+              </div>
+              <p
+                className={`text-3xl font-bold ${
+                  utilization >= 70
+                    ? "text-green-700"
+                    : utilization >= 50
+                    ? "text-yellow-700"
+                    : "text-red-700"
+                }`}
+              >
+                {utilization}%
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {utilization >= 70
+                  ? "Sangat baik - Armada digunakan maksimal"
+                  : utilization >= 50
+                  ? "Cukup baik - Masih ada ruang untuk peningkatan"
+                  : "Perlu ditingkatkan - Banyak armada menganggur"}
+              </p>
+            </div>
           </div>
         </div>
       </CardContent>

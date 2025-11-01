@@ -54,7 +54,7 @@ export function PackageForm({
     getValues,
     setError,
     clearErrors,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm({
     defaultValues: {
       isCustomizable: false,
@@ -305,7 +305,7 @@ export function PackageForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchedTarifHotel]);
 
-  const onSubmit = (data) => {
+  const onSubmit = async (data) => {
     // client-side validation for priceRanges when Paket Tour
     if (data.tipePaket === "Paket Tour" && Array.isArray(data.tarifHotel)) {
       for (let i = 0; i < data.tarifHotel.length; i++) {
@@ -360,13 +360,14 @@ export function PackageForm({
     }
 
     if (typeof onSave === "function") {
-      onSave(packageData);
-    } else if (typeof onSubmitProp === "function") {
-      onSubmitProp(packageData);
-    } else {
-      console.warn("PackageForm: no save handler provided");
+      await onSave(packageData);
+      return;
     }
-    onOpenChange(false);
+    if (typeof onSubmitProp === "function") {
+      await onSubmitProp(packageData);
+      return;
+    }
+    console.warn("PackageForm: no save handler provided");
   };
 
   return (
@@ -1302,7 +1303,11 @@ export function PackageForm({
             >
               Batal
             </Button>
-            <Button type="submit" className="bg-teal-600 hover:bg-teal-700">
+            <Button
+              type="submit"
+              className="bg-teal-600 hover:bg-teal-700"
+              disabled={isSubmitting}
+            >
               Simpan
             </Button>
           </div>

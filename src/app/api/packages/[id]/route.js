@@ -54,6 +54,8 @@ export async function PUT(request, { params }) {
       ...rest
     } = data;
 
+    console.log("Received data for update:", data);
+
     // durations may come nested under `durasi` (hari/malam) or as top-level fields
     const durasiHari = (durasi && durasi.hari) || data.durasiHari || null;
     const durasiMalam = (durasi && durasi.malam) || data.durasiMalam || null;

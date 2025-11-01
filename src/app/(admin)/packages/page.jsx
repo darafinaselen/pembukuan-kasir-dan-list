@@ -30,7 +30,7 @@ export default function PackagesPage() {
         console.error("Failed to parse /api/packages response as JSON", err);
         return null;
       });
-      
+
       if (!Array.isArray(data)) {
         console.warn(
           "/api/packages returned unexpected payload, expected array.",
@@ -65,15 +65,32 @@ export default function PackagesPage() {
         body: JSON.stringify(data),
       });
 
+      console.log(`Submit package form response (${method} ${url}):`, res);
+
       if (res.ok) {
         setIsFormOpen(false);
         setSelectedPackage(null);
         fetchPackages();
       } else {
-        console.error("Failed to save package");
+        let detail = "";
+        try {
+          detail = await res.text();
+        } catch {}
+        console.error("Failed to save package", res.status, detail);
+        // Surface the error so users understand why it didn't save
+        if (typeof window !== "undefined") {
+          window.alert(
+            `Gagal menyimpan paket (status ${res.status}).\n${
+              detail || "Coba lagi atau periksa log server."
+            }`
+          );
+        }
       }
     } catch (err) {
       console.error("Failed to save package", err);
+      if (typeof window !== "undefined") {
+        window.alert(`Gagal menyimpan paket: ${err?.message || err}`);
+      }
     }
   };
 

@@ -60,6 +60,10 @@ const data = {
           title: "Transaksi",
           url: "/transaksi",
         },
+        {
+          title: "Laporan",
+          url: "/laporan",
+        },
       ],
     },
   ],

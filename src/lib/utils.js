@@ -6,6 +6,49 @@ export function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 
+export function calculateFinancials(tx) {
+  // 'tx' adalah objek transaksi
+  if (!tx) return {};
+
+  const {
+    checkout_datetime,
+    checkin_datetime,
+    all_in_rate,
+    overtime_rate_per_hour,
+    fuel_cost,
+    driver_fee,
+    package: pkg, // ambil data relasi 'package'
+  } = tx;
+
+  if (!checkout_datetime || !checkin_datetime) return {};
+
+  const start = new Date(checkout_datetime);
+  const end = new Date(checkin_datetime);
+
+  if (end <= start) {
+    const totalPendapatan = Number(all_in_rate) || 0;
+    const totalBiayaOps = (Number(fuel_cost) || 0) + (Number(driver_fee) || 0);
+    const labaKotor = totalPendapatan - totalBiayaOps;
+    return { lamaSewaJam: 0, lamaOvertimeJam: 0, totalPendapatan, labaKotor };
+  }
+
+  const diffMs = end.getTime() - start.getTime();
+  const lamaSewaJam = Math.round(diffMs / (1000 * 60 * 60));
+
+  const durasiPaketJam = pkg?.durationHours || 12;
+
+  const lamaOvertimeJam = Math.max(0, lamaSewaJam - durasiPaketJam);
+
+  const totalOvertimeFee =
+    lamaOvertimeJam * (Number(overtime_rate_per_hour) || 0);
+  const totalPendapatan = (Number(all_in_rate) || 0) + totalOvertimeFee;
+
+  const totalOperasional = (Number(fuel_cost) || 0) + (Number(driver_fee) || 0);
+  const labaKotor = totalPendapatan - totalOperasional;
+
+  return { lamaSewaJam, lamaOvertimeJam, totalPendapatan, labaKotor };
+}
+
 export function exportToExcel(data, fileName) {
   try {
     const ws = XLSX.utils.json_to_sheet(data);

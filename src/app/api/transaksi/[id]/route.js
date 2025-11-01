@@ -3,6 +3,35 @@ import { NextResponse } from "next/server";
 
 const prisma = new PrismaClient();
 
+export async function GET(request, { params }) {
+  const { id: idFromParams } = await params;
+
+  try {
+    const transaction = await prisma.transaction.findUnique({
+      where: { id: idFromParams },
+      include: {
+        package: true,
+        armada: true,
+        driver: true,
+      },
+    });
+
+    if (!transaction) {
+      return NextResponse.json(
+        { error: "Transaksi tidak ditemukan" },
+        { status: 404 }
+      );
+    }
+    return NextResponse.json(transaction);
+  } catch (error) {
+    console.error(`Error fetching transaction ${idFromParams}:`, error);
+    return NextResponse.json(
+      { error: "Gagal mengambil data" },
+      { status: 500 }
+    );
+  }
+}
+
 export async function PUT(request, { params }) {
   const { id: idFromParams } = await params;
 

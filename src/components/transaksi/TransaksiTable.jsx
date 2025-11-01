@@ -16,7 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, Printer } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -65,11 +65,16 @@ export default function TransaksiTable({
   onDelete,
   onViewDetails,
   onUpdateStatus,
+  onPrint,
 }) {
   const getCalculatedData = (item) => {
-    const durasiPaketJam = 12;
+    const durasiPaketJam = item.package?.durationHours || 12;
     const start = new Date(item.checkout_datetime);
     const end = new Date(item.checkin_datetime);
+
+    if (end <= start) {
+      return { totalTagihan: Number(item.all_in_rate) || 0 };
+    }
 
     const lamaSewaJam = Math.round(
       (end.getTime() - start.getTime()) / (1000 * 60 * 60)
@@ -201,6 +206,9 @@ export default function TransaksiTable({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent>
+                        <DropdownMenuItem onClick={() => onPrint(item)}>
+                          Cetak Invoice
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => onViewDetails(item)}>
                           Lihat Detail
                         </DropdownMenuItem>
@@ -217,6 +225,13 @@ export default function TransaksiTable({
                     </DropdownMenu>
                   </div>
                   <div className="hidden lg:flex lg:items-center lg:gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onPrint(item)}
+                    >
+                      <Printer className="mr-1 h-3 w-3" /> Cetak
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"

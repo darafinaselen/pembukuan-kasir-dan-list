@@ -8,6 +8,7 @@ import TransaksiDialog from "@/components/transaksi/TransaksiDialog";
 import TransaksiDetailModal from "@/components/transaksi/TransaksiDetailModal";
 
 import { startOfMonth, startOfYear, endOfToday } from "date-fns";
+import { calculateFinancials } from "@/lib/utils";
 
 function getTodayDateString() {
   const today = new Date();
@@ -39,40 +40,40 @@ const INITIAL_FORM_STATE = {
   driver_fee: 0,
 };
 
-function calculateFinancials(formData) {
-  const {
-    checkout_datetime,
-    checkin_datetime,
-    all_in_rate,
-    overtime_rate_per_hour,
-    fuel_cost,
-    driver_fee,
-    package: pkg,
-  } = formData;
+// function calculateFinancials(formData) {
+//   const {
+//     checkout_datetime,
+//     checkin_datetime,
+//     all_in_rate,
+//     overtime_rate_per_hour,
+//     fuel_cost,
+//     driver_fee,
+//     package: pkg,
+//   } = formData;
 
-  if (!checkout_datetime || !checkin_datetime) return {};
+//   if (!checkout_datetime || !checkin_datetime) return {};
 
-  const start = new Date(checkout_datetime);
-  const end = new Date(checkin_datetime);
+//   const start = new Date(checkout_datetime);
+//   const end = new Date(checkin_datetime);
 
-  if (end <= start) return {};
+//   if (end <= start) return {};
 
-  const diffMs = end.getTime() - start.getTime();
-  const lamaSewaJam = Math.round(diffMs / (1000 * 60 * 60));
+//   const diffMs = end.getTime() - start.getTime();
+//   const lamaSewaJam = Math.round(diffMs / (1000 * 60 * 60));
 
-  const durasiPaketJam = pkg?.durationHours || 12;
+//   const durasiPaketJam = pkg?.durationHours || 12;
 
-  const lamaOvertimeJam = Math.max(0, lamaSewaJam - durasiPaketJam);
+//   const lamaOvertimeJam = Math.max(0, lamaSewaJam - durasiPaketJam);
 
-  const totalOvertimeFee =
-    lamaOvertimeJam * (Number(overtime_rate_per_hour) || 0);
-  const totalPendapatan = (Number(all_in_rate) || 0) + totalOvertimeFee;
+//   const totalOvertimeFee =
+//     lamaOvertimeJam * (Number(overtime_rate_per_hour) || 0);
+//   const totalPendapatan = (Number(all_in_rate) || 0) + totalOvertimeFee;
 
-  const totalOperasional = (Number(fuel_cost) || 0) + (Number(driver_fee) || 0);
-  const labaKotor = totalPendapatan - totalOperasional;
+//   const totalOperasional = (Number(fuel_cost) || 0) + (Number(driver_fee) || 0);
+//   const labaKotor = totalPendapatan - totalOperasional;
 
-  return { lamaSewaJam, lamaOvertimeJam, totalPendapatan, labaKotor };
-}
+//   return { lamaSewaJam, lamaOvertimeJam, totalPendapatan, labaKotor };
+// }
 
 export default function TransaksiPage() {
   const [data, setData] = useState([]);
@@ -338,6 +339,10 @@ export default function TransaksiPage() {
     }
   };
 
+  const handlePrintInvoice = (item) => {
+    window.open(`/transaksi/cetak/${item.id}`, "_blank");
+  };
+
   // --- Render ---
   return (
     <div className="flex w-full flex-col">
@@ -360,6 +365,7 @@ export default function TransaksiPage() {
           onDelete={handleDelete}
           onViewDetails={openViewDialog}
           onUpdateStatus={handleUpdateStatus}
+          onPrint={handlePrintInvoice}
         />
       </div>
 

@@ -30,7 +30,7 @@ export default function ArmadaCard({
   return (
     <Card
       key={armada.id}
-      className="relative overflow-hidden border rounded-xl shadow-sm bg-white"
+      className="relative overflow-hidden border rounded-xl shadow-sm bg-white w-[400px]"
     >
       <div className="p-5">
         {/* header */}

@@ -84,7 +84,7 @@ export default function ArmadaDialog({
               }}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Pilih tipe armada atau pilih 'Lainnya' untuk memasukkan manual" />
+                <SelectValue placeholder="Pilih tipe (atau 'Lainnya...')" />
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>

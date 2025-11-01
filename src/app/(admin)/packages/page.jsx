@@ -30,7 +30,7 @@ export default function PackagesPage() {
         console.error("Failed to parse /api/packages response as JSON", err);
         return null;
       });
-      
+
       if (!Array.isArray(data)) {
         console.warn(
           "/api/packages returned unexpected payload, expected array.",
@@ -58,6 +58,11 @@ export default function PackagesPage() {
         ? `/api/packages/${selectedPackage.id}`
         : "/api/packages";
 
+    console.log("=== Submitting package form ===");
+    console.log("Method:", method);
+    console.log("URL:", url);
+    console.log("Data:", JSON.stringify(data, null, 2));
+
     try {
       const res = await fetch(url, {
         method,
@@ -65,15 +70,42 @@ export default function PackagesPage() {
         body: JSON.stringify(data),
       });
 
+      console.log(`Submit package form response (${method} ${url}):`, res);
+
       if (res.ok) {
+        console.log("Package saved successfully");
         setIsFormOpen(false);
         setSelectedPackage(null);
-        fetchPackages();
+        await fetchPackages(); // Wait for fetch to complete
+        if (typeof window !== "undefined") {
+          window.alert("Paket berhasil disimpan!");
+        }
       } else {
-        console.error("Failed to save package");
+        let detail = "";
+        let errorData = null;
+        try {
+          const text = await res.text();
+          detail = text;
+          try {
+            errorData = JSON.parse(text);
+            detail = errorData.error || errorData.details || text;
+          } catch {}
+        } catch {}
+        console.error("Failed to save package", res.status, detail);
+        // Surface the error so users understand why it didn't save
+        if (typeof window !== "undefined") {
+          window.alert(
+            `Gagal menyimpan paket (status ${res.status}).\n${
+              detail || "Coba lagi atau periksa log server."
+            }`
+          );
+        }
       }
     } catch (err) {
       console.error("Failed to save package", err);
+      if (typeof window !== "undefined") {
+        window.alert(`Gagal menyimpan paket: ${err?.message || err}`);
+      }
     }
   };
 

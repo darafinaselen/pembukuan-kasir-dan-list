@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -54,7 +55,7 @@ export function PackageForm({
     getValues,
     setError,
     clearErrors,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm({
     defaultValues: {
       isCustomizable: false,
@@ -98,6 +99,8 @@ export function PackageForm({
 
   useEffect(() => {
     const pkg = package_ ?? defaultValues;
+    console.log("PackageForm useEffect - Received package:", pkg);
+
     if (pkg) {
       // support both English- and Indonesian-shaped package objects
       const namaPaket = pkg.namaPaket ?? pkg.name ?? "";
@@ -124,10 +127,46 @@ export function PackageForm({
       const tarifOvertime = pkg.tarifOvertime ?? pkg.overtimeRate ?? 0;
       const include = pkg.include ?? pkg.includes ?? "";
       const exclude = pkg.exclude ?? pkg.excludes ?? "";
-      const tarifHotelVal =
-        pkg.tarifHotel ?? pkg.hotelTiers ?? pkg.tarifHotel ?? [];
-      const itineraryVal =
-        pkg.itinerary ?? pkg.itineraries ?? pkg.itinerary ?? [];
+
+      // Transform hotelTiers from database format to form format
+      let tarifHotelVal = pkg.tarifHotel ?? [];
+      if (!tarifHotelVal || tarifHotelVal.length === 0) {
+        // Check if we have hotelTiers from database (English format)
+        const dbHotelTiers = pkg.hotelTiers ?? [];
+        console.log("Transforming hotelTiers from DB:", dbHotelTiers);
+        if (Array.isArray(dbHotelTiers) && dbHotelTiers.length > 0) {
+          tarifHotelVal = dbHotelTiers.map((tier) => ({
+            tingkat: `Bintang ${tier.starRating}`,
+            tarifPerPax: tier.pricePerPax ?? 0,
+            daftarHotel: Array.isArray(tier.hotels)
+              ? tier.hotels.map((h) => h.name)
+              : [],
+            priceRanges: Array.isArray(tier.priceRanges)
+              ? tier.priceRanges.map((pr) => ({
+                  minPax: pr.minPax,
+                  maxPax: pr.maxPax,
+                  price: pr.price,
+                }))
+              : [],
+          }));
+          console.log("Transformed tarifHotelVal:", tarifHotelVal);
+        }
+      }
+
+      // Transform itineraries from database format to form format
+      let itineraryVal = pkg.itinerary ?? [];
+      if (!itineraryVal || itineraryVal.length === 0) {
+        const dbItineraries = pkg.itineraries ?? [];
+        console.log("Transforming itineraries from DB:", dbItineraries);
+        if (Array.isArray(dbItineraries) && dbItineraries.length > 0) {
+          itineraryVal = dbItineraries.map((it) => ({
+            hari: it.day,
+            aktivitas: it.title || "",
+            deskripsi: it.description || "",
+          }));
+          console.log("Transformed itineraryVal:", itineraryVal);
+        }
+      }
 
       // Build reset payload depending on package type so we don't prefill irrelevant data
       const base = {
@@ -142,7 +181,7 @@ export function PackageForm({
 
       if (mappedTipe === "Paket Tour") {
         // Tour: include hotel tiers and itinerary
-        reset({
+        const resetData = {
           ...base,
           durasiHari: durasiHari || 1,
           durasiMalam: durasiMalam || 0,
@@ -162,7 +201,9 @@ export function PackageForm({
             Array.isArray(itineraryVal) && itineraryVal.length > 0
               ? itineraryVal
               : [{ hari: 1, aktivitas: "" }],
-        });
+        };
+        console.log("Resetting form for Paket Tour with data:", resetData);
+        reset(resetData);
       } else if (mappedTipe === "Full Day Trip") {
         // Full day: include price/overtime and itinerary; clear hotel tiers
         reset({
@@ -305,7 +346,7 @@ export function PackageForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchedTarifHotel]);
 
-  const onSubmit = (data) => {
+  const onSubmit = async (data) => {
     // client-side validation for priceRanges when Paket Tour
     if (data.tipePaket === "Paket Tour" && Array.isArray(data.tarifHotel)) {
       for (let i = 0; i < data.tarifHotel.length; i++) {
@@ -360,13 +401,14 @@ export function PackageForm({
     }
 
     if (typeof onSave === "function") {
-      onSave(packageData);
-    } else if (typeof onSubmitProp === "function") {
-      onSubmitProp(packageData);
-    } else {
-      console.warn("PackageForm: no save handler provided");
+      await onSave(packageData);
+      return;
     }
-    onOpenChange(false);
+    if (typeof onSubmitProp === "function") {
+      await onSubmitProp(packageData);
+      return;
+    }
+    console.warn("PackageForm: no save handler provided");
   };
 
   return (
@@ -879,10 +921,9 @@ export function PackageForm({
                         <span className="text-red-500">*</span>
                       </FormLabel>
                       <FormControl>
-                        <Input
+                        <CurrencyInput
                           id="hargaDefault"
-                          type="number"
-                          placeholder="500000"
+                          placeholder="500.000"
                           {...register("hargaDefault", {
                             required:
                               tipePaket === "Sewa Mobil" ||
@@ -911,10 +952,9 @@ export function PackageForm({
                         Tarif Overtime (per Jam)
                       </FormLabel>
                       <FormControl>
-                        <Input
+                        <CurrencyInput
                           id="tarifOvertime"
-                          type="number"
-                          placeholder="50000"
+                          placeholder="50.000"
                           {...register("tarifOvertime", {
                             min: {
                               value: 0,
@@ -1044,9 +1084,8 @@ export function PackageForm({
                             <FormItem>
                               <FormLabel>Tarif per PAX</FormLabel>
                               <FormControl>
-                                <Input
-                                  type="number"
-                                  placeholder="1500000"
+                                <CurrencyInput
+                                  placeholder="1.500.000"
                                   {...register(
                                     `tarifHotel.${index}.tarifPerPax`,
                                     {
@@ -1137,16 +1176,15 @@ export function PackageForm({
                                       )}
                                       placeholder="max"
                                     />
-                                    <Input
-                                      type="number"
-                                      className={`w-36 ${
+                                    <CurrencyInput
+                                      className={`w-40 ${
                                         fieldError ? "border-red-500" : ""
                                       }`}
                                       {...register(
                                         `tarifHotel.${index}.priceRanges.${ri}.price`,
                                         { valueAsNumber: true }
                                       )}
-                                      placeholder="price"
+                                      placeholder="Harga"
                                     />
                                     <Button
                                       type="button"
@@ -1302,7 +1340,11 @@ export function PackageForm({
             >
               Batal
             </Button>
-            <Button type="submit" className="bg-teal-600 hover:bg-teal-700">
+            <Button
+              type="submit"
+              className="bg-teal-600 hover:bg-teal-700"
+              disabled={isSubmitting}
+            >
               Simpan
             </Button>
           </div>

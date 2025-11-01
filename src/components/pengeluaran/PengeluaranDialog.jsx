@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -97,11 +98,10 @@ export default function PengeluaranDialog({
 
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="amount" className="text-right">
-              Jumlah (Rp)
+              Jumlah
             </Label>
-            <Input
+            <CurrencyInput
               id="amount"
-              type="number"
               value={formData.amount}
               onChange={handleInputChange}
               className="col-span-3"

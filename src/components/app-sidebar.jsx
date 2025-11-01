@@ -29,6 +29,11 @@ const data = {
   ],
   navMain: [
     {
+      title: "Dashboard",
+      icon: GalleryVerticalEnd,
+      url: "/dashboard",
+    },
+    {
       title: "Master Data",
       icon: BookOpen,
       isActive: true,

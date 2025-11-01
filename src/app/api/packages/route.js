@@ -55,6 +55,9 @@ export async function POST(request) {
       exclude,
       ...rest
     } = data;
+    // Support nested `durasi` object from the form as well
+    const nestedDurasiHari = data?.durasi?.hari;
+    const nestedDurasiMalam = data?.durasi?.malam;
 
     // Map incoming form fields (Indonesian) to Prisma schema fields (English)
     const type =
@@ -103,11 +106,16 @@ export async function POST(request) {
           : tarifOvertime
           ? Number(tarifOvertime)
           : null;
+      // For CAR_RENTAL and FULL_DAY_TRIP, durasiHari represents hours
+      const hours = nestedDurasiHari ?? durasiHari;
+      prismaData.durationHours = hours ? Number(hours) : null;
     }
 
     if (type === "TOUR_PACKAGE") {
-      prismaData.durationDays = durasiHari ? Number(durasiHari) : null;
-      prismaData.durationNights = durasiMalam ? Number(durasiMalam) : null;
+      const days = nestedDurasiHari ?? durasiHari;
+      const nights = nestedDurasiMalam ?? durasiMalam;
+      prismaData.durationDays = days ? Number(days) : null;
+      prismaData.durationNights = nights ? Number(nights) : null;
 
       if (hotelTiers && Array.isArray(hotelTiers) && hotelTiers.length > 0) {
         // validate priceRanges for each tier

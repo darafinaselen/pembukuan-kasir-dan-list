@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { calculateFinancials } from "@/lib/utils";
+import { calculateTransactionFinancials } from "@/lib/accounting";
 
 function formatCurrency(amount) {
   if (typeof amount !== "number" || isNaN(amount)) return "-";
@@ -127,8 +127,8 @@ export default function TransaksiDetailModal({
                   data.payment_status === "PAID"
                     ? "success"
                     : data.payment_status === "DOWN_PAYMENT"
-                    ? "warning"
-                    : "destructive"
+                      ? "warning"
+                      : "destructive"
                 }
               >
                 {getStatusLabel(data.payment_status)}

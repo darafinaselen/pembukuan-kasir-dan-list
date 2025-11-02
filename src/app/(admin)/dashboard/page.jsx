@@ -1,40 +1,40 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Separator } from "@/components/ui/separator";
+import { useRouter } from "next/navigation";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { TransactionChart } from "@/components/dashboard/TransactionChart";
 import { FleetStatusChart } from "@/components/dashboard/FleetStatusChart";
 import { FleetRevenueChart } from "@/components/dashboard/FleetRevenueChart";
 import { Calendar, Clock, TrendingUp } from "lucide-react";
+import { useAuthFetch } from "@/lib/useAuthFetch";
 
-export default function Page() {
+function DashboardPage() {
   const [period, setPeriod] = useState("month");
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  const authFetch = useAuthFetch();
 
   const fetchDashboardData = async () => {
     setLoading(true);
     console.log("Fetching dashboard data for period:", period);
     try {
-      const res = await fetch(`/api/dashboard/stats?period=${period}`);
+      const res = await authFetch(`/api/dashboard/stats?period=${period}`);
+
+      if (!res) return; // authFetch returns null on 401/403 and redirects
+
       if (!res.ok) {
         console.error("Failed to fetch dashboard stats:", res.status);
         setStats(null);
         return;
       }
-      const data = await res.json();
+      const result = await res.json();
+
+      // API returns { success, data, message }
+      const data = result.data || result;
       console.log("Dashboard data received:", data);
       setStats(data);
     } catch (error) {
@@ -80,89 +80,52 @@ export default function Page() {
 
   return (
     <>
-      <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
-        <div className="flex items-center gap-2 px-4 w-full">
-          <SidebarTrigger className="-ml-1" />
-          <Separator
-            orientation="vertical"
-            className="mr-2 data-[orientation=vertical]:h-4"
-          />
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem className="hidden md:block">
-                <BreadcrumbLink href="#">Pembukuan Kasir</BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator className="hidden md:block" />
-              <BreadcrumbItem>
-                <BreadcrumbPage>Dashboard</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
+      <header className="flex items-center gap-4 p-4">
+        <SidebarTrigger className="-ml-1" />
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Gambaran umum bisnis Anda — statistik, grafik, dan insight keuangan.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex gap-2">
+            <Button
+              variant={period === "today" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setPeriod("today")}
+            >
+              <Clock className="mr-2 h-4 w-4" />
+              Hari Ini
+            </Button>
+            <Button
+              variant={period === "month" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setPeriod("month")}
+            >
+              <Calendar className="mr-2 h-4 w-4" />
+              Bulan Ini
+            </Button>
+            <Button
+              variant={period === "year" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setPeriod("year")}
+            >
+              <TrendingUp className="mr-2 h-4 w-4" />
+              Tahun Ini
+            </Button>
+          </div>
         </div>
       </header>
-      <div className="flex flex-1 flex-col gap-6 p-6 pt-6">
-        {/* Header with Period Filter */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-              <span className="px-3 py-1 text-sm font-medium bg-blue-100 text-blue-700 rounded-full">
-                {getPeriodLabel()}
-              </span>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Gambaran umum bisnis {getPeriodLabel().toLowerCase()} •
+      <div className="flex flex-1 flex-col gap-6 p-6 pt-0">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-semibold tracking-tight">
+              Ringkasan {getPeriodLabel()}
+            </h2>
+            <span className="px-3 py-1 text-sm font-medium bg-blue-100 text-blue-700 rounded-full">
               {getPeriodDateRange()}
-            </p>
-          </div>
-
-          {/* Period Filter with Buttons */}
-          <div className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground w-full sm:w-[400px]">
-            <button
-              onClick={() => {
-                console.log("Clicked: today");
-                setPeriod("today");
-              }}
-              className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 flex-1 ${
-                period === "today"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "hover:bg-background/50"
-              }`}
-            >
-              <Clock className="h-4 w-4" />
-              <span className="hidden sm:inline">Hari Ini</span>
-              <span className="sm:hidden">Hari</span>
-            </button>
-            <button
-              onClick={() => {
-                console.log("Clicked: month");
-                setPeriod("month");
-              }}
-              className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 flex-1 ${
-                period === "month"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "hover:bg-background/50"
-              }`}
-            >
-              <Calendar className="h-4 w-4" />
-              <span className="hidden sm:inline">Bulan Ini</span>
-              <span className="sm:hidden">Bulan</span>
-            </button>
-            <button
-              onClick={() => {
-                console.log("Clicked: year");
-                setPeriod("year");
-              }}
-              className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 flex-1 ${
-                period === "year"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "hover:bg-background/50"
-              }`}
-            >
-              <TrendingUp className="h-4 w-4" />
-              <span className="hidden sm:inline">Tahun Ini</span>
-              <span className="sm:hidden">Tahun</span>
-            </button>
+            </span>
           </div>
         </div>
 
@@ -189,3 +152,5 @@ export default function Page() {
     </>
   );
 }
+
+export default DashboardPage;

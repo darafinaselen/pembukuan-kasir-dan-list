@@ -3,6 +3,7 @@
  * Authenticates user and creates session
  */
 
+import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
   publicRoute,
@@ -23,11 +24,17 @@ import {
 } from "@/lib/auth";
 import { logAuthEvent } from "@/lib/audit";
 
-// Validation schema
-const loginSchema = z.object({
-  username: z.string().min(1, "Username is required"),
-  password: z.string().min(1, "Password is required"),
-});
+// Validation schema - accepts either email or username
+const loginSchema = z
+  .object({
+    email: z.string().min(1, "Email or username is required").optional(),
+    username: z.string().min(1, "Email or username is required").optional(),
+    password: z.string().min(1, "Password is required"),
+  })
+  .refine((data) => data.email || data.username, {
+    message: "Either email or username is required",
+    path: ["email"],
+  });
 
 async function handleLogin(request) {
   try {
@@ -40,7 +47,8 @@ async function handleLogin(request) {
       return errorResponse("Validation failed", 400, validation.error);
     }
 
-    const { username, password } = validation.data;
+    const { email, username, password } = validation.data;
+    const loginIdentifier = email || username;
 
     // Get client info
     const ipAddress = getClientIp(request);
@@ -49,7 +57,7 @@ async function handleLogin(request) {
     // Find user by username or email
     const user = await prisma.user.findFirst({
       where: {
-        OR: [{ username }, { email: username }],
+        OR: [{ username: loginIdentifier }, { email: loginIdentifier }],
       },
     });
 
@@ -114,9 +122,11 @@ async function handleLogin(request) {
     // Log successful login
     await logAuthEvent(user.id, "LOGIN", ipAddress, userAgent, true);
 
-    // Return session token and user info
-    return successResponse(
-      {
+    // Prepare response data
+    const responseData = {
+      success: true,
+      message: "Login successful",
+      data: {
         token: session.token,
         user: {
           id: user.id,
@@ -127,8 +137,32 @@ async function handleLogin(request) {
         },
         expiresAt: session.expiresAt,
       },
-      "Login successful"
-    );
+      timestamp: new Date().toISOString(),
+    };
+
+    // Create NextResponse with cookie
+    const response = NextResponse.json(responseData, { status: 200 });
+
+    // Set session cookie (httpOnly, secure in production)
+    const isProduction = process.env.NODE_ENV === "production";
+    const cookieOptions = {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
+      path: "/",
+    };
+
+    response.cookies.set("session", session.token, cookieOptions);
+
+    // Debug log
+    console.log("🍪 Setting cookie:", {
+      name: "session",
+      value: session.token.substring(0, 20) + "...",
+      options: cookieOptions,
+    });
+
+    return response;
   } catch (error) {
     console.error("Login error:", error);
     return errorResponse("An error occurred during login", 500);

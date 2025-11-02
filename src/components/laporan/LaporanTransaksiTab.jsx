@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,25 +17,34 @@ const formatCurrency = (amount) =>
 export default function LaporanTransaksiTab({ data, isLoading }) {
   const handleDownload = () => {
     if (!data) return;
-    const excelData = [
-      {
-        Deskripsi: "Total Transaksi (Order)",
-        Jumlah: data.totalTransaksi,
-      },
-      {
-        Deskripsi: "Total Pemasukan Sewa",
-        Jumlah: data.totalPemasukan,
-      },
-      {
-        Deskripsi: "Total Pengeluaran (BBM + Gaji)",
-        Jumlah: data.totalPengeluaranOps,
-      },
-      {
-        Deskripsi: "Total Laba Kotor",
-        Jumlah: data.totalLabaKotor,
-      },
-    ];
-    exportToExcel(excelData, "Laporan_Transaksi_Laba_Kotor");
+    try {
+      const excelData = [
+        {
+          Deskripsi: "Total Transaksi (Order)",
+          Jumlah: data.totalTransaksi,
+        },
+        {
+          Deskripsi: "Total Pemasukan Sewa",
+          Jumlah: data.totalPemasukan,
+        },
+        {
+          Deskripsi: "Total Pengeluaran (BBM + Gaji)",
+          Jumlah: data.totalPengeluaranOps,
+        },
+        {
+          Deskripsi: "Total Laba Kotor",
+          Jumlah: data.totalLabaKotor,
+        },
+      ];
+      exportToExcel(excelData, "Laporan_Transaksi_Laba_Kotor");
+      toast.success("Laporan berhasil diunduh!", {
+        description: "File Excel telah tersimpan",
+      });
+    } catch (error) {
+      toast.error("Gagal mengunduh laporan", {
+        description: error.message,
+      });
+    }
   };
 
   if (isLoading) {

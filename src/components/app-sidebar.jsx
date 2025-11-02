@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { BookOpen, GalleryVerticalEnd, DollarSign } from "lucide-react";
+import { BookOpen, GalleryVerticalEnd, DollarSign, Users } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
@@ -15,16 +15,10 @@ import {
 } from "@/components/ui/sidebar";
 
 const data = {
-  user: {
-    name: "Reborn Admin",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
   teams: [
     {
-      name: "Acme Inc",
+      name: "Reborn Lombok",
       logo: GalleryVerticalEnd,
-      plan: "Enterprise",
     },
   ],
   navMain: [
@@ -40,15 +34,15 @@ const data = {
       items: [
         {
           title: "Paket Jasa",
-          url: "/packages",
+          url: "/paket",
         },
         {
           title: "Armada",
-          url: "/cars",
+          url: "/armada",
         },
         {
           title: "Sopir",
-          url: "/drivers",
+          url: "/sopir",
         },
       ],
     },
@@ -71,10 +65,50 @@ const data = {
         },
       ],
     },
+    {
+      title: "Manajemen User",
+      icon: Users,
+      url: "/users",
+    },
   ],
 };
 
 export function AppSidebar({ ...props }) {
+  const [user, setUser] = React.useState({
+    name: "Loading...",
+    email: "",
+    avatar: "",
+  });
+
+  React.useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await fetch("/api/auth/me", {
+          credentials: "include",
+        });
+
+        if (res.ok) {
+          const result = await res.json();
+          // API returns { success: true, data: { user: {...} } }
+          const userData = result.data?.user || result.data || result.user;
+
+          if (userData) {
+            setUser({
+              name: userData.name || userData.username || "User",
+              email: userData.email || "",
+              avatar: userData.avatar || "",
+              role: userData.role || "OPERATOR",
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      }
+    };
+
+    fetchUser();
+  }, []);
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -84,7 +118,7 @@ export function AppSidebar({ ...props }) {
         <NavMain items={data.navMain} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={user} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

@@ -158,17 +158,18 @@ export const rateLimitPresets = {
   auth: { max: 5, window: 60000 }, // 5 requests per minute
 
   // Strict - for write operations (POST, PUT, DELETE)
-  write: { max: 30, window: 60000 }, // 30 requests per minute
+  write: { max: 100, window: 60000 }, // 100 requests per minute
 
   // Moderate - for read operations (GET)
-  read: { max: 100, window: 60000 }, // 100 requests per minute
+  read: { max: 600, window: 60000 }, // 600 requests per minute (10/sec)
 
   // Lenient - for high-frequency operations
-  realtime: { max: 200, window: 60000 }, // 200 requests per minute
+  realtime: { max: 1000, window: 60000 }, // 1000 requests per minute
 
   // Custom for specific endpoints
-  export: { max: 10, window: 300000 }, // 10 requests per 5 minutes
-  bulk: { max: 5, window: 60000 }, // 5 requests per minute
+  reports: { max: 600, window: 60000 }, // 600 requests per minute for reports
+  export: { max: 20, window: 300000 }, // 20 requests per 5 minutes
+  bulk: { max: 10, window: 60000 }, // 10 requests per minute
 };
 
 export function rateLimit(identifier, maxRequests = 100, windowMs = 60000) {
@@ -258,6 +259,7 @@ export function getCorsHeaders(origin = "*") {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Credentials": "true", // Allow cookies
     "Access-Control-Max-Age": "86400",
   };
 }

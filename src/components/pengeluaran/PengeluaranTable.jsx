@@ -35,6 +35,16 @@ function formatDate(dateString) {
   });
 }
 
+function formatCategory(category) {
+  const categoryMap = {
+    BBM: "BBM",
+    GAJI_SOPIR: "Gaji Sopir",
+    PERAWATAN_ARMADA: "Perawatan Armada",
+    OPERASIONAL: "Operasional",
+  };
+  return categoryMap[category] || category;
+}
+
 export default function PengeluaranTable({
   isLoading,
   data,
@@ -107,7 +117,7 @@ export default function PengeluaranTable({
           {data.map((item) => (
             <TableRow key={item.id}>
               <TableCell>{formatDate(item.date)}</TableCell>
-              <TableCell>{item.category}</TableCell>
+              <TableCell>{formatCategory(item.category)}</TableCell>
               <TableCell>{item.description}</TableCell>
               <TableCell className="text-right">
                 {formatCurrency(item.amount)}

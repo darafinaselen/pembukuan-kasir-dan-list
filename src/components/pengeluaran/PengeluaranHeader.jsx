@@ -7,15 +7,21 @@ import { PlusCircle } from "lucide-react";
 
 export default function PengeluaranHeader({ onAdd }) {
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between gap-2 border-b bg-background px-4">
-      <div className="flex items-center gap-2">
-        <SidebarTrigger className="-ml-1" />
-        <h1 className="text-xl font-semibold">Manajemen Pengeluaran</h1>
+    <header className="flex items-center gap-4 p-4">
+      <SidebarTrigger className="-ml-1" />
+      <div className="flex-1">
+        <h1 className="text-2xl font-bold">Manajemen Pengeluaran</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Kelola pengeluaran operasional — BBM, gaji sopir, perawatan, dan
+          lainnya.
+        </p>
       </div>
-      <Button onClick={onAdd} size="sm">
-        <PlusCircle className="mr-2 h-4 w-4" />
-        Tambah Pengeluaran
-      </Button>
+      <div className="flex items-center gap-2">
+        <Button onClick={onAdd}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Tambah Pengeluaran
+        </Button>
+      </div>
     </header>
   );
 }

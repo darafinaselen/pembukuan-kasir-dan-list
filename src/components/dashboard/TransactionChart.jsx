@@ -88,14 +88,23 @@ export function TransactionChart({ data, period, loading }) {
   const midpoint = Math.floor(data.length / 2);
   const firstHalf = data.slice(0, midpoint);
   const secondHalf = data.slice(midpoint);
+
   const firstHalfAvg =
-    firstHalf.reduce((sum, d) => sum + d.count, 0) / firstHalf.length;
+    firstHalf.length > 0
+      ? firstHalf.reduce((sum, d) => sum + d.count, 0) / firstHalf.length
+      : 0;
   const secondHalfAvg =
-    secondHalf.reduce((sum, d) => sum + d.count, 0) / secondHalf.length;
-  const trendPercentage = (
-    ((secondHalfAvg - firstHalfAvg) / firstHalfAvg) *
-    100
-  ).toFixed(1);
+    secondHalf.length > 0
+      ? secondHalf.reduce((sum, d) => sum + d.count, 0) / secondHalf.length
+      : 0;
+
+  const trendPercentage =
+    firstHalfAvg > 0
+      ? (((secondHalfAvg - firstHalfAvg) / firstHalfAvg) * 100).toFixed(1)
+      : secondHalfAvg > 0
+        ? "100.0"
+        : "0.0";
+
   const isGrowing = secondHalfAvg > firstHalfAvg;
 
   // Calculate Y-axis labels with better scaling
@@ -223,8 +232,8 @@ export function TransactionChart({ data, period, loading }) {
                         {period === "today"
                           ? item.date.split(":")[0] + ":00"
                           : period === "month"
-                          ? item.date.split("-").pop()
-                          : item.date}
+                            ? item.date.split("-").pop()
+                            : item.date}
                       </span>
                     </div>
                   );
@@ -239,8 +248,8 @@ export function TransactionChart({ data, period, loading }) {
                 {period === "today"
                   ? "Jam"
                   : period === "month"
-                  ? "Tanggal"
-                  : "Bulan"}
+                    ? "Tanggal"
+                    : "Bulan"}
               </div>
             </div>
           </div>

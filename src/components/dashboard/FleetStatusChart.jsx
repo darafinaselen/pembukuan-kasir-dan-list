@@ -90,7 +90,7 @@ export function FleetStatusChart({ data, loading }) {
   const utilization = total > 0 ? ((activeFleets / total) * 100).toFixed(1) : 0;
 
   return (
-    <Card>
+    <Card className="h-full">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Car className="h-5 w-5 text-purple-600" />
@@ -196,8 +196,8 @@ export function FleetStatusChart({ data, loading }) {
                 utilization >= 70
                   ? "bg-green-50 border-green-200"
                   : utilization >= 50
-                  ? "bg-yellow-50 border-yellow-200"
-                  : "bg-red-50 border-red-200"
+                    ? "bg-yellow-50 border-yellow-200"
+                    : "bg-red-50 border-red-200"
               }`}
             >
               <div className="flex items-center justify-between mb-2">
@@ -210,15 +210,15 @@ export function FleetStatusChart({ data, loading }) {
                     utilization >= 70
                       ? "text-green-700 border-green-300"
                       : utilization >= 50
-                      ? "text-yellow-700 border-yellow-300"
-                      : "text-red-700 border-red-300"
+                        ? "text-yellow-700 border-yellow-300"
+                        : "text-red-700 border-red-300"
                   }`}
                 >
                   {utilization >= 70
                     ? "Optimal"
                     : utilization >= 50
-                    ? "Normal"
-                    : "Rendah"}
+                      ? "Normal"
+                      : "Rendah"}
                 </Badge>
               </div>
               <p
@@ -226,8 +226,8 @@ export function FleetStatusChart({ data, loading }) {
                   utilization >= 70
                     ? "text-green-700"
                     : utilization >= 50
-                    ? "text-yellow-700"
-                    : "text-red-700"
+                      ? "text-yellow-700"
+                      : "text-red-700"
                 }`}
               >
                 {utilization}%
@@ -236,8 +236,8 @@ export function FleetStatusChart({ data, loading }) {
                 {utilization >= 70
                   ? "Sangat baik - Armada digunakan maksimal"
                   : utilization >= 50
-                  ? "Cukup baik - Masih ada ruang untuk peningkatan"
-                  : "Perlu ditingkatkan - Banyak armada menganggur"}
+                    ? "Cukup baik - Masih ada ruang untuk peningkatan"
+                    : "Perlu ditingkatkan - Banyak armada menganggur"}
               </p>
             </div>
           </div>

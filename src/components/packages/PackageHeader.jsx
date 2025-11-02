@@ -1,6 +1,7 @@
 import React from "react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import { PlusCircle } from "lucide-react";
 
 export default function PackageHeader({ onAdd }) {
   return (
@@ -13,7 +14,10 @@ export default function PackageHeader({ onAdd }) {
         </p>
       </div>
       <div className="flex items-center gap-2">
-        <Button onClick={onAdd}>Tambah Paket</Button>
+        <Button onClick={onAdd}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Tambah Paket
+        </Button>
       </div>
     </header>
   );

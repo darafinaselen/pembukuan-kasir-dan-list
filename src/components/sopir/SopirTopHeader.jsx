@@ -4,6 +4,7 @@ import React from "react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PlusCircle } from "lucide-react";
 
 export default function SopirTopHeader({ onAdd, searchValue, onSearchChange }) {
   return (
@@ -17,7 +18,10 @@ export default function SopirTopHeader({ onAdd, searchValue, onSearchChange }) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={onAdd}>Tambah Sopir</Button>
+          <Button onClick={onAdd}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Tambah Sopir
+          </Button>
         </div>
       </div>
 

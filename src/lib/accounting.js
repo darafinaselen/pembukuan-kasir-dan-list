@@ -15,6 +15,22 @@ export function calculateTransactionFinancials(transaction) {
   const start = new Date(transaction.checkout_datetime);
   const end = new Date(transaction.checkin_datetime);
 
+  // Validate dates are valid Date objects
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    return {
+      lamaSewaJam: 0,
+      lamaOvertimeJam: 0,
+      totalOvertimeFee: 0,
+      totalPendapatan: transaction.all_in_rate || 0,
+      totalBiayaOps:
+        (transaction.fuel_cost || 0) + (transaction.driver_fee || 0),
+      labaKotor:
+        (transaction.all_in_rate || 0) -
+        ((transaction.fuel_cost || 0) + (transaction.driver_fee || 0)),
+      error: "Invalid date format",
+    };
+  }
+
   // Edge case: Invalid time range
   if (end <= start) {
     return {

@@ -35,13 +35,16 @@ export default function LaporanFilter({
   };
 
   return (
-    <header className="flex flex-wrap items-center justify-between gap-4 border-b bg-background p-4">
-      <div className="flex items-center gap-2">
-        <SidebarTrigger className="-ml-1" />
-        <h1 className="text-xl font-semibold">Laporan & Keuangan</h1>
+    <header className="flex items-center gap-4 p-4">
+      <SidebarTrigger className="-ml-1" />
+      <div className="flex-1">
+        <h1 className="text-2xl font-bold">Laporan & Keuangan</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Lihat laporan transaksi, laba rugi, dan rekapitulasi keuangan bisnis
+          Anda.
+        </p>
       </div>
-
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex items-center gap-2">
         <Button variant="outline" size="sm" onClick={setThisMonth}>
           Bulan Ini
         </Button>
@@ -53,8 +56,9 @@ export default function LaporanFilter({
           <PopoverTrigger asChild>
             <Button
               variant={"outline"}
+              size="sm"
               className={cn(
-                "w-[300px] justify-start text-left font-normal",
+                "w-[260px] justify-start text-left font-normal",
                 !dateRange.from && "text-muted-foreground"
               )}
             >

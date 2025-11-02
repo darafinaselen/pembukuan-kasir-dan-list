@@ -23,18 +23,37 @@ export default function LaporanPage() {
 
     setIsLoading(true);
     try {
+      // Format date tanpa konversi timezone (YYYY-MM-DD)
+      const formatDate = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      };
+
+      const fromStr = formatDate(dateRange.from);
+      const toStr = formatDate(dateRange.to);
+
+      console.log("📅 Fetching report data:", { from: fromStr, to: toStr });
+
       const params = new URLSearchParams({
-        from: dateRange.from.toISOString(),
-        to: dateRange.to.toISOString(),
+        from: fromStr,
+        to: toStr,
       });
 
-      const res = await fetch(`/api/laporan/ringkasan?${params.toString()}`);
+      const res = await fetch(`/api/reports/summary?${params.toString()}`, {
+        credentials: "include",
+      });
       if (!res.ok) throw new Error("Gagal mengambil data laporan");
 
-      const data = await res.json();
+      const result = await res.json();
+      // API returns { success, data, message }
+      const data = result.data || result;
+
+      console.log("📊 Report data received:", data);
       setReportData(data);
     } catch (err) {
-      console.error(err);
+      console.error("❌ Error fetching report:", err);
       setReportData(null);
     } finally {
       setIsLoading(false);

@@ -40,13 +40,30 @@ export default function PengeluaranPage() {
   async function fetchData() {
     try {
       setIsLoading(true);
-      const res = await fetch("/api/expenses");
+      const res = await fetch("/api/expenses", {
+        credentials: "include",
+      });
       if (!res.ok) throw new Error("fetch failed");
-      const fetchedData = await res.json();
+      const result = await res.json();
 
-      setData(fetchedData);
+      // API returns { success, data, message }
+      const fetchedData = result.data || result;
+      const dataArray = Array.isArray(fetchedData) ? fetchedData : [];
+
+      console.log("📦 Fetched expenses data:", {
+        count: dataArray.length,
+        sample: dataArray[0],
+        dates: dataArray.slice(0, 3).map((item) => ({
+          id: item.id,
+          date: item.date,
+          description: item.description?.substring(0, 20),
+        })),
+      });
+
+      setData(dataArray);
     } catch (err) {
       console.error("Failed to load data", err);
+      setData([]); // Fallback to empty array
       // TODO: Tampilkan notifikasi error (toast)
     } finally {
       setIsLoading(false);
@@ -60,25 +77,62 @@ export default function PengeluaranPage() {
   // --- Filtering Logic ---
   const filteredData = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
-    return data.filter((item) => {
-      const itemDate = new Date(item.tanggal);
+
+    console.log("🔍 Filtering with:", {
+      searchTerm: q,
+      dateRange,
+      totalData: data.length,
+    });
+
+    const filtered = data.filter((item) => {
+      // Convert item date to start of day for comparison
+      const itemDate = new Date(item.date);
+      itemDate.setHours(0, 0, 0, 0);
+
       const matchesSearch =
         !q ||
-        item.deskripsi.toLowerCase().includes(q) ||
-        item.kategori.toLowerCase().replace("_", " ").includes(q);
+        item.description.toLowerCase().includes(q) ||
+        item.category.toLowerCase().replace("_", " ").includes(q);
 
-      const toDate = dateRange.to
-        ? new Date(dateRange.to.setHours(23, 59, 59, 999))
-        : undefined;
-      const fromDate = dateRange.from
-        ? new Date(dateRange.from.setHours(0, 0, 0, 0))
-        : undefined;
+      // Create comparison dates
+      let matchesDate = true;
 
-      const matchesDate =
-        (!fromDate || itemDate >= fromDate) && (!toDate || itemDate <= toDate);
+      if (dateRange.from) {
+        const fromDate = new Date(dateRange.from);
+        fromDate.setHours(0, 0, 0, 0);
+        matchesDate = matchesDate && itemDate >= fromDate;
+      }
+
+      if (dateRange.to) {
+        const toDate = new Date(dateRange.to);
+        toDate.setHours(23, 59, 59, 999);
+        matchesDate = matchesDate && itemDate <= toDate;
+      }
+
+      if (dateRange.from || dateRange.to) {
+        console.log("📅 Date check:", {
+          item: item.description?.substring(0, 30),
+          itemDate: itemDate.toISOString().split("T")[0],
+          fromDate: dateRange.from
+            ? new Date(dateRange.from).toISOString().split("T")[0]
+            : "none",
+          toDate: dateRange.to
+            ? new Date(dateRange.to).toISOString().split("T")[0]
+            : "none",
+          matchesDate,
+        });
+      }
 
       return matchesSearch && matchesDate;
     });
+
+    console.log(
+      "✅ Filtered result:",
+      filtered.length,
+      "items out of",
+      data.length
+    );
+    return filtered;
   }, [data, searchTerm, dateRange]);
 
   // --- Event Handlers ---
@@ -94,16 +148,17 @@ export default function PengeluaranPage() {
     const today = new Date();
 
     if (value === "month") {
-      setDateRange({
-        from: startOfMonth(today),
-        to: endOfToday(),
-      });
+      const from = startOfMonth(today);
+      const to = endOfToday();
+      console.log("🗓️ Filter Bulan Ini:", { from, to });
+      setDateRange({ from, to });
     } else if (value === "year") {
-      setDateRange({
-        from: startOfYear(today),
-        to: endOfToday(),
-      });
+      const from = startOfYear(today);
+      const to = endOfToday();
+      console.log("🗓️ Filter Tahun Ini:", { from, to });
+      setDateRange({ from, to });
     } else {
+      console.log("🗓️ Filter All - Reset date range");
       setDateRange({ from: undefined, to: undefined });
     }
   };
@@ -138,7 +193,10 @@ export default function PengeluaranPage() {
     if (!confirm("Yakin ingin menghapus data ini?")) return;
     try {
       console.log("Menghapus data ID:", id);
-      const res = await fetch(`/api/expenses/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/expenses/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
       if (!res.ok) throw new Error("delete failed");
 
       // Optimistic UI: Hapus dari state
@@ -168,6 +226,7 @@ export default function PengeluaranPage() {
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: body,
       });
       if (!res.ok) throw new Error("save failed");

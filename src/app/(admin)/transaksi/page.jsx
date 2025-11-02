@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+import { toast } from "sonner";
 import TransaksiHeader from "@/components/transaksi/TransaksiHeader";
 import TransaksiFilters from "@/components/transaksi/TransaksiFilters";
 import TransaksiTable from "@/components/transaksi/TransaksiTable";
@@ -8,7 +9,7 @@ import TransaksiDialog from "@/components/transaksi/TransaksiDialog";
 import TransaksiDetailModal from "@/components/transaksi/TransaksiDetailModal";
 
 import { startOfMonth, startOfYear, endOfToday } from "date-fns";
-import { calculateFinancials } from "@/lib/utils";
+import { calculateTransactionFinancials } from "@/lib/accounting";
 
 function getTodayDateString() {
   const today = new Date();
@@ -100,11 +101,15 @@ export default function TransaksiPage() {
   async function fetchData() {
     try {
       setIsLoading(true);
-      // Nanti kita akan buat API ini
-      const res = await fetch("/api/transaksi");
+      const res = await fetch("/api/transactions", {
+        credentials: "include",
+      });
       if (!res.ok) throw new Error("fetch failed");
-      const fetchedData = await res.json();
-      setData(fetchedData);
+      const result = await res.json();
+
+      // API returns { success, data, message }
+      const fetchedData = result.data || result;
+      setData(Array.isArray(fetchedData) ? fetchedData : []);
     } catch (err) {
       console.error("Failed to load data", err);
       setData([]);
@@ -116,23 +121,30 @@ export default function TransaksiPage() {
   async function fetchDependencies() {
     try {
       setIsLoadingDependencies(true);
-      // TANYAKAN Dev B: Apakah API-nya mendukung filter status?
-      // Kita 'await' semua bersamaan
+      // Fetch semua bersamaan dengan credentials
       const [paketRes, armadaRes, sopirRes] = await Promise.all([
-        fetch("/api/packages"), // Ganti jika URL beda
-        fetch("/api/armada?status=READY"),
-        fetch("/api/sopir?status=READY"),
+        fetch("/api/packages", { credentials: "include" }),
+        fetch("/api/vehicles?status=READY", { credentials: "include" }),
+        fetch("/api/drivers?status=READY", { credentials: "include" }),
       ]);
 
-      const paketData = await paketRes.json();
-      const armadaData = await armadaRes.json();
-      const sopirData = await sopirRes.json();
+      const paketResult = await paketRes.json();
+      const armadaResult = await armadaRes.json();
+      const sopirResult = await sopirRes.json();
 
-      setPaketList(paketData || []);
-      setArmadaList(armadaData || []);
-      setSopirList(sopirData || []);
+      // API returns { success, data, message }
+      const paketData = paketResult.data || paketResult;
+      const armadaData = armadaResult.data || armadaResult;
+      const sopirData = sopirResult.data || sopirResult;
+
+      setPaketList(Array.isArray(paketData) ? paketData : []);
+      setArmadaList(Array.isArray(armadaData) ? armadaData : []);
+      setSopirList(Array.isArray(sopirData) ? sopirData : []);
     } catch (err) {
       console.error("Failed to load dependencies", err);
+      setPaketList([]);
+      setArmadaList([]);
+      setSopirList([]);
       // TODO: Tampilkan toast error
     } finally {
       setIsLoadingDependencies(false);
@@ -144,7 +156,7 @@ export default function TransaksiPage() {
   }, []);
 
   useEffect(() => {
-    setCalculatedData(calculateFinancials(formData));
+    setCalculatedData(calculateTransactionFinancials(formData));
   }, [formData]);
 
   // --- Filtering Logic ---
@@ -242,14 +254,17 @@ export default function TransaksiPage() {
 
   const openViewDialog = (item) => {
     setViewingData(item);
-    setCalculatedData(calculateFinancials(item));
+    setCalculatedData(calculateTransactionFinancials(item));
     setIsDetailOpen(true);
   };
 
   const handleDelete = async (id) => {
     if (!confirm("Yakin ingin menghapus transaksi ini?")) return;
     try {
-      const res = await fetch(`/api/transaksi/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/transactions/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
       if (!res.ok) throw new Error("delete failed");
       await fetchData();
     } catch (err) {
@@ -259,10 +274,11 @@ export default function TransaksiPage() {
 
   const handleUpdateStatus = async (id, newStatus) => {
     try {
-      // Kita akan buat API khusus untuk update status
-      const res = await fetch(`/api/transaksi/status/${id}`, {
+      // Update status transaksi
+      const res = await fetch(`/api/transactions/status/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ payment_status: newStatus }),
       });
       if (!res.ok) throw new Error("status update failed");
@@ -281,20 +297,24 @@ export default function TransaksiPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.armadaId) {
-      alert("Error: Silakan pilih Armada terlebih dahulu.");
+      toast.error("Validasi Gagal", {
+        description: "Silakan pilih Armada terlebih dahulu.",
+      });
       return;
     }
     if (!formData.driverId) {
-      alert("Error: Silakan pilih Sopir terlebih dahulu.");
+      toast.error("Validasi Gagal", {
+        description: "Silakan pilih Sopir terlebih dahulu.",
+      });
       return;
     }
     try {
       const method = editingData ? "PUT" : "POST";
       const url = editingData
-        ? `/api/transaksi/${editingData.id}`
-        : "/api/transaksi";
+        ? `/api/transactions/${editingData.id}`
+        : "/api/transactions";
 
-      const finalCalculations = calculateFinancials(formData);
+      const finalCalculations = calculateTransactionFinancials(formData);
       const payload = {
         // Data Pelanggan
         customer_name: formData.customer_name,
@@ -322,6 +342,7 @@ export default function TransaksiPage() {
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: body,
       });
 
@@ -330,12 +351,22 @@ export default function TransaksiPage() {
         throw new Error(errData.error || "Gagal menyimpan transaksi");
       }
 
+      toast.success(
+        editingData
+          ? "Transaksi berhasil diupdate!"
+          : "Transaksi berhasil ditambahkan!",
+        {
+          description: `${formData.customer_name} - ${formData.invoice_code}`,
+        }
+      );
+
       setIsDialogOpen(false);
       await fetchData();
-      // TODO: Tampilkan notifikasi sukses (toast)
     } catch (err) {
       console.error("Failed to save", err);
-      alert(`Error: ${err.message}`);
+      toast.error("Gagal menyimpan transaksi", {
+        description: err.message,
+      });
     }
   };
 

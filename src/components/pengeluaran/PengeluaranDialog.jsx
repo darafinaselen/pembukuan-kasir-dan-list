@@ -71,14 +71,12 @@ export default function PengeluaranDialog({
                 <SelectValue placeholder="Pilih kategori..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="SERVIS_ARMADA">Servis Armada</SelectItem>
-                <SelectItem value="BIAYA_KANTOR">Biaya Kantor</SelectItem>
-                <SelectItem value="LISTRIK_AIR">Listrik/Air</SelectItem>
-                <SelectItem value="TOL_PARKIR_NON_PAKET">
-                  Tol & Parkir (Non-Paket)
+                <SelectItem value="BBM">BBM</SelectItem>
+                <SelectItem value="GAJI_SOPIR">Gaji Sopir</SelectItem>
+                <SelectItem value="PERAWATAN_ARMADA">
+                  Perawatan Armada
                 </SelectItem>
-                <SelectItem value="GAJI_ADMIN">Gaji Admin</SelectItem>
-                <SelectItem value="LAIN_LAIN">Lain-lain</SelectItem>
+                <SelectItem value="OPERASIONAL">Operasional</SelectItem>
               </SelectContent>
             </Select>
           </div>

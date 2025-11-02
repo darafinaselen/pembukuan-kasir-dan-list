@@ -1,10 +1,19 @@
-import { PrismaClient } from "@prisma/client";
-import { NextResponse } from "next/server";
+import {
+  protectedRoute,
+  successResponse,
+  errorResponse,
+  permissions,
+} from "@/lib/middleware";
+import { prisma } from "@/lib/prisma";
+import { logTransactionEvent } from "@/lib/audit";
 
-const prisma = new PrismaClient();
-
-export async function GET() {
+async function handleGetTransactions(request) {
   try {
+    // Check permissions
+    if (!permissions.canViewTransactions(request.auth.user)) {
+      return errorResponse("Insufficient permissions", 403);
+    }
+
     const transactions = await prisma.transaction.findMany({
       orderBy: {
         booking_date: "desc",
@@ -15,33 +24,31 @@ export async function GET() {
         driver: true,
       },
     });
-    return NextResponse.json(transactions);
+
+    return successResponse(transactions);
   } catch (error) {
     console.error("Error fetching transactions:", error);
-    return NextResponse.json(
-      { error: "Gagal mengambil data transaksi" },
-      { status: 500 }
-    );
+    return errorResponse("Gagal mengambil data transaksi", 500);
   }
 }
 
-export async function POST(request) {
+async function handleCreateTransaction(request) {
   try {
-    const body = await request.json();
+    // Check permissions
+    if (!permissions.canCreateTransaction(request.auth.user)) {
+      return errorResponse("Insufficient permissions", 403);
+    }
 
+    const body = await request.json();
     const { armadaId, driverId, packageId, ...transactionData } = body;
 
     if (!armadaId || !driverId) {
-      return NextResponse.json(
-        { error: "Armada dan Sopir wajib diisi" },
-        { status: 400 }
-      );
+      return errorResponse("Armada dan Sopir wajib diisi", 400);
     }
 
     const isStartingTodayOrPast =
       new Date(body.checkout_datetime) <= new Date();
     const armadaStatus = isStartingTodayOrPast ? "ON_TRIP" : "BOOKED";
-
     const driverStatus = "ON_TRIP";
 
     const date = new Date();
@@ -73,18 +80,31 @@ export async function POST(request) {
       }),
     ]);
 
-    return NextResponse.json(newTransaction, { status: 201 });
+    // Log audit event
+    await logTransactionEvent(
+      request.auth.user.id,
+      "CREATE",
+      newTransaction.id,
+      newTransaction,
+      request.auth.ipAddress,
+      request.auth.userAgent
+    );
+
+    return successResponse(newTransaction, 201);
   } catch (error) {
     console.error("Error creating transaction:", error);
     if (error.code === "P2002") {
-      return NextResponse.json(
-        { error: "Gagal membuat invoice code unik. Coba lagi." },
-        { status: 409 }
-      );
+      return errorResponse("Gagal membuat invoice code unik. Coba lagi.", 409);
     }
-    return NextResponse.json(
-      { error: "Gagal membuat transaksi" },
-      { status: 500 }
-    );
+    return errorResponse("Gagal membuat transaksi", 500);
   }
 }
+
+// All roles can view and create transactions
+export const GET = protectedRoute(handleGetTransactions, {
+  roles: ["ADMIN", "MANAGER", "OPERATOR"],
+});
+
+export const POST = protectedRoute(handleCreateTransaction, {
+  roles: ["ADMIN", "MANAGER", "OPERATOR"],
+});

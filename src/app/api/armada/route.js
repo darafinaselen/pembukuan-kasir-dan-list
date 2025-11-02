@@ -1,37 +1,36 @@
-import { PrismaClient } from "@prisma/client";
-import { NextResponse } from "next/server";
+import {
+  protectedRoute,
+  successResponse,
+  errorResponse,
+  permissions,
+} from "@/lib/middleware";
+import { prisma } from "@/lib/prisma";
 
-const prisma = new PrismaClient();
-
-export async function GET() {
+async function handleGetArmadas(request) {
   try {
-    // Return armadas in a stable order. Without explicit ordering
-    // the database may return rows in arbitrary order which makes UI
-    // appear to reshuffle after updates. Order by createdAt descending
-    // so newest entries appear first.
+    // All roles can view armadas
     const armadas = await prisma.armada.findMany({
       orderBy: { createdAt: "desc" },
     });
-    return NextResponse.json(armadas);
+    return successResponse(armadas);
   } catch (error) {
     console.error("Error fetching armadas:", error);
-    return NextResponse.json(
-      { message: "Error fetching armadas" },
-      { status: 500 }
-    );
+    return errorResponse("Error fetching armadas", 500);
   }
 }
 
-export async function POST(request) {
+async function handleCreateArmada(request) {
   try {
+    // Check permissions - only ADMIN and MANAGER can create
+    if (!["ADMIN", "MANAGER"].includes(request.auth.user.role)) {
+      return errorResponse("Insufficient permissions", 403);
+    }
+
     const data = await request.json();
     const { license_plate, brand, model, status } = data;
 
     if (!license_plate || !brand || !model) {
-      return NextResponse.json(
-        { message: "Missing required fields" },
-        { status: 400 }
-      );
+      return errorResponse("Missing required fields", 400);
     }
 
     const newArmada = await prisma.armada.create({
@@ -42,12 +41,20 @@ export async function POST(request) {
         status,
       },
     });
-    return NextResponse.json(newArmada, { status: 201 });
+
+    return successResponse(newArmada, 201);
   } catch (error) {
     console.error("Error creating armada:", error);
-    return NextResponse.json(
-      { message: "Error creating armada" },
-      { status: 500 }
-    );
+    return errorResponse("Error creating armada", 500);
   }
 }
+
+// All roles can view armadas
+export const GET = protectedRoute(handleGetArmadas, {
+  roles: ["ADMIN", "MANAGER", "OPERATOR"],
+});
+
+// Only ADMIN and MANAGER can create armadas
+export const POST = protectedRoute(handleCreateArmada, {
+  roles: ["ADMIN", "MANAGER"],
+});

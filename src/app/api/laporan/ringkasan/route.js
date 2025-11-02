@@ -1,10 +1,15 @@
-import { PrismaClient } from "@prisma/client";
-import { NextResponse } from "next/server";
+import {
+  protectedRoute,
+  successResponse,
+  errorResponse,
+  permissions,
+  rateLimitPresets,
+} from "@/lib/middleware";
+import { prisma } from "@/lib/prisma";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { calculateTransactionFinancials } from "@/lib/accounting";
-
-const prisma = new PrismaClient();
+import { logReportAccess } from "@/lib/audit";
 
 /**
  * Calculate financial metrics for a transaction
@@ -15,17 +20,19 @@ function calculateTxFinancials(tx) {
   return calculateTransactionFinancials(tx);
 }
 
-export async function GET(request) {
+async function handleGetSummaryReport(request) {
   try {
+    // Check permissions - only ADMIN and MANAGER can view reports
+    if (!permissions.canViewReports(request.auth.user)) {
+      return errorResponse("Insufficient permissions", 403);
+    }
+
     const url = new URL(request.url);
     const from = url.searchParams.get("from");
     const to = url.searchParams.get("to");
 
     if (!from || !to) {
-      return NextResponse.json(
-        { error: "Rentang tanggal wajib diisi" },
-        { status: 400 }
-      );
+      return errorResponse("Rentang tanggal wajib diisi", 400);
     }
 
     const dateFilterTx = {
@@ -108,7 +115,16 @@ export async function GET(request) {
     const rekapBBM = Array.from(bbmMap.values());
     const rekapGaji = Array.from(gajiMap.values());
 
-    return NextResponse.json({
+    // Log report access for audit trail
+    await logReportAccess(
+      request.auth.user.id,
+      "ringkasan",
+      { from, to },
+      request.auth.ipAddress,
+      request.auth.userAgent
+    );
+
+    return successResponse({
       laporanTransaksi,
       laporanLabaRugi,
       rekapBBM,
@@ -116,9 +132,13 @@ export async function GET(request) {
     });
   } catch (error) {
     console.error("Error fetching report data:", error);
-    return NextResponse.json(
-      { error: "Gagal memuat data laporan" },
-      { status: 500 }
-    );
+    return errorResponse("Gagal memuat data laporan", 500);
   }
 }
+
+// Only ADMIN and MANAGER can view reports
+// Use export rate limit to prevent data harvesting
+export const GET = protectedRoute(handleGetSummaryReport, {
+  roles: ["ADMIN", "MANAGER"],
+  rateLimit: rateLimitPresets.export, // 10 requests per 5 minutes
+});

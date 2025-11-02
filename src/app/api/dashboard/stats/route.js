@@ -1,21 +1,29 @@
-import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import {
+  protectedRoute,
+  successResponse,
+  errorResponse,
+} from "@/lib/middleware";
+import { prisma } from "@/lib/prisma";
 import { calculateTransactionFinancials } from "@/lib/accounting";
-
-const prisma = new PrismaClient();
+import { permissions } from "@/lib/middleware";
 
 /**
  * GET /api/dashboard/stats?period=today|month|year
  * Returns:
- * - totalRevenue: sum of all_in_rate
- * - grossProfit: sum of (all_in_rate - fuel_cost - driver_fee)
+ * - totalRevenue: sum of all_in_rate + overtime
+ * - grossProfit: sum of (revenue - fuel_cost - driver_fee)
  * - transactionCount: count of transactions
  * - fleetCount: count of armadas
  * - transactionTrend: array of { date, count, revenue } for chart
  * - fleetStatus: array of { status, count } for pie chart
  */
-export async function GET(request) {
+async function handleGetDashboardStats(request) {
   try {
+    // Check permission
+    if (!permissions.canViewDashboard(request.auth.user)) {
+      return errorResponse("Insufficient permissions to view dashboard", 403);
+    }
+
     const { searchParams } = new URL(request.url);
     const period = searchParams.get("period") || "month"; // today | month | year
 
@@ -158,24 +166,29 @@ export async function GET(request) {
       (a, b) => b.revenue - a.revenue
     );
 
-    return NextResponse.json({
-      totalRevenue,
-      grossProfit: totalGrossProfit,
-      transactionCount,
-      fleetCount,
-      transactionTrend,
-      fleetStatus,
-      fleetRevenue,
-      period,
-    });
+    return successResponse(
+      {
+        totalRevenue,
+        grossProfit: totalGrossProfit,
+        transactionCount,
+        fleetCount,
+        transactionTrend,
+        fleetStatus,
+        fleetRevenue,
+        period,
+      },
+      "Dashboard stats retrieved successfully"
+    );
   } catch (error) {
     console.error("Dashboard stats error:", error);
-    return NextResponse.json(
-      {
-        error: "Failed to fetch dashboard stats",
-        message: error?.message,
-      },
-      { status: 500 }
+    return errorResponse(
+      "Failed to fetch dashboard stats",
+      500,
+      error?.message
     );
   }
 }
+
+export const GET = protectedRoute(handleGetDashboardStats, {
+  roles: ["ADMIN", "MANAGER"],
+});

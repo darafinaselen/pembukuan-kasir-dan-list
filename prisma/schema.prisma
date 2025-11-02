@@ -38,6 +38,22 @@ enum PaymentStatus {
   PAID
 }
 
+enum UserRole {
+  ADMIN
+  MANAGER
+  OPERATOR
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  VIEW
+  EXPORT
+}
+
 // Modul 2.5: Manajemen Paket Jasa
 model ServicePackage {
   id                String      @id @default(uuid())
@@ -218,4 +234,73 @@ model Transaction {
   updatedAt DateTime @updatedAt
 
   @@map("transactions")
+}
+
+// Modul 6: Authentication & Authorization
+model User {
+  id          String    @id @default(uuid())
+  email       String    @unique
+  username    String    @unique
+  password    String // Hashed with bcrypt
+  name        String
+  role        UserRole  @default(OPERATOR)
+  isActive    Boolean   @default(true)
+  lastLoginAt DateTime?
+  lastLoginIp String?
+
+  // Password reset
+  resetToken       String?   @unique
+  resetTokenExpiry DateTime?
+
+  // Account security
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+
+  // Relasi
+  sessions  Session[]
+  auditLogs AuditLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([token])
+  @@map("sessions")
+}
+
+// Modul 7: Audit Logging untuk Compliance
+model AuditLog {
+  id          String      @id @default(uuid())
+  userId      String?
+  user        User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action      AuditAction
+  resource    String // e.g., "Transaction", "Armada", "User"
+  resourceId  String? // ID of the affected resource
+  description String // Human-readable description
+  metadata    Json? // Additional data (before/after values, etc.)
+  ipAddress   String?
+  userAgent   String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([resource])
+  @@index([createdAt])
+  @@map("audit_logs")
 }

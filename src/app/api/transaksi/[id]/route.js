@@ -1,12 +1,21 @@
-import { PrismaClient } from "@prisma/client";
-import { NextResponse } from "next/server";
+import {
+  protectedRoute,
+  successResponse,
+  errorResponse,
+  permissions,
+} from "@/lib/middleware";
+import { prisma } from "@/lib/prisma";
+import { logTransactionEvent } from "@/lib/audit";
 
-const prisma = new PrismaClient();
-
-export async function GET(request, { params }) {
+async function handleGetTransaction(request, { params }) {
   const { id: idFromParams } = await params;
 
   try {
+    // Check permissions
+    if (!permissions.canViewTransactions(request.auth.user)) {
+      return errorResponse("Insufficient permissions", 403);
+    }
+
     const transaction = await prisma.transaction.findUnique({
       where: { id: idFromParams },
       include: {
@@ -17,25 +26,25 @@ export async function GET(request, { params }) {
     });
 
     if (!transaction) {
-      return NextResponse.json(
-        { error: "Transaksi tidak ditemukan" },
-        { status: 404 }
-      );
+      return errorResponse("Transaksi tidak ditemukan", 404);
     }
-    return NextResponse.json(transaction);
+
+    return successResponse(transaction);
   } catch (error) {
     console.error(`Error fetching transaction ${idFromParams}:`, error);
-    return NextResponse.json(
-      { error: "Gagal mengambil data" },
-      { status: 500 }
-    );
+    return errorResponse("Gagal mengambil data", 500);
   }
 }
 
-export async function PUT(request, { params }) {
+async function handleUpdateTransaction(request, { params }) {
   const { id: idFromParams } = await params;
 
   try {
+    // Check permissions
+    if (!permissions.canUpdateTransaction(request.auth.user)) {
+      return errorResponse("Insufficient permissions", 403);
+    }
+
     const body = await request.json();
     const { armadaId, driverId, packageId, ...transactionData } = body;
 
@@ -49,30 +58,39 @@ export async function PUT(request, { params }) {
       },
     });
 
-    return NextResponse.json(updatedTransaction);
+    // Log audit event
+    await logTransactionEvent(
+      request.auth.user.id,
+      "UPDATE",
+      updatedTransaction.id,
+      updatedTransaction,
+      request.auth.ipAddress,
+      request.auth.userAgent
+    );
+
+    return successResponse(updatedTransaction);
   } catch (error) {
     console.error(`Error updating transaction ${idFromParams}:`, error);
-    return NextResponse.json(
-      { error: "Gagal mengupdate data" },
-      { status: 500 }
-    );
+    return errorResponse("Gagal mengupdate data", 500);
   }
 }
 
-export async function DELETE(request, { params }) {
+async function handleDeleteTransaction(request, { params }) {
   const { id: idFromParams } = await params;
 
   try {
+    // Check permissions
+    if (!permissions.canDeleteTransaction(request.auth.user)) {
+      return errorResponse("Insufficient permissions", 403);
+    }
+
     const tx = await prisma.transaction.findUnique({
       where: { id: idFromParams },
       select: { armadaId: true, driverId: true },
     });
 
     if (!tx) {
-      return NextResponse.json(
-        { error: "Transaksi tidak ditemukan" },
-        { status: 404 }
-      );
+      return errorResponse("Transaksi tidak ditemukan", 404);
     }
 
     await prisma.$transaction([
@@ -91,18 +109,37 @@ export async function DELETE(request, { params }) {
       }),
     ]);
 
-    return NextResponse.json(
-      {
-        message:
-          "Data transaksi berhasil dihapus dan status armada/sopir di-reset",
-      },
-      { status: 200 }
+    // Log audit event
+    await logTransactionEvent(
+      request.auth.user.id,
+      "DELETE",
+      idFromParams,
+      { armadaId: tx.armadaId, driverId: tx.driverId },
+      request.auth.ipAddress,
+      request.auth.userAgent
     );
+
+    return successResponse({
+      message:
+        "Data transaksi berhasil dihapus dan status armada/sopir di-reset",
+    });
   } catch (error) {
     console.error(`Error deleting transaction ${idFromParams}:`, error);
-    return NextResponse.json(
-      { error: "Gagal menghapus data" },
-      { status: 500 }
-    );
+    return errorResponse("Gagal menghapus data", 500);
   }
 }
+
+// All roles can view transactions
+export const GET = protectedRoute(handleGetTransaction, {
+  roles: ["ADMIN", "MANAGER", "OPERATOR"],
+});
+
+// All roles can update transactions
+export const PUT = protectedRoute(handleUpdateTransaction, {
+  roles: ["ADMIN", "MANAGER", "OPERATOR"],
+});
+
+// Only ADMIN and MANAGER can delete transactions
+export const DELETE = protectedRoute(handleDeleteTransaction, {
+  roles: ["ADMIN", "MANAGER"],
+});

@@ -1,11 +1,14 @@
-import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import {
+  protectedRoute,
+  successResponse,
+  errorResponse,
+} from "@/lib/middleware";
+import { prisma } from "@/lib/prisma";
 import { validatePriceRangesForTier } from "@/lib/utils";
 
-const prisma = new PrismaClient();
-
-export async function GET() {
+async function handleGetPackages(request) {
   try {
+    // All roles can view packages
     const packages = await prisma.servicePackage.findMany({
       include: {
         hotelTiers: {
@@ -17,27 +20,33 @@ export async function GET() {
         itineraries: true,
       },
     });
-    return NextResponse.json(packages);
+    return successResponse(packages);
   } catch (error) {
     console.error(error);
     // If the packages table doesn't exist yet (local dev), return an empty array so UI can render.
     if (error?.code === "P2021") {
-      return NextResponse.json([], { status: 200 });
+      return successResponse([]);
     }
-    // Return error details in dev for quicker debugging
-    return NextResponse.json(
-      {
-        error: "Failed to fetch packages",
-        message: error?.message,
-        stack: error?.stack,
-      },
-      { status: 500 }
+    return errorResponse(
+      "Failed to fetch packages",
+      500,
+      process.env.NODE_ENV === "development"
+        ? {
+            message: error?.message,
+            stack: error?.stack,
+          }
+        : null
     );
   }
 }
 
-export async function POST(request) {
+async function handleCreatePackage(request) {
   try {
+    // Check permissions - only ADMIN and MANAGER can create
+    if (!["ADMIN", "MANAGER"].includes(request.auth.user.role)) {
+      return errorResponse("Insufficient permissions", 403);
+    }
+
     const data = await request.json();
     const {
       tarifHotel: hotelTiers,
@@ -64,8 +73,8 @@ export async function POST(request) {
       tipePaket === "Paket Tour"
         ? "TOUR_PACKAGE"
         : tipePaket === "Full Day Trip"
-        ? "FULL_DAY_TRIP"
-        : "CAR_RENTAL";
+          ? "FULL_DAY_TRIP"
+          : "CAR_RENTAL";
 
     const includes =
       typeof include === "string"
@@ -98,14 +107,14 @@ export async function POST(request) {
         typeof hargaDefault === "number"
           ? hargaDefault
           : hargaDefault
-          ? Number(hargaDefault)
-          : null;
+            ? Number(hargaDefault)
+            : null;
       prismaData.overtimeRate =
         typeof tarifOvertime === "number"
           ? tarifOvertime
           : tarifOvertime
-          ? Number(tarifOvertime)
-          : null;
+            ? Number(tarifOvertime)
+            : null;
       // For CAR_RENTAL and FULL_DAY_TRIP, durasiHari represents hours
       const hours = nestedDurasiHari ?? durasiHari;
       prismaData.durationHours = hours ? Number(hours) : null;
@@ -124,13 +133,9 @@ export async function POST(request) {
           if (tier.priceRanges) {
             const v = validatePriceRangesForTier(tier.priceRanges);
             if (!v.ok) {
-              return NextResponse.json(
-                {
-                  error: `Validasi priceRanges gagal di tingkat ke-${i + 1}: ${
-                    v.message
-                  }`,
-                },
-                { status: 400 }
+              return errorResponse(
+                `Validasi priceRanges gagal di tingkat ke-${i + 1}: ${v.message}`,
+                400
               );
             }
           }
@@ -192,12 +197,19 @@ export async function POST(request) {
       },
     });
 
-    return NextResponse.json(newPackage, { status: 201 });
+    return successResponse(newPackage, 201);
   } catch (error) {
     console.error(error);
-    return NextResponse.json(
-      { error: "Failed to create package" },
-      { status: 500 }
-    );
+    return errorResponse("Failed to create package", 500);
   }
 }
+
+// All roles can view packages
+export const GET = protectedRoute(handleGetPackages, {
+  roles: ["ADMIN", "MANAGER", "OPERATOR"],
+});
+
+// Only ADMIN and MANAGER can create packages
+export const POST = protectedRoute(handleCreatePackage, {
+  roles: ["ADMIN", "MANAGER"],
+});

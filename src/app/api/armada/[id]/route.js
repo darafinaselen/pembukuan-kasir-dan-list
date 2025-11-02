@@ -1,11 +1,19 @@
-import { PrismaClient } from "@prisma/client";
-import { NextResponse } from "next/server";
+import {
+  protectedRoute,
+  successResponse,
+  errorResponse,
+} from "@/lib/middleware";
+import { prisma } from "@/lib/prisma";
 
-const prisma = new PrismaClient();
-
-export async function PUT(request, { params }) {
+async function handleUpdateArmada(request, { params }) {
   const { id } = await params;
+
   try {
+    // Check permissions - only ADMIN and MANAGER can update
+    if (!["ADMIN", "MANAGER"].includes(request.auth.user.role)) {
+      return errorResponse("Insufficient permissions", 403);
+    }
+
     const data = await request.json();
     const { license_plate, brand, model, status } = data;
 
@@ -18,28 +26,39 @@ export async function PUT(request, { params }) {
         status,
       },
     });
-    return NextResponse.json(updatedArmada);
+
+    return successResponse(updatedArmada);
   } catch (error) {
     console.error(`Error updating armada ${id}:`, error);
-    return NextResponse.json(
-      { message: `Error updating armada ${id}` },
-      { status: 500 }
-    );
+    return errorResponse(`Error updating armada ${id}`, 500);
   }
 }
 
-export async function DELETE(request, { params }) {
+async function handleDeleteArmada(request, { params }) {
   const { id } = await params;
+
   try {
+    // Check permissions - only ADMIN and MANAGER can delete
+    if (!["ADMIN", "MANAGER"].includes(request.auth.user.role)) {
+      return errorResponse("Insufficient permissions", 403);
+    }
+
     await prisma.armada.delete({
       where: { id },
     });
-    return NextResponse.json({ message: `Armada ${id} deleted successfully` });
+
+    return successResponse({ message: `Armada ${id} deleted successfully` });
   } catch (error) {
     console.error(`Error deleting armada ${id}:`, error);
-    return NextResponse.json(
-      { message: `Error deleting armada ${id}` },
-      { status: 500 }
-    );
+    return errorResponse(`Error deleting armada ${id}`, 500);
   }
 }
+
+// Only ADMIN and MANAGER can update and delete armadas
+export const PUT = protectedRoute(handleUpdateArmada, {
+  roles: ["ADMIN", "MANAGER"],
+});
+
+export const DELETE = protectedRoute(handleDeleteArmada, {
+  roles: ["ADMIN", "MANAGER"],
+});

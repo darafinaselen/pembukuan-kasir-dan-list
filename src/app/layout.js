@@ -48,16 +48,15 @@ export const metadata = {
     maximumScale: 1,
   },
   manifest: "/manifest.json",
-  icons: {
-    icon: "/newLogo.png",
-    shortcut: "/newLogo.png",
-    apple: "/newLogo.png",
-  },
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="id">
+      <head>
+        <link rel="icon" href="/newLogo.png" sizes="any" />
+        <link rel="apple-touch-icon" href="/newLogo.png" />
+      </head>
       {/* suppressHydrationWarning silences hydration attribute mismatches on <body>.
           Prefer debugging extensions (incognito) first; this is a safe fallback. */}
       <body suppressHydrationWarning className="antialiased">

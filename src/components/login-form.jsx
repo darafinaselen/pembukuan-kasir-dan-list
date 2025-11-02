@@ -165,25 +165,6 @@ export function LoginForm({ className, ...props }) {
         </CardContent>
       </Card>
 
-      {/* Demo Credentials */}
-      <Card className="border-blue-200 bg-blue-50">
-        <CardContent className="pt-6">
-          <div className="text-sm">
-            <p className="font-semibold text-blue-900 mb-2">
-              Demo Credentials:
-            </p>
-            <div className="space-y-1 text-blue-700">
-              <p>
-                Email: <span className="font-mono">admin@example.com</span>
-              </p>
-              <p>
-                Password: <span className="font-mono">admin123</span>
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       <FieldDescription className="px-6 text-center text-xs text-muted-foreground">
         Sistem Pembukuan Kasir & List - Rental Mobil
       </FieldDescription>

@@ -143,12 +143,14 @@ async function handleLogin(request) {
     // Create NextResponse with cookie
     const response = NextResponse.json(responseData, { status: 200 });
 
-    // Set session cookie (httpOnly, secure in production)
+    // Set session cookie (httpOnly, secure only if HTTPS)
     const isProduction = process.env.NODE_ENV === "production";
+    const isHttps = process.env.NEXT_PUBLIC_BASE_URL?.startsWith("https://");
+
     const cookieOptions = {
       httpOnly: true,
-      secure: isProduction,
-      sameSite: "lax",
+      secure: isProduction && isHttps, // Only secure if production AND using HTTPS
+      sameSite: isProduction ? "lax" : "lax",
       maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
       path: "/",
     };
@@ -160,6 +162,9 @@ async function handleLogin(request) {
       name: "session",
       value: session.token.substring(0, 20) + "...",
       options: cookieOptions,
+      isProduction,
+      isHttps,
+      url: process.env.NEXT_PUBLIC_BASE_URL || "not set",
     });
 
     return response;

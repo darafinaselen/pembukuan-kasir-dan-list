@@ -3,6 +3,7 @@
  * Terminates user session
  */
 
+import { NextResponse } from "next/server";
 import {
   protectedRoute,
   successResponse,
@@ -29,7 +30,23 @@ async function handleLogout(request) {
       true
     );
 
-    return successResponse(null, "Logout successful");
+    // Create response
+    const response = NextResponse.json({
+      success: true,
+      message: "Logout successful",
+      data: null,
+    });
+
+    // Clear session cookie
+    response.cookies.set("session", "", {
+      httpOnly: true,
+      secure: false, // Allow clearing on HTTP
+      sameSite: "lax",
+      maxAge: 0, // Expire immediately
+      path: "/",
+    });
+
+    return response;
   } catch (error) {
     console.error("Logout error:", error);
     return errorResponse("An error occurred during logout", 500);

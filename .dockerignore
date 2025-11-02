@@ -43,6 +43,11 @@ Thumbs.db
 # Documentation
 *.md
 !README.md
+!DATABASE_SETUP.md
+!RAILWAY_DEPLOY.md
+
+# Shell scripts - KEEP THESE (needed for deployment)
+# *.sh
 
 # Misc
 .editorconfig

@@ -1,9 +1,10 @@
 [phases.setup]
-nixPkgs = ["nodejs-20_x", "openssl"]
+nixPkgs = ["nodejs_20", "openssl"]
+aptPkgs = []
 
 [phases.install]
 cmds = [
-  "npm ci --include=dev"
+  "npm ci --include=dev --legacy-peer-deps"
 ]
 
 [phases.build]

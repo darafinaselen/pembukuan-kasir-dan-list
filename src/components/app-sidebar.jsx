@@ -18,7 +18,7 @@ const data = {
   teams: [
     {
       name: "Reborn Lombok",
-      logo: GalleryVerticalEnd,
+      logo: "/newLogo.png",
     },
   ],
   navMain: [

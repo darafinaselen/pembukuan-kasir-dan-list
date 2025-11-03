@@ -112,17 +112,37 @@ export function DashboardStats({ stats, loading }) {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       {statCards.map((stat) => (
-        <Card key={stat.title} className="hover:shadow-lg transition-shadow">
+        <Card
+          key={stat.title}
+          className="hover:shadow-lg transition-shadow overflow-hidden"
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-            <div className={`p-2 rounded-lg ${stat.bgColor}`}>
+            <CardTitle className="text-sm font-medium truncate pr-2">
+              {stat.title}
+            </CardTitle>
+            <div className={`p-2 rounded-lg ${stat.bgColor} shrink-0`}>
               <stat.icon className={`h-4 w-4 ${stat.color}`} />
             </div>
           </CardHeader>
           <CardContent className="space-y-1">
-            <div className="text-2xl font-bold">{stat.value}</div>
-            <p className="text-xs text-muted-foreground">{stat.description}</p>
-            <p className="text-xs font-medium text-gray-600">{stat.detail}</p>
+            <div
+              className="text-xl sm:text-2xl font-bold truncate"
+              title={stat.value}
+            >
+              {stat.value}
+            </div>
+            <p
+              className="text-xs text-muted-foreground truncate"
+              title={stat.description}
+            >
+              {stat.description}
+            </p>
+            <p
+              className="text-xs font-medium text-gray-600 truncate"
+              title={stat.detail}
+            >
+              {stat.detail}
+            </p>
           </CardContent>
         </Card>
       ))}

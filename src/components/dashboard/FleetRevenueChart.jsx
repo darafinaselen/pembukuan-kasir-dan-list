@@ -181,37 +181,65 @@ export function FleetRevenueChart({ data, loading }) {
           <div className="space-y-3 pt-4 border-t">
             {/* Main Summary Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-              <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
-                <p className="text-xs text-muted-foreground mb-1">Tertinggi</p>
-                <p className="text-2xl font-bold text-green-600">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center overflow-hidden">
+                <p className="text-xs text-muted-foreground mb-1 truncate">
+                  Tertinggi
+                </p>
+                <p
+                  className="text-xl sm:text-2xl font-bold text-green-600 truncate"
+                  title={formatCompact(topPerformers[0]?.revenue || 0)}
+                >
                   {formatCompact(topPerformers[0]?.revenue || 0)}
                 </p>
-                <p className="text-xs text-green-700 mt-1 truncate">
+                <p
+                  className="text-xs text-green-700 mt-1 truncate"
+                  title={topPerformers[0]?.licensePlate}
+                >
                   {topPerformers[0]?.licensePlate}
                 </p>
               </div>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
-                <p className="text-xs text-muted-foreground mb-1">Rata-rata</p>
-                <p className="text-2xl font-bold text-blue-600">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center overflow-hidden">
+                <p className="text-xs text-muted-foreground mb-1 truncate">
+                  Rata-rata
+                </p>
+                <p
+                  className="text-xl sm:text-2xl font-bold text-blue-600 truncate"
+                  title={formatCompact(avgRevenue)}
+                >
                   {formatCompact(avgRevenue)}
                 </p>
-                <p className="text-xs text-blue-700 mt-1">Per armada</p>
+                <p className="text-xs text-blue-700 mt-1 truncate">
+                  Per armada
+                </p>
               </div>
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
-                <p className="text-xs text-muted-foreground mb-1">Terendah</p>
-                <p className="text-2xl font-bold text-red-600">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center overflow-hidden">
+                <p className="text-xs text-muted-foreground mb-1 truncate">
+                  Terendah
+                </p>
+                <p
+                  className="text-xl sm:text-2xl font-bold text-red-600 truncate"
+                  title={formatCompact(minRevenue)}
+                >
                   {formatCompact(minRevenue)}
                 </p>
-                <p className="text-xs text-red-700 mt-1 truncate">
+                <p
+                  className="text-xs text-red-700 mt-1 truncate"
+                  title={sortedData[sortedData.length - 1]?.licensePlate}
+                >
                   {sortedData[sortedData.length - 1]?.licensePlate}
                 </p>
               </div>
-              <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-center">
-                <p className="text-xs text-muted-foreground mb-1">Total</p>
-                <p className="text-2xl font-bold text-purple-600">
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-center overflow-hidden">
+                <p className="text-xs text-muted-foreground mb-1 truncate">
+                  Total
+                </p>
+                <p
+                  className="text-xl sm:text-2xl font-bold text-purple-600 truncate"
+                  title={formatCompact(totalRevenue)}
+                >
                   {formatCompact(totalRevenue)}
                 </p>
-                <p className="text-xs text-purple-700 mt-1">
+                <p className="text-xs text-purple-700 mt-1 truncate">
                   {data.length} armada
                 </p>
               </div>

@@ -143,56 +143,62 @@ export function FleetStatusChart({ data, loading }) {
           {/* Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t">
             <div
-              className={`p-4 rounded-lg border-2 ${statusConfig.READY.lightColor} ${statusConfig.READY.borderColor}`}
+              className={`p-4 rounded-lg border-2 ${statusConfig.READY.lightColor} ${statusConfig.READY.borderColor} overflow-hidden`}
             >
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-medium text-muted-foreground">
+              <div className="flex items-center justify-between mb-2 gap-2">
+                <p className="text-xs font-medium text-muted-foreground truncate">
                   Tersedia
                 </p>
                 <Badge
                   variant="outline"
-                  className={`text-xs ${statusConfig.READY.textColor} bg-white`}
+                  className={`text-xs ${statusConfig.READY.textColor} bg-white shrink-0`}
                 >
                   Siap Operasi
                 </Badge>
               </div>
               <p
-                className={`text-3xl font-bold ${statusConfig.READY.textColor}`}
+                className={`text-2xl sm:text-3xl font-bold ${statusConfig.READY.textColor} truncate`}
               >
                 {availableFleets}
               </p>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p
+                className="text-xs text-muted-foreground mt-1 truncate"
+                title={`${total > 0 ? ((availableFleets / total) * 100).toFixed(1) : 0}% dari total armada`}
+              >
                 {total > 0 ? ((availableFleets / total) * 100).toFixed(1) : 0}%
                 dari total armada
               </p>
             </div>
 
             <div
-              className={`p-4 rounded-lg border-2 ${statusConfig.ON_TRIP.lightColor} ${statusConfig.ON_TRIP.borderColor}`}
+              className={`p-4 rounded-lg border-2 ${statusConfig.ON_TRIP.lightColor} ${statusConfig.ON_TRIP.borderColor} overflow-hidden`}
             >
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-medium text-muted-foreground">
+              <div className="flex items-center justify-between mb-2 gap-2">
+                <p className="text-xs font-medium text-muted-foreground truncate">
                   Aktif
                 </p>
                 <Badge
                   variant="outline"
-                  className={`text-xs ${statusConfig.ON_TRIP.textColor} bg-white`}
+                  className={`text-xs ${statusConfig.ON_TRIP.textColor} bg-white shrink-0`}
                 >
                   Produktif
                 </Badge>
               </div>
               <p
-                className={`text-3xl font-bold ${statusConfig.ON_TRIP.textColor}`}
+                className={`text-2xl sm:text-3xl font-bold ${statusConfig.ON_TRIP.textColor} truncate`}
               >
                 {activeFleets}
               </p>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p
+                className="text-xs text-muted-foreground mt-1 truncate"
+                title="Sedang beroperasi atau dipesan"
+              >
                 Sedang beroperasi atau dipesan
               </p>
             </div>
 
             <div
-              className={`p-4 rounded-lg border-2 ${
+              className={`p-4 rounded-lg border-2 overflow-hidden ${
                 utilization >= 70
                   ? "bg-green-50 border-green-200"
                   : utilization >= 50
@@ -200,13 +206,13 @@ export function FleetStatusChart({ data, loading }) {
                     : "bg-red-50 border-red-200"
               }`}
             >
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-medium text-muted-foreground">
+              <div className="flex items-center justify-between mb-2 gap-2">
+                <p className="text-xs font-medium text-muted-foreground truncate">
                   Utilisasi
                 </p>
                 <Badge
                   variant="outline"
-                  className={`text-xs bg-white ${
+                  className={`text-xs bg-white shrink-0 ${
                     utilization >= 70
                       ? "text-green-700 border-green-300"
                       : utilization >= 50
@@ -222,7 +228,7 @@ export function FleetStatusChart({ data, loading }) {
                 </Badge>
               </div>
               <p
-                className={`text-3xl font-bold ${
+                className={`text-2xl sm:text-3xl font-bold truncate ${
                   utilization >= 70
                     ? "text-green-700"
                     : utilization >= 50
@@ -232,7 +238,16 @@ export function FleetStatusChart({ data, loading }) {
               >
                 {utilization}%
               </p>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p
+                className="text-xs text-muted-foreground mt-1 line-clamp-2"
+                title={
+                  utilization >= 70
+                    ? "Sangat baik - Armada digunakan maksimal"
+                    : utilization >= 50
+                      ? "Cukup baik - Masih ada ruang untuk peningkatan"
+                      : "Perlu ditingkatkan - Banyak armada menganggur"
+                }
+              >
                 {utilization >= 70
                   ? "Sangat baik - Armada digunakan maksimal"
                   : utilization >= 50

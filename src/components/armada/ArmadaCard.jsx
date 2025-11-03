@@ -30,33 +30,42 @@ export default function ArmadaCard({
   return (
     <Card
       key={armada.id}
-      className="relative overflow-hidden border rounded-xl shadow-sm bg-white w-[400px]"
+      className="relative overflow-hidden border rounded-xl shadow-sm bg-white w-full max-w-[400px]"
     >
       <div className="p-5">
         {/* header */}
         <div className="flex items-center gap-3 mb-4">
-          <div className="h-10 w-10 rounded-lg flex items-center justify-center bg-blue-400 text-white shadow">
+          <div className="h-10 w-10 rounded-lg flex items-center justify-center bg-blue-400 text-white shadow shrink-0">
             <Car className="h-5 w-5" />
           </div>
-          <div>
-            <h3 className="text-lg font-semibold text-slate-800">
+          <div className="min-w-0 flex-1">
+            <h3
+              className="text-lg font-semibold text-slate-800 truncate"
+              title={armada.license_plate}
+            >
               {armada.license_plate}
             </h3>
-            <p className="text-xs text-muted-foreground">No. Polisi</p>
+            <p className="text-xs text-muted-foreground truncate">No. Polisi</p>
           </div>
         </div>
 
         {/* merk/tipe */}
         <div className="grid grid-cols-2 gap-4 mb-3">
-          <div className="bg-white rounded-lg p-3 shadow-sm border border-slate-100">
-            <p className="text-xs text-muted-foreground">Merk</p>
-            <p className="mt-1 text-sm text-slate-800 font-medium">
+          <div className="bg-white rounded-lg p-3 shadow-sm border border-slate-100 overflow-hidden">
+            <p className="text-xs text-muted-foreground truncate">Merk</p>
+            <p
+              className="mt-1 text-sm text-slate-800 font-medium truncate"
+              title={armada.brand ?? "-"}
+            >
               {armada.brand ?? "-"}
             </p>
           </div>
-          <div className="bg-white rounded-lg p-3 shadow-sm border border-slate-100">
-            <p className="text-xs text-muted-foreground">Tipe</p>
-            <p className="mt-1 text-sm text-slate-800 font-medium">
+          <div className="bg-white rounded-lg p-3 shadow-sm border border-slate-100 overflow-hidden">
+            <p className="text-xs text-muted-foreground truncate">Tipe</p>
+            <p
+              className="mt-1 text-sm text-slate-800 font-medium truncate"
+              title={armada.model ?? "-"}
+            >
               {armada.model ?? "-"}
             </p>
           </div>
@@ -65,40 +74,43 @@ export default function ArmadaCard({
         {/* year pill */}
         <div className="mt-2">
           <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 rounded-md px-3 py-2 text-sm">
-            <Calendar className="h-4 w-4 text-blue-500" />
-            <span className="font-medium">Tahun {year ?? "-"}</span>
+            <Calendar className="h-4 w-4 text-blue-500 shrink-0" />
+            <span className="font-medium truncate">Tahun {year ?? "-"}</span>
           </div>
         </div>
 
         {/* status full width */}
         <div className="mt-4">
-          <p className="text-xs text-muted-foreground mb-2">Status Armada</p>
+          <p className="text-xs text-muted-foreground mb-2 truncate">
+            Status Armada
+          </p>
           <div
-            className={`w-full rounded-md py-2 px-3 text-sm font-medium text-center ${
+            className={`w-full rounded-md py-2 px-3 text-sm font-medium text-center truncate ${
               status === "READY"
                 ? "bg-emerald-600 text-white"
                 : "bg-amber-100 text-amber-800"
             }`}
+            title={status === "READY" ? "✓ Ready" : status}
           >
             {status === "READY" ? "✓ Ready" : status}
           </div>
         </div>
 
         {/* actions */}
-        <div className="flex gap-3 mt-4">
+        <div className="flex gap-2 mt-4">
           <Button
             onClick={() => onEdit(armada)}
-            className="flex-1 py-2 px-3 rounded-md border border-sky-200 font-medium transition"
+            className="flex-1 py-2 px-2 sm:px-3 rounded-md border border-sky-200 font-medium transition text-xs sm:text-sm"
           >
-            <Pencil className="inline-block mr-2 size-4" />
-            Edit
+            <Pencil className="inline-block mr-1 sm:mr-2 size-4 shrink-0" />
+            <span className="truncate">Edit</span>
           </Button>
           <Button
             onClick={() => onMaintenance(armada)}
-            className="flex-1 py-2 px-3 rounded-md bg-amber-50 text-amber-700 text-sm font-medium hover:bg-amber-100 transition border border-amber-100"
+            className="flex-1 py-2 px-2 sm:px-3 rounded-md bg-amber-50 text-amber-700 text-xs sm:text-sm font-medium hover:bg-amber-100 transition border border-amber-100"
           >
-            <Wrench className="inline-block mr-2 size-4" />
-            Maintenance
+            <Wrench className="inline-block mr-1 sm:mr-2 size-4 shrink-0" />
+            <span className="truncate">Maintenance</span>
           </Button>
           <AlertDialog>
             <AlertDialogTrigger asChild>

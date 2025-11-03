@@ -258,52 +258,70 @@ export function TransactionChart({ data, period, loading }) {
           <div className="space-y-4">
             {/* Main Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-medium text-muted-foreground">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 overflow-hidden">
+                <div className="flex items-center justify-between mb-2 gap-2">
+                  <p className="text-xs font-medium text-muted-foreground truncate">
                     Total Transaksi
                   </p>
-                  <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-medium">
+                  <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-medium shrink-0">
                     {getPeriodLabel()}
                   </span>
                 </div>
-                <p className="text-3xl font-bold text-blue-600">
+                <p
+                  className="text-2xl sm:text-3xl font-bold text-blue-600 truncate"
+                  title={totalTransactions.toString()}
+                >
                   {totalTransactions}
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p
+                  className="text-xs text-muted-foreground mt-1 truncate"
+                  title={`Rata-rata ${avgPerPeriod.toFixed(1)} transaksi ${getPeriodLabel().toLowerCase()}`}
+                >
                   Rata-rata {avgPerPeriod.toFixed(1)} transaksi{" "}
                   {getPeriodLabel().toLowerCase()}
                 </p>
               </div>
 
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-medium text-muted-foreground">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 overflow-hidden">
+                <div className="flex items-center justify-between mb-2 gap-2">
+                  <p className="text-xs font-medium text-muted-foreground truncate">
                     Total Pendapatan
                   </p>
-                  <TrendingUp className="h-4 w-4 text-green-600" />
+                  <TrendingUp className="h-4 w-4 text-green-600 shrink-0" />
                 </div>
-                <p className="text-3xl font-bold text-green-600">
+                <p
+                  className="text-2xl sm:text-3xl font-bold text-green-600 truncate"
+                  title={formatCurrency(totalRevenue)}
+                >
                   {formatCurrency(totalRevenue)}
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p
+                  className="text-xs text-muted-foreground mt-1 truncate"
+                  title={`Rata-rata ${formatCurrency(avgTransaction)} per transaksi`}
+                >
                   Rata-rata {formatCurrency(avgTransaction)} per transaksi
                 </p>
               </div>
 
-              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-medium text-muted-foreground">
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 overflow-hidden">
+                <div className="flex items-center justify-between mb-2 gap-2">
+                  <p className="text-xs font-medium text-muted-foreground truncate">
                     Puncak Transaksi
                   </p>
-                  <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full font-medium">
+                  <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full font-medium shrink-0">
                     Tertinggi
                   </span>
                 </div>
-                <p className="text-3xl font-bold text-purple-600">
+                <p
+                  className="text-2xl sm:text-3xl font-bold text-purple-600 truncate"
+                  title={peakDay.count.toString()}
+                >
                   {peakDay.count}
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p
+                  className="text-xs text-muted-foreground mt-1 truncate"
+                  title={`Pada ${peakDay.date} • ${formatCurrency(peakDay.revenue)}`}
+                >
                   Pada {peakDay.date} • {formatCurrency(peakDay.revenue)}
                 </p>
               </div>

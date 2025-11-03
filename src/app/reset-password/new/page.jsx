@@ -108,7 +108,7 @@ function NewPasswordForm() {
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
               <CheckCircle2 className="h-8 w-8 text-green-600" />
             </div>
-            <CardTitle className="text-2xl">
+            <CardTitle className="text-xl">
               Password Berhasil Diubah!
             </CardTitle>
             <CardDescription>
@@ -135,7 +135,7 @@ function NewPasswordForm() {
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
             <Lock className="h-8 w-8 text-green-600" />
           </div>
-          <CardTitle className="text-center text-2xl">
+          <CardTitle className="text-center text-xl">
             Buat Password Baru
           </CardTitle>
           <CardDescription className="text-center">

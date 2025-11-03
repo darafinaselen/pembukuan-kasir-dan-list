@@ -87,18 +87,18 @@ export default function ArmadaCard({
         {/* actions */}
         <div className="flex gap-2 mt-4">
           <Button
-            onClick={() => onEdit(armada)}
-            className="flex-1 py-2 px-2 sm:px-3 rounded-md border border-sky-200 font-medium transition text-xs sm:text-sm"
-          >
-            <Pencil className="inline-block mr-1 sm:mr-2 size-4 shrink-0" />
-            <span>Edit</span>
-          </Button>
-          <Button
             onClick={() => onMaintenance(armada)}
             className="flex-1 py-2 px-2 sm:px-3 rounded-md bg-amber-50 text-amber-700 text-xs sm:text-sm font-medium hover:bg-amber-100 transition border border-amber-100"
           >
             <Wrench className="inline-block mr-1 sm:mr-2 size-4 shrink-0" />
             <span>Maintenance</span>
+          </Button>
+          <Button
+            onClick={() => onEdit(armada)}
+            className="flex-1 py-2 px-2 sm:px-3 rounded-md border border-sky-200 font-medium transition text-xs sm:text-sm"
+          >
+            <Pencil className="inline-block mr-1 sm:mr-2 size-4 shrink-0" />
+            {/* <span>Edit</span> */}
           </Button>
           <AlertDialog>
             <AlertDialogTrigger asChild>

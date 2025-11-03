@@ -12,7 +12,7 @@ export default function SopirTopHeader({ onAdd, searchValue, onSearchChange }) {
       <div className="flex items-center gap-4 p-4">
         <SidebarTrigger className="-ml-1" />
         <div className="flex-1">
-          <h1 className="text-2xl font-bold">Manajemen Sopir</h1>
+          <h1 className="text-xl font-bold">Manajemen Sopir</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Kelola sopir Anda — tambah, edit, dan lihat status tugas.
           </p>

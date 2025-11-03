@@ -157,7 +157,7 @@ export function FleetStatusChart({ data, loading }) {
                 </Badge>
               </div>
               <p
-                className={`text-2xl sm:text-3xl font-bold ${statusConfig.READY.textColor}`}
+                className={`text-xl sm:text-2xl font-bold ${statusConfig.READY.textColor}`}
               >
                 {availableFleets}
               </p>
@@ -182,7 +182,7 @@ export function FleetStatusChart({ data, loading }) {
                 </Badge>
               </div>
               <p
-                className={`text-2xl sm:text-3xl font-bold ${statusConfig.ON_TRIP.textColor}`}
+                className={`text-xl sm:text-2xl font-bold ${statusConfig.ON_TRIP.textColor}`}
               >
                 {activeFleets}
               </p>
@@ -222,7 +222,7 @@ export function FleetStatusChart({ data, loading }) {
                 </Badge>
               </div>
               <p
-                className={`text-2xl sm:text-3xl font-bold ${
+                className={`text-xl sm:text-2xl font-bold ${
                   utilization >= 70
                     ? "text-green-700"
                     : utilization >= 50

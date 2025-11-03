@@ -77,7 +77,7 @@ export default function CetakInvoicePage() {
       <div className="invoice-box w-full max-w-3xl mx-auto p-8 bg-white border rounded-lg shadow-lg my-8">
         <div className="flex justify-between items-center border-b pb-4">
           <div>
-            <h1 className="text-3xl font-bold">INVOICE</h1>
+            <h1 className="text-2xl font-bold">INVOICE</h1>
             <p className="text-gray-500">Invoice #: {tx.invoice_code}</p>
             <p className="text-gray-500">
               Tanggal Booking: {formatDate(tx.booking_date)}

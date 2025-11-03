@@ -67,7 +67,7 @@ export default function ForgotPasswordPage() {
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
               <CheckCircle2 className="h-8 w-8 text-green-600" />
             </div>
-            <CardTitle className="text-2xl">Email Terkirim!</CardTitle>
+            <CardTitle className="text-xl">Email Terkirim!</CardTitle>
             <CardDescription>
               Kode OTP telah dikirim ke email Anda
             </CardDescription>
@@ -93,7 +93,7 @@ export default function ForgotPasswordPage() {
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
             <Mail className="h-8 w-8 text-blue-600" />
           </div>
-          <CardTitle className="text-center text-2xl">Lupa Password?</CardTitle>
+          <CardTitle className="text-center text-xl">Lupa Password?</CardTitle>
           <CardDescription className="text-center">
             Masukkan email Anda untuk menerima kode OTP reset password
           </CardDescription>

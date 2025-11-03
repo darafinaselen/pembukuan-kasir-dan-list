@@ -10,7 +10,7 @@ export default function PengeluaranHeader({ onAdd }) {
     <header className="flex items-center gap-4 p-4">
       <SidebarTrigger className="-ml-1" />
       <div className="flex-1">
-        <h1 className="text-2xl font-bold">Manajemen Pengeluaran</h1>
+        <h1 className="text-xl font-bold">Manajemen Pengeluaran</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Kelola pengeluaran operasional — BBM, gaji sopir, perawatan, dan
           lainnya.

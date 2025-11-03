@@ -184,7 +184,7 @@ function VerifyOTPForm() {
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-indigo-100">
             <ShieldCheck className="h-8 w-8 text-indigo-600" />
           </div>
-          <CardTitle className="text-center text-2xl">Verifikasi OTP</CardTitle>
+          <CardTitle className="text-center text-xl">Verifikasi OTP</CardTitle>
           <CardDescription className="text-center">
             Masukkan 6 digit kode yang dikirim ke <br />
             <strong>{email}</strong>

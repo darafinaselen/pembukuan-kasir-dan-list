@@ -183,7 +183,7 @@ export function FleetRevenueChart({ data, loading }) {
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
               <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center overflow-hidden">
                 <p className="text-xs text-muted-foreground mb-1">Tertinggi</p>
-                <p className="text-xl sm:text-2xl font-bold text-green-600">
+                <p className="text-lg sm:text-xl font-bold text-green-600">
                   {formatCompact(topPerformers[0]?.revenue || 0)}
                 </p>
                 <p className="text-xs text-green-700 mt-1">
@@ -192,14 +192,14 @@ export function FleetRevenueChart({ data, loading }) {
               </div>
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center overflow-hidden">
                 <p className="text-xs text-muted-foreground mb-1">Rata-rata</p>
-                <p className="text-xl sm:text-2xl font-bold text-blue-600">
+                <p className="text-lg sm:text-xl font-bold text-blue-600">
                   {formatCompact(avgRevenue)}
                 </p>
                 <p className="text-xs text-blue-700 mt-1">Per armada</p>
               </div>
               <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center overflow-hidden">
                 <p className="text-xs text-muted-foreground mb-1">Terendah</p>
-                <p className="text-xl sm:text-2xl font-bold text-red-600">
+                <p className="text-lg sm:text-xl font-bold text-red-600">
                   {formatCompact(minRevenue)}
                 </p>
                 <p className="text-xs text-red-700 mt-1">
@@ -208,7 +208,7 @@ export function FleetRevenueChart({ data, loading }) {
               </div>
               <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-center overflow-hidden">
                 <p className="text-xs text-muted-foreground mb-1">Total</p>
-                <p className="text-xl sm:text-2xl font-bold text-purple-600">
+                <p className="text-lg sm:text-xl font-bold text-purple-600">
                   {formatCompact(totalRevenue)}
                 </p>
                 <p className="text-xs text-purple-700 mt-1">

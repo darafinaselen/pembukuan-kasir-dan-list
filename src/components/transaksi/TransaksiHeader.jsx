@@ -10,7 +10,7 @@ export default function TransaksiHeader({ onAdd }) {
     <header className="flex items-center gap-4 p-4">
       <SidebarTrigger className="-ml-1" />
       <div className="flex-1">
-        <h1 className="text-2xl font-bold">Manajemen Transaksi</h1>
+        <h1 className="text-xl font-bold">Manajemen Transaksi</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Kelola transaksi sewa kendaraan — input, edit, dan pantau status
           pembayaran.

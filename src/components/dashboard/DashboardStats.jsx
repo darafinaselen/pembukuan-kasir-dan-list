@@ -125,7 +125,7 @@ export function DashboardStats({ stats, loading }) {
             </div>
           </CardHeader>
           <CardContent className="space-y-1">
-            <div className="text-xl sm:text-2xl font-bold wrap-break-word">
+            <div className="text-lg sm:text-xl font-bold wrap-break-word">
               {stat.value}
             </div>
             <p className="text-xs text-muted-foreground wrap-break-word">

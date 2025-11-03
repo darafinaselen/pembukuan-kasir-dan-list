@@ -258,7 +258,7 @@ export function TransactionChart({ data, period, loading }) {
                     {getPeriodLabel()}
                   </span>
                 </div>
-                <p className="text-2xl sm:text-3xl font-bold text-blue-600">
+                <p className="text-xl sm:text-2xl font-bold text-blue-600">
                   {totalTransactions}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -274,7 +274,7 @@ export function TransactionChart({ data, period, loading }) {
                   </p>
                   <TrendingUp className="h-4 w-4 text-green-600 shrink-0" />
                 </div>
-                <p className="text-2xl sm:text-3xl font-bold text-green-600">
+                <p className="text-xl sm:text-2xl font-bold text-green-600">
                   {formatCurrency(totalRevenue)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -291,7 +291,7 @@ export function TransactionChart({ data, period, loading }) {
                     Tertinggi
                   </span>
                 </div>
-                <p className="text-2xl sm:text-3xl font-bold text-purple-600">
+                <p className="text-xl sm:text-2xl font-bold text-purple-600">
                   {peakDay.count}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">

@@ -83,6 +83,19 @@ export default function TransaksiDetailModal({
               label="Paket Jasa"
               value={data.package?.name || "Kustom"}
             />
+            {data.package?.type === "TOUR_PACKAGE" && (
+              <>
+                {data.hotel_name && (
+                  <DetailItem label="Hotel" value={data.hotel_name} />
+                )}
+                {data.pax_count && (
+                  <DetailItem
+                    label="Jumlah Pax"
+                    value={`${data.pax_count} orang`}
+                  />
+                )}
+              </>
+            )}
             <DetailItem
               label="Armada"
               value={`${data.armada?.license_plate || ""} (${

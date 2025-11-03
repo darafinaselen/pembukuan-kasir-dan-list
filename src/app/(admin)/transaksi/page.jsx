@@ -39,6 +39,8 @@ const INITIAL_FORM_STATE = {
   overtime_rate_per_hour: 0,
   fuel_cost: 0,
   driver_fee: 0,
+  hotel_name: "",
+  pax_count: "",
 };
 
 // function calculateFinancials(formData) {
@@ -247,6 +249,8 @@ export default function TransaksiPage() {
       overtime_rate_per_hour: item.overtime_rate_per_hour || 0,
       fuel_cost: item.fuel_cost || 0,
       driver_fee: item.driver_fee || 0,
+      hotel_name: item.hotel_name || "",
+      pax_count: item.pax_count || "",
     });
     fetchDependencies();
     setIsDialogOpen(true);
@@ -330,6 +334,10 @@ export default function TransaksiPage() {
         overtime_rate_per_hour: Number(formData.overtime_rate_per_hour),
         fuel_cost: Number(formData.fuel_cost),
         driver_fee: Number(formData.driver_fee),
+
+        // Data Tambahan untuk Paket Wisata (opsional)
+        hotel_name: formData.hotel_name || null,
+        pax_count: formData.pax_count ? Number(formData.pax_count) : null,
 
         // Relasi (ID)
         packageId: formData.packageId || null,

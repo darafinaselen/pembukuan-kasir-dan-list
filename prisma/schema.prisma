@@ -214,6 +214,10 @@ model Transaction {
   driver_fee             Int // Biaya Gaji Sopir (dicatat per transaksi)
   payment_status         PaymentStatus @default(UNPAID)
 
+  // Data Tambahan untuk Paket Wisata
+  hotel_name String? // Nama hotel yang dipilih (opsional, untuk TOUR_PACKAGE)
+  pax_count  Int? // Jumlah penumpang/pax (opsional, untuk TOUR_PACKAGE)
+
   // --- Relasi (Foreign Keys) ---
 
   // Relasi: Transaksi ini (opsional) menggunakan paket apa

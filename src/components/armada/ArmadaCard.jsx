@@ -1,9 +1,15 @@
 "use client";
 
 import React from "react";
-import { Card } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
 import { Car, Calendar, Wrench, Trash, Pencil } from "lucide-react";
 import { Button } from "../ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -30,106 +36,113 @@ export default function ArmadaCard({
   return (
     <Card
       key={armada.id}
-      className="relative overflow-hidden border rounded-xl shadow-sm bg-white w-full max-w-[400px]"
+      className="group hover:shadow-xl transition-all duration-300 border-gray-200 overflow-hidden flex flex-col"
     >
-      <div className="p-5">
-        {/* header */}
-        <div className="flex items-center gap-3 mb-4">
-          <div className="h-10 w-10 rounded-lg flex items-center justify-center bg-blue-400 text-white shadow shrink-0">
-            <Car className="h-5 w-5" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <h3 className="text-lg font-semibold text-slate-800 wrap-break-word">
-              {armada.license_plate}
-            </h3>
-            <p className="text-xs text-muted-foreground">No. Polisi</p>
-          </div>
-        </div>
-
-        {/* merk/tipe */}
-        <div className="grid grid-cols-2 gap-4 mb-3">
-          <div className="bg-white rounded-lg p-3 shadow-sm border border-slate-100 overflow-hidden">
-            <p className="text-xs text-muted-foreground">Merk</p>
-            <p className="mt-1 text-sm text-slate-800 font-medium wrap-break-word">
-              {armada.brand ?? "-"}
-            </p>
-          </div>
-          <div className="bg-white rounded-lg p-3 shadow-sm border border-slate-100 overflow-hidden">
-            <p className="text-xs text-muted-foreground">Tipe</p>
-            <p className="mt-1 text-sm text-slate-800 font-medium wrap-break-word">
-              {armada.model ?? "-"}
-            </p>
-          </div>
-        </div>
-
-        {/* year pill */}
-        <div className="mt-2">
-          <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 rounded-md px-3 py-2 text-sm">
-            <Calendar className="h-4 w-4 text-blue-500 shrink-0" />
-            <span className="font-medium">Tahun {year ?? "-"}</span>
-          </div>
-        </div>
-
-        {/* status full width */}
-        <div className="mt-4">
-          <p className="text-xs text-muted-foreground mb-2">Status Armada</p>
-          <div
-            className={`w-full rounded-md py-2 px-3 text-sm font-medium text-center ${
-              status === "READY"
-                ? "bg-emerald-600 text-white"
-                : "bg-amber-100 text-amber-800"
-            }`}
-          >
-            {status === "READY" ? "✓ Ready" : status}
-          </div>
-        </div>
-
-        {/* actions */}
-        <div className="flex gap-2 mt-4">
-          <Button
-            onClick={() => onMaintenance(armada)}
-            className="flex-1 py-2 px-2 sm:px-3 rounded-md bg-amber-50 text-amber-700 text-xs sm:text-sm font-medium hover:bg-amber-100 transition border border-amber-100"
-          >
-            <Wrench className="inline-block mr-1 sm:mr-2 size-4 shrink-0" />
-            <span>Maintenance</span>
-          </Button>
-          <Button
-            onClick={() => onEdit(armada)}
-            className="flex-1 py-2 px-2 sm:px-3 rounded-md border border-sky-200 font-medium transition text-xs sm:text-sm"
-          >
-            <Pencil className="inline-block mr-1 sm:mr-2 size-4 shrink-0" />
-            {/* <span>Edit</span> */}
-          </Button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <button className="py-2 px-2 rounded-md border border-red-100 text-white bg-red-500 hover:bg-red-600 text-sm font-medium transition">
-                <Trash className="inline-block size-4" />
-              </button>
-            </AlertDialogTrigger>
-
-            <AlertDialogContent className="max-w-sm">
-              <AlertDialogHeader>
-                <AlertDialogTitle>Konfirmasi Hapus</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Anda yakin ingin menghapus armada{" "}
-                  <strong>{armada.license_plate}</strong>? Tindakan ini tidak
-                  dapat dikembalikan.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-
-              <AlertDialogFooter>
-                <AlertDialogCancel>Batal</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() => onDelete(armada.id)}
-                  className="bg-red-600 text-white hover:bg-red-700"
+      <CardHeader className="pb-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3 flex-1">
+            <div className="relative">
+              <div className="w-14 h-14 bg-blue-500 rounded-xl flex items-center justify-center">
+                <Car className="h-7 w-7 text-white" />
+              </div>
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2 wrap-break-word">
+                {armada.license_plate}
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                <Badge
+                  variant="secondary"
+                  className={`border-0 ${
+                    status === "READY"
+                      ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                      : status === "ON_TRIP"
+                        ? "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                        : status === "MAINTENANCE"
+                          ? "bg-orange-100 text-orange-700 hover:bg-orange-200"
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
                 >
-                  Hapus
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+                  {status === "READY"
+                    ? "Siap"
+                    : status === "ON_TRIP"
+                      ? "Sedang Jalan"
+                      : status === "MAINTENANCE"
+                        ? "Perawatan"
+                        : status}
+                </Badge>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      </CardHeader>
+      <CardContent className="space-y-4 pb-4 flex-1">
+        <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+          <p className="text-gray-500 mb-1.5">Merk & Model</p>
+          <p className="text-gray-900 wrap-break-word">
+            {armada.brand} {armada.model}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 px-3 py-2.5 bg-blue-50 rounded-lg border border-blue-100">
+          <Calendar className="h-4 w-4 text-blue-600 shrink-0" />
+          <div>
+            <p className="text-blue-900">Tahun {year ?? "-"}</p>
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter className="pt-0 pb-5 flex gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex-1 border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+          onClick={() => onEdit(armada)}
+        >
+          <Pencil className="h-4 w-4 mr-2" />
+          Edit
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex-1 border-amber-200 text-amber-600 hover:bg-amber-50 hover:text-amber-700"
+          onClick={() => onMaintenance(armada)}
+        >
+          <Wrench className="h-4 w-4 mr-2" />
+          Maintenance
+        </Button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+            >
+              <Trash className="h-4 w-4" />
+            </Button>
+          </AlertDialogTrigger>
+
+          <AlertDialogContent className="max-w-sm">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Konfirmasi Hapus</AlertDialogTitle>
+              <AlertDialogDescription>
+                Anda yakin ingin menghapus armada{" "}
+                <strong>{armada.license_plate}</strong>? Tindakan ini tidak
+                dapat dikembalikan.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+
+            <AlertDialogFooter>
+              <AlertDialogCancel>Batal</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => onDelete(armada.id)}
+                className="bg-red-600 text-white hover:bg-red-700"
+              >
+                Hapus
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </CardFooter>
     </Card>
   );
 }

@@ -103,6 +103,23 @@ export default function CetakInvoicePage() {
           <div className="text-right">
             <h3 className="font-semibold text-gray-700">Detail Perjalanan:</h3>
             <p>
+              <strong>Paket:</strong> {tx.package?.name || "Kustom"}
+            </p>
+            {tx.package?.type === "TOUR_PACKAGE" && (
+              <>
+                {tx.hotel_name && (
+                  <p>
+                    <strong>Hotel:</strong> {tx.hotel_name}
+                  </p>
+                )}
+                {tx.pax_count && (
+                  <p>
+                    <strong>Jumlah Pax:</strong> {tx.pax_count} orang
+                  </p>
+                )}
+              </>
+            )}
+            <p>
               <strong>Armada:</strong> {tx.armada?.license_plate} (
               {tx.armada?.model})
             </p>

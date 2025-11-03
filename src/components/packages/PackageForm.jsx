@@ -535,8 +535,8 @@ export function PackageForm({
                               (Array.isArray(t.daftarHotel)
                                 ? t.daftarHotel.length
                                 : Array.isArray(t.hotels)
-                                ? t.hotels.length
-                                : 0),
+                                  ? t.hotels.length
+                                  : 0),
                             0
                           )
                         : 0;
@@ -827,18 +827,27 @@ export function PackageForm({
               <FormField>
                 <FormItem>
                   <FormLabel htmlFor="durasiHari">
-                    Durasi (Hari) <span className="text-red-500">*</span>
+                    {tipePaket === "Sewa Mobil"
+                      ? "Durasi (Jam)"
+                      : "Durasi (Hari)"}{" "}
+                    <span className="text-red-500">*</span>
                   </FormLabel>
                   <FormControl>
                     <Input
                       id="durasiHari"
                       type="number"
-                      placeholder="4"
+                      placeholder={tipePaket === "Sewa Mobil" ? "24" : "4"}
                       {...register("durasiHari", {
-                        required: "Durasi hari harus diisi",
+                        required:
+                          tipePaket === "Sewa Mobil"
+                            ? "Durasi jam harus diisi"
+                            : "Durasi hari harus diisi",
                         min: {
                           value: 1,
-                          message: "Minimal 1 hari",
+                          message:
+                            tipePaket === "Sewa Mobil"
+                              ? "Minimal 1 jam"
+                              : "Minimal 1 hari",
                         },
                         valueAsNumber: true,
                       })}

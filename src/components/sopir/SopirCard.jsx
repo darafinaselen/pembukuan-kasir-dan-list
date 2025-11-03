@@ -1,101 +1,133 @@
 "use client";
 
 import React from "react";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { User, Pencil, Trash, Moon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  User,
+  Pencil,
+  Trash,
+  Moon,
+  Phone,
+  MapPin,
+  CreditCard,
+} from "lucide-react";
 
 export default function SopirCard({ driver, onEdit, onSetStatus, onDelete }) {
+  const status = driver.status || "READY";
+
   return (
     <Card
       key={driver.id}
-      className="relative overflow-hidden border rounded-xl shadow-sm bg-white w-full"
+      className="group hover:shadow-xl transition-all duration-300 border-gray-200 overflow-hidden flex flex-col"
     >
-      <CardHeader>
-        <div className="flex items-center gap-3 mb-1">
-          <div className="h-10 w-10 rounded-lg flex items-center justify-center bg-purple-500 text-white shadow shrink-0">
-            <User className="h-5 w-5" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <h3 className="text-lg font-semibold text-slate-800 wrap-break-word">
-              {driver.driver_name}
-            </h3>
-            <p className="text-xs text-muted-foreground">Sopir</p>
+      <CardHeader className="pb-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3 flex-1">
+            <div className="relative">
+              <div className="w-14 h-14 bg-purple-500 rounded-xl flex items-center justify-center">
+                <User className="h-7 w-7 text-white" />
+              </div>
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2 wrap-break-word">
+                {driver.driver_name}
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                <Badge
+                  variant="secondary"
+                  className={`border-0 ${
+                    status === "READY"
+                      ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                      : status === "ON_TRIP"
+                        ? "bg-sky-100 text-sky-700 hover:bg-sky-200"
+                        : status === "OFF_DUTY"
+                          ? "bg-amber-100 text-amber-700 hover:bg-amber-200"
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  {status === "READY"
+                    ? "Siap"
+                    : status === "ON_TRIP"
+                      ? "Sedang Jalan"
+                      : status === "OFF_DUTY"
+                        ? "Libur"
+                        : status}
+                </Badge>
+              </div>
+            </div>
           </div>
         </div>
       </CardHeader>
-
-      <CardContent>
-        <div className="grid grid-cols-1 gap-3">
-          <div className="bg-white rounded-lg p-3 shadow-sm border border-slate-100 overflow-hidden">
-            <p className="text-xs text-muted-foreground">NIK</p>
-            <p className="mt-1 text-sm text-slate-800 font-medium wrap-break-word">
-              {driver.nik ?? "-"}
-            </p>
+      <CardContent className="space-y-4 pb-4 flex-1">
+        {driver.nik && (
+          <div className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 rounded-lg border border-gray-100">
+            <CreditCard className="h-4 w-4 text-gray-600 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-gray-500">NIK</p>
+              <p className="text-gray-900 wrap-break-word">{driver.nik}</p>
+            </div>
           </div>
-          <div className="bg-white rounded-lg p-3 shadow-sm border border-slate-100 overflow-hidden">
-            <p className="text-xs text-muted-foreground">No. HP</p>
-            <p className="mt-1 text-sm text-slate-800 font-medium wrap-break-word">
+        )}
+
+        <div className="flex items-center gap-2 px-3 py-2.5 bg-purple-50 rounded-lg border border-purple-100">
+          <Phone className="h-4 w-4 text-purple-600 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-purple-600">No. HP</p>
+            <p className="text-purple-900 wrap-break-word">
               {driver.phone_number ?? "-"}
             </p>
           </div>
-
-          <div className="bg-white rounded-lg p-3 shadow-sm border border-slate-100 overflow-hidden">
-            <p className="text-xs text-muted-foreground">Alamat</p>
-            <p className="mt-1 text-sm text-slate-800 wrap-break-word">
-              {driver.address ?? "-"}
-            </p>
-          </div>
-
-          <div>
-            <p className="text-xs text-muted-foreground mb-2">Status Sopir</p>
-            {(() => {
-              const s = driver.status || "READY";
-              let classes =
-                "w-full rounded-md py-2 px-3 text-sm font-medium text-center ";
-              let label = s;
-              if (s === "READY") {
-                classes += "bg-emerald-600 text-white";
-                label = "✓ Ready";
-              } else if (s === "ON_TRIP") {
-                classes += "bg-sky-600 text-white";
-                label = "On Trip";
-              } else if (s === "OFF_DUTY") {
-                classes += "bg-amber-500 text-white";
-                label = "Off Duty";
-              } else {
-                classes += "bg-amber-100 text-amber-800";
-              }
-              return <div className={classes}>{label}</div>;
-            })()}
-          </div>
-
-          <div className="flex gap-2 mt-3">
-            <Button
-              onClick={() => onEdit(driver)}
-              className="flex-1 py-2 px-2 sm:px-3 rounded-md border border-sky-200 font-medium transition text-xs sm:text-sm"
-            >
-              <Pencil className="inline-block mr-1 sm:mr-2 size-4 shrink-0" />
-              <span>Edit</span>
-            </Button>
-
-            <Button
-              onClick={() => onSetStatus(driver, "OFF_DUTY")}
-              className="flex-1 py-2 px-2 sm:px-3 rounded-md bg-amber-50 text-amber-700 text-xs sm:text-sm font-medium hover:bg-amber-100 transition border border-amber-100"
-            >
-              <Moon className="inline-block mr-1 sm:mr-2 size-4 shrink-0" />
-              <span>Libur</span>
-            </Button>
-
-            <Button
-              onClick={() => onDelete(driver.id)}
-              className="py-2 px-2 rounded-md border border-red-100 text-white bg-red-500 hover:bg-red-600 text-sm font-medium transition shrink-0"
-            >
-              <Trash className="inline-block size-4" />
-            </Button>
-          </div>
         </div>
+
+        {driver.address && (
+          <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+            <div className="flex items-start gap-2">
+              <MapPin className="h-4 w-4 text-gray-600 shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-gray-500 mb-1.5 text-xs">Alamat</p>
+                <p className="text-gray-900 wrap-break-word text-sm">
+                  {driver.address}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </CardContent>
+      <CardFooter className="pt-0 pb-5 flex gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex-1 border-purple-200 text-purple-600 hover:bg-purple-50 hover:text-purple-700"
+          onClick={() => onEdit(driver)}
+        >
+          <Pencil className="h-4 w-4 mr-2" />
+          Edit
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex-1 border-amber-200 text-amber-600 hover:bg-amber-50 hover:text-amber-700"
+          onClick={() => onSetStatus(driver, "OFF_DUTY")}
+        >
+          <Moon className="h-4 w-4 mr-2" />
+          Libur
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+          onClick={() => onDelete(driver.id)}
+        >
+          <Trash className="h-4 w-4" />
+        </Button>
+      </CardFooter>
     </Card>
   );
 }

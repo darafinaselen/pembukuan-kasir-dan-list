@@ -49,6 +49,12 @@ export default function TransaksiDialog({
   sopirList,
   isLoadingDependencies,
 }) {
+  // Cari paket yang dipilih untuk cek tipenya
+  const selectedPackage = paketList.find(
+    (pkg) => pkg.id === formData.packageId
+  );
+  const isTourPackage = selectedPackage?.type === "TOUR_PACKAGE";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -188,6 +194,42 @@ export default function TransaksiDialog({
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {/* Field Hotel dan Pax - Hanya muncul untuk TOUR_PACKAGE */}
+                  {isTourPackage && (
+                    <>
+                      <div className="grid gap-1.5">
+                        <Label htmlFor="hotel_name">
+                          Hotel{" "}
+                          <span className="text-xs text-muted-foreground">
+                            (Opsional)
+                          </span>
+                        </Label>
+                        <Input
+                          id="hotel_name"
+                          value={formData.hotel_name || ""}
+                          onChange={handleInputChange}
+                          placeholder="Nama hotel yang dipilih"
+                        />
+                      </div>
+                      <div className="grid gap-1.5">
+                        <Label htmlFor="pax_count">
+                          Jumlah Pax{" "}
+                          <span className="text-xs text-muted-foreground">
+                            (Penumpang)
+                          </span>
+                        </Label>
+                        <Input
+                          id="pax_count"
+                          type="number"
+                          min="1"
+                          value={formData.pax_count || ""}
+                          onChange={handleInputChange}
+                          placeholder="Contoh: 5"
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
               </fieldset>
             </div>

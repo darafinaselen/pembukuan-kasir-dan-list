@@ -117,7 +117,7 @@ export function DashboardStats({ stats, loading }) {
           className="hover:shadow-lg transition-shadow overflow-hidden"
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium truncate pr-2">
+            <CardTitle className="text-sm font-medium pr-2">
               {stat.title}
             </CardTitle>
             <div className={`p-2 rounded-lg ${stat.bgColor} shrink-0`}>
@@ -125,22 +125,13 @@ export function DashboardStats({ stats, loading }) {
             </div>
           </CardHeader>
           <CardContent className="space-y-1">
-            <div
-              className="text-xl sm:text-2xl font-bold truncate"
-              title={stat.value}
-            >
+            <div className="text-xl sm:text-2xl font-bold wrap-break-word">
               {stat.value}
             </div>
-            <p
-              className="text-xs text-muted-foreground truncate"
-              title={stat.description}
-            >
+            <p className="text-xs text-muted-foreground wrap-break-word">
               {stat.description}
             </p>
-            <p
-              className="text-xs font-medium text-gray-600 truncate"
-              title={stat.detail}
-            >
+            <p className="text-xs font-medium text-gray-600 wrap-break-word">
               {stat.detail}
             </p>
           </CardContent>

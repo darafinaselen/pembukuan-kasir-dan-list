@@ -168,17 +168,8 @@ export function TransactionChart({ data, period, loading }) {
         <div className="space-y-6">
           {/* Bar Chart dengan Grid Lines */}
           <div className="relative">
-            {/* Y-axis labels */}
-            <div className="absolute left-0 top-0 bottom-12 w-12 flex flex-col justify-between text-xs text-muted-foreground">
-              {yAxisLabels.map((label, i) => (
-                <span key={i} className="text-right pr-2">
-                  {label}
-                </span>
-              ))}
-            </div>
-
             {/* Chart area with grid */}
-            <div className="ml-12 relative">
+            <div className="relative">
               {/* Horizontal grid lines */}
               <div className="absolute inset-0 flex flex-col justify-between pointer-events-none mb-12">
                 {[0, 1, 2, 3, 4].map((i) => (
@@ -228,7 +219,7 @@ export function TransactionChart({ data, period, loading }) {
                       </div>
 
                       {/* X-axis label */}
-                      <span className="text-[10px] text-muted-foreground truncate w-full text-center font-medium">
+                      <span className="text-[10px] text-muted-foreground w-full text-center font-medium block">
                         {period === "today"
                           ? item.date.split(":")[0] + ":00"
                           : period === "month"
@@ -260,23 +251,17 @@ export function TransactionChart({ data, period, loading }) {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 overflow-hidden">
                 <div className="flex items-center justify-between mb-2 gap-2">
-                  <p className="text-xs font-medium text-muted-foreground truncate">
+                  <p className="text-xs font-medium text-muted-foreground">
                     Total Transaksi
                   </p>
                   <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-medium shrink-0">
                     {getPeriodLabel()}
                   </span>
                 </div>
-                <p
-                  className="text-2xl sm:text-3xl font-bold text-blue-600 truncate"
-                  title={totalTransactions.toString()}
-                >
+                <p className="text-2xl sm:text-3xl font-bold text-blue-600">
                   {totalTransactions}
                 </p>
-                <p
-                  className="text-xs text-muted-foreground mt-1 truncate"
-                  title={`Rata-rata ${avgPerPeriod.toFixed(1)} transaksi ${getPeriodLabel().toLowerCase()}`}
-                >
+                <p className="text-xs text-muted-foreground mt-1">
                   Rata-rata {avgPerPeriod.toFixed(1)} transaksi{" "}
                   {getPeriodLabel().toLowerCase()}
                 </p>
@@ -284,44 +269,32 @@ export function TransactionChart({ data, period, loading }) {
 
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 overflow-hidden">
                 <div className="flex items-center justify-between mb-2 gap-2">
-                  <p className="text-xs font-medium text-muted-foreground truncate">
+                  <p className="text-xs font-medium text-muted-foreground">
                     Total Pendapatan
                   </p>
                   <TrendingUp className="h-4 w-4 text-green-600 shrink-0" />
                 </div>
-                <p
-                  className="text-2xl sm:text-3xl font-bold text-green-600 truncate"
-                  title={formatCurrency(totalRevenue)}
-                >
+                <p className="text-2xl sm:text-3xl font-bold text-green-600">
                   {formatCurrency(totalRevenue)}
                 </p>
-                <p
-                  className="text-xs text-muted-foreground mt-1 truncate"
-                  title={`Rata-rata ${formatCurrency(avgTransaction)} per transaksi`}
-                >
+                <p className="text-xs text-muted-foreground mt-1">
                   Rata-rata {formatCurrency(avgTransaction)} per transaksi
                 </p>
               </div>
 
               <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 overflow-hidden">
                 <div className="flex items-center justify-between mb-2 gap-2">
-                  <p className="text-xs font-medium text-muted-foreground truncate">
+                  <p className="text-xs font-medium text-muted-foreground">
                     Puncak Transaksi
                   </p>
                   <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full font-medium shrink-0">
                     Tertinggi
                   </span>
                 </div>
-                <p
-                  className="text-2xl sm:text-3xl font-bold text-purple-600 truncate"
-                  title={peakDay.count.toString()}
-                >
+                <p className="text-2xl sm:text-3xl font-bold text-purple-600">
                   {peakDay.count}
                 </p>
-                <p
-                  className="text-xs text-muted-foreground mt-1 truncate"
-                  title={`Pada ${peakDay.date} • ${formatCurrency(peakDay.revenue)}`}
-                >
+                <p className="text-xs text-muted-foreground mt-1">
                   Pada {peakDay.date} • {formatCurrency(peakDay.revenue)}
                 </p>
               </div>

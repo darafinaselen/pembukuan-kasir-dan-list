@@ -17,13 +17,10 @@ export default function SopirCard({ driver, onEdit, onSetStatus, onDelete }) {
             <User className="h-5 w-5" />
           </div>
           <div className="min-w-0 flex-1">
-            <h3
-              className="text-lg font-semibold text-slate-800 truncate"
-              title={driver.driver_name}
-            >
+            <h3 className="text-lg font-semibold text-slate-800 wrap-break-word">
               {driver.driver_name}
             </h3>
-            <p className="text-xs text-muted-foreground truncate">Sopir</p>
+            <p className="text-xs text-muted-foreground">Sopir</p>
           </div>
         </div>
       </CardHeader>
@@ -31,42 +28,31 @@ export default function SopirCard({ driver, onEdit, onSetStatus, onDelete }) {
       <CardContent>
         <div className="grid grid-cols-1 gap-3">
           <div className="bg-white rounded-lg p-3 shadow-sm border border-slate-100 overflow-hidden">
-            <p className="text-xs text-muted-foreground truncate">NIK</p>
-            <p
-              className="mt-1 text-sm text-slate-800 font-medium truncate"
-              title={driver.nik ?? "-"}
-            >
+            <p className="text-xs text-muted-foreground">NIK</p>
+            <p className="mt-1 text-sm text-slate-800 font-medium wrap-break-word">
               {driver.nik ?? "-"}
             </p>
           </div>
           <div className="bg-white rounded-lg p-3 shadow-sm border border-slate-100 overflow-hidden">
-            <p className="text-xs text-muted-foreground truncate">No. HP</p>
-            <p
-              className="mt-1 text-sm text-slate-800 font-medium truncate"
-              title={driver.phone_number ?? "-"}
-            >
+            <p className="text-xs text-muted-foreground">No. HP</p>
+            <p className="mt-1 text-sm text-slate-800 font-medium wrap-break-word">
               {driver.phone_number ?? "-"}
             </p>
           </div>
 
           <div className="bg-white rounded-lg p-3 shadow-sm border border-slate-100 overflow-hidden">
-            <p className="text-xs text-muted-foreground truncate">Alamat</p>
-            <p
-              className="mt-1 text-sm text-slate-800 line-clamp-2"
-              title={driver.address ?? "-"}
-            >
+            <p className="text-xs text-muted-foreground">Alamat</p>
+            <p className="mt-1 text-sm text-slate-800 wrap-break-word">
               {driver.address ?? "-"}
             </p>
           </div>
 
           <div>
-            <p className="text-xs text-muted-foreground mb-2 truncate">
-              Status Sopir
-            </p>
+            <p className="text-xs text-muted-foreground mb-2">Status Sopir</p>
             {(() => {
               const s = driver.status || "READY";
               let classes =
-                "w-full rounded-md py-2 px-3 text-sm font-medium text-center truncate ";
+                "w-full rounded-md py-2 px-3 text-sm font-medium text-center ";
               let label = s;
               if (s === "READY") {
                 classes += "bg-emerald-600 text-white";
@@ -80,11 +66,7 @@ export default function SopirCard({ driver, onEdit, onSetStatus, onDelete }) {
               } else {
                 classes += "bg-amber-100 text-amber-800";
               }
-              return (
-                <div className={classes} title={label}>
-                  {label}
-                </div>
-              );
+              return <div className={classes}>{label}</div>;
             })()}
           </div>
 
@@ -94,7 +76,7 @@ export default function SopirCard({ driver, onEdit, onSetStatus, onDelete }) {
               className="flex-1 py-2 px-2 sm:px-3 rounded-md border border-sky-200 font-medium transition text-xs sm:text-sm"
             >
               <Pencil className="inline-block mr-1 sm:mr-2 size-4 shrink-0" />
-              <span className="truncate">Edit</span>
+              <span>Edit</span>
             </Button>
 
             <Button
@@ -102,7 +84,7 @@ export default function SopirCard({ driver, onEdit, onSetStatus, onDelete }) {
               className="flex-1 py-2 px-2 sm:px-3 rounded-md bg-amber-50 text-amber-700 text-xs sm:text-sm font-medium hover:bg-amber-100 transition border border-amber-100"
             >
               <Moon className="inline-block mr-1 sm:mr-2 size-4 shrink-0" />
-              <span className="truncate">Libur</span>
+              <span>Libur</span>
             </Button>
 
             <Button

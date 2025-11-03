@@ -39,33 +39,24 @@ export default function ArmadaCard({
             <Car className="h-5 w-5" />
           </div>
           <div className="min-w-0 flex-1">
-            <h3
-              className="text-lg font-semibold text-slate-800 truncate"
-              title={armada.license_plate}
-            >
+            <h3 className="text-lg font-semibold text-slate-800 wrap-break-word">
               {armada.license_plate}
             </h3>
-            <p className="text-xs text-muted-foreground truncate">No. Polisi</p>
+            <p className="text-xs text-muted-foreground">No. Polisi</p>
           </div>
         </div>
 
         {/* merk/tipe */}
         <div className="grid grid-cols-2 gap-4 mb-3">
           <div className="bg-white rounded-lg p-3 shadow-sm border border-slate-100 overflow-hidden">
-            <p className="text-xs text-muted-foreground truncate">Merk</p>
-            <p
-              className="mt-1 text-sm text-slate-800 font-medium truncate"
-              title={armada.brand ?? "-"}
-            >
+            <p className="text-xs text-muted-foreground">Merk</p>
+            <p className="mt-1 text-sm text-slate-800 font-medium wrap-break-word">
               {armada.brand ?? "-"}
             </p>
           </div>
           <div className="bg-white rounded-lg p-3 shadow-sm border border-slate-100 overflow-hidden">
-            <p className="text-xs text-muted-foreground truncate">Tipe</p>
-            <p
-              className="mt-1 text-sm text-slate-800 font-medium truncate"
-              title={armada.model ?? "-"}
-            >
+            <p className="text-xs text-muted-foreground">Tipe</p>
+            <p className="mt-1 text-sm text-slate-800 font-medium wrap-break-word">
               {armada.model ?? "-"}
             </p>
           </div>
@@ -75,22 +66,19 @@ export default function ArmadaCard({
         <div className="mt-2">
           <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 rounded-md px-3 py-2 text-sm">
             <Calendar className="h-4 w-4 text-blue-500 shrink-0" />
-            <span className="font-medium truncate">Tahun {year ?? "-"}</span>
+            <span className="font-medium">Tahun {year ?? "-"}</span>
           </div>
         </div>
 
         {/* status full width */}
         <div className="mt-4">
-          <p className="text-xs text-muted-foreground mb-2 truncate">
-            Status Armada
-          </p>
+          <p className="text-xs text-muted-foreground mb-2">Status Armada</p>
           <div
-            className={`w-full rounded-md py-2 px-3 text-sm font-medium text-center truncate ${
+            className={`w-full rounded-md py-2 px-3 text-sm font-medium text-center ${
               status === "READY"
                 ? "bg-emerald-600 text-white"
                 : "bg-amber-100 text-amber-800"
             }`}
-            title={status === "READY" ? "✓ Ready" : status}
           >
             {status === "READY" ? "✓ Ready" : status}
           </div>
@@ -103,14 +91,14 @@ export default function ArmadaCard({
             className="flex-1 py-2 px-2 sm:px-3 rounded-md border border-sky-200 font-medium transition text-xs sm:text-sm"
           >
             <Pencil className="inline-block mr-1 sm:mr-2 size-4 shrink-0" />
-            <span className="truncate">Edit</span>
+            <span>Edit</span>
           </Button>
           <Button
             onClick={() => onMaintenance(armada)}
             className="flex-1 py-2 px-2 sm:px-3 rounded-md bg-amber-50 text-amber-700 text-xs sm:text-sm font-medium hover:bg-amber-100 transition border border-amber-100"
           >
             <Wrench className="inline-block mr-1 sm:mr-2 size-4 shrink-0" />
-            <span className="truncate">Maintenance</span>
+            <span>Maintenance</span>
           </Button>
           <AlertDialog>
             <AlertDialogTrigger asChild>

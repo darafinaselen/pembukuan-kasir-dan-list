@@ -146,7 +146,7 @@ export function FleetStatusChart({ data, loading }) {
               className={`p-4 rounded-lg border-2 ${statusConfig.READY.lightColor} ${statusConfig.READY.borderColor} overflow-hidden`}
             >
               <div className="flex items-center justify-between mb-2 gap-2">
-                <p className="text-xs font-medium text-muted-foreground truncate">
+                <p className="text-xs font-medium text-muted-foreground">
                   Tersedia
                 </p>
                 <Badge
@@ -157,14 +157,11 @@ export function FleetStatusChart({ data, loading }) {
                 </Badge>
               </div>
               <p
-                className={`text-2xl sm:text-3xl font-bold ${statusConfig.READY.textColor} truncate`}
+                className={`text-2xl sm:text-3xl font-bold ${statusConfig.READY.textColor}`}
               >
                 {availableFleets}
               </p>
-              <p
-                className="text-xs text-muted-foreground mt-1 truncate"
-                title={`${total > 0 ? ((availableFleets / total) * 100).toFixed(1) : 0}% dari total armada`}
-              >
+              <p className="text-xs text-muted-foreground mt-1">
                 {total > 0 ? ((availableFleets / total) * 100).toFixed(1) : 0}%
                 dari total armada
               </p>
@@ -174,7 +171,7 @@ export function FleetStatusChart({ data, loading }) {
               className={`p-4 rounded-lg border-2 ${statusConfig.ON_TRIP.lightColor} ${statusConfig.ON_TRIP.borderColor} overflow-hidden`}
             >
               <div className="flex items-center justify-between mb-2 gap-2">
-                <p className="text-xs font-medium text-muted-foreground truncate">
+                <p className="text-xs font-medium text-muted-foreground">
                   Aktif
                 </p>
                 <Badge
@@ -185,14 +182,11 @@ export function FleetStatusChart({ data, loading }) {
                 </Badge>
               </div>
               <p
-                className={`text-2xl sm:text-3xl font-bold ${statusConfig.ON_TRIP.textColor} truncate`}
+                className={`text-2xl sm:text-3xl font-bold ${statusConfig.ON_TRIP.textColor}`}
               >
                 {activeFleets}
               </p>
-              <p
-                className="text-xs text-muted-foreground mt-1 truncate"
-                title="Sedang beroperasi atau dipesan"
-              >
+              <p className="text-xs text-muted-foreground mt-1">
                 Sedang beroperasi atau dipesan
               </p>
             </div>
@@ -207,7 +201,7 @@ export function FleetStatusChart({ data, loading }) {
               }`}
             >
               <div className="flex items-center justify-between mb-2 gap-2">
-                <p className="text-xs font-medium text-muted-foreground truncate">
+                <p className="text-xs font-medium text-muted-foreground">
                   Utilisasi
                 </p>
                 <Badge
@@ -228,7 +222,7 @@ export function FleetStatusChart({ data, loading }) {
                 </Badge>
               </div>
               <p
-                className={`text-2xl sm:text-3xl font-bold truncate ${
+                className={`text-2xl sm:text-3xl font-bold ${
                   utilization >= 70
                     ? "text-green-700"
                     : utilization >= 50
@@ -238,16 +232,7 @@ export function FleetStatusChart({ data, loading }) {
               >
                 {utilization}%
               </p>
-              <p
-                className="text-xs text-muted-foreground mt-1 line-clamp-2"
-                title={
-                  utilization >= 70
-                    ? "Sangat baik - Armada digunakan maksimal"
-                    : utilization >= 50
-                      ? "Cukup baik - Masih ada ruang untuk peningkatan"
-                      : "Perlu ditingkatkan - Banyak armada menganggur"
-                }
-              >
+              <p className="text-xs text-muted-foreground mt-1">
                 {utilization >= 70
                   ? "Sangat baik - Armada digunakan maksimal"
                   : utilization >= 50

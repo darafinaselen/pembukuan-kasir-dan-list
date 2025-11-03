@@ -37,7 +37,9 @@ export default function CetakInvoicePage() {
           setIsLoading(true);
           const res = await fetch(`/api/transactions/${id}`);
           if (!res.ok) throw new Error("Gagal ambil data transaksi");
-          const data = await res.json();
+          const json = await res.json();
+          // API mengembalikan { success, data, message }
+          const data = json.data || json;
           setTx(data);
           setCalcs(calculateTransactionFinancials(data));
         } catch (err) {

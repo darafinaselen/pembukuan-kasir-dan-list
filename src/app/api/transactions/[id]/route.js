@@ -13,7 +13,8 @@ async function handleGetTransaction(request, { params }) {
       return errorResponse("Insufficient permissions", 403);
     }
 
-    const { id } = params;
+    // In Next.js 15+, params is a Promise that needs to be awaited
+    const { id } = await params;
 
     if (!id) {
       return errorResponse("Transaction ID is required", 400);
@@ -48,7 +49,8 @@ async function handleUpdateTransaction(request, { params }) {
       return errorResponse("Insufficient permissions", 403);
     }
 
-    const { id } = params;
+    // In Next.js 15+, params is a Promise that needs to be awaited
+    const { id } = await params;
     const body = await request.json();
 
     if (!id) {
@@ -96,7 +98,8 @@ async function handleDeleteTransaction(request, { params }) {
       return errorResponse("Insufficient permissions", 403);
     }
 
-    const { id } = params;
+    // In Next.js 15+, params is a Promise that needs to be awaited
+    const { id } = await params;
 
     if (!id) {
       return errorResponse("Transaction ID is required", 400);

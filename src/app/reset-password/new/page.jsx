@@ -108,9 +108,7 @@ function NewPasswordForm() {
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
               <CheckCircle2 className="h-8 w-8 text-green-600" />
             </div>
-            <CardTitle className="text-xl">
-              Password Berhasil Diubah!
-            </CardTitle>
+            <CardTitle className="text-xl">Password Berhasil Diubah!</CardTitle>
             <CardDescription>
               Password Anda telah berhasil diperbarui
             </CardDescription>

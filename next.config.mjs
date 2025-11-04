@@ -8,6 +8,10 @@ const nextConfig = {
       bodySizeLimit: "2mb",
     },
   },
+  // Set explicit turbopack root
+  turbopack: {
+    root: process.cwd(),
+  },
   // Optimize for production
   poweredByHeader: false,
   compress: true,

@@ -54,6 +54,13 @@ enum AuditAction {
   EXPORT
 }
 
+enum StaffStatus {
+  ACTIVE
+  INACTIVE
+  ON_LEAVE
+  TERMINATED
+}
+
 // Modul 2.5: Manajemen Paket Jasa
 model ServicePackage {
   id                String      @id @default(uuid())
@@ -285,6 +292,39 @@ model Session {
   @@index([userId])
   @@index([token])
   @@map("sessions")
+}
+
+// Modul 8: Manajemen Staff (untuk pembayaran gaji)
+model Staff {
+  id           String  @id @default(uuid())
+  staff_name   String
+  nik          String? @unique // Nomor Induk Karyawan
+  position     String // Posisi bebas, dapat ditambahkan secara dinamis
+  phone_number String
+  email        String?
+  address      String?
+
+  // Informasi Gaji
+  salary_amount Int // Gaji pokok per bulan
+  allowances    Int? @default(0) // Tunjangan
+
+  // Informasi Bank untuk transfer gaji
+  bank_name      String?
+  bank_account   String?
+  account_holder String?
+
+  // Status & Tanggal
+  status      StaffStatus @default(ACTIVE)
+  join_date   DateTime    @db.Date
+  resign_date DateTime?   @db.Date
+
+  // Notes
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("staff")
 }
 
 // Modul 7: Audit Logging untuk Compliance

@@ -19,6 +19,7 @@ async function main() {
   console.log("🧹 Cleaning existing data...");
   await prisma.transaction.deleteMany();
   await prisma.expense.deleteMany();
+  await prisma.staff.deleteMany();
   await prisma.servicePackage.deleteMany();
   await prisma.driver.deleteMany();
   await prisma.armada.deleteMany();
@@ -330,7 +331,169 @@ async function main() {
   console.log(`✅ Created driver: ${driver4.driver_name}\n`);
 
   // ========================================
-  // 6. CREATE TRANSACTIONS (Oktober 2025)
+  // 6. CREATE STAFF
+  // ========================================
+  console.log("👔 Creating staff...");
+
+  const staff1 = await prisma.staff.create({
+    data: {
+      staff_name: "Siti Rahayu",
+      nik: "3201015678900001",
+      position: "Admin",
+      phone_number: "08123456701",
+      email: "siti.rahayu@pembukuan.com",
+      address: "Jl. Kebon Jeruk No. 12, Jakarta Barat",
+      salary_amount: 4500000,
+      allowances: 500000,
+      bank_name: "BCA",
+      bank_account: "1234567890",
+      account_holder: "Siti Rahayu",
+      join_date: new Date("2024-01-15"),
+      status: "ACTIVE",
+      notes: "Bertanggung jawab untuk administrasi kantor",
+    },
+  });
+
+  const staff2 = await prisma.staff.create({
+    data: {
+      staff_name: "Andi Firmansyah",
+      nik: "3201015678900002",
+      position: "Finance",
+      phone_number: "08123456702",
+      email: "andi.firmansyah@pembukuan.com",
+      address: "Jl. Palmerah No. 34, Jakarta Pusat",
+      salary_amount: 6000000,
+      allowances: 1000000,
+      bank_name: "Mandiri",
+      bank_account: "9876543210",
+      account_holder: "Andi Firmansyah",
+      join_date: new Date("2023-06-01"),
+      status: "ACTIVE",
+      notes: "Mengelola keuangan dan pembukuan perusahaan",
+    },
+  });
+
+  const staff3 = await prisma.staff.create({
+    data: {
+      staff_name: "Rudi Hartono",
+      nik: "3201015678900003",
+      position: "Mekanik",
+      phone_number: "08123456703",
+      email: "rudi.hartono@pembukuan.com",
+      address: "Jl. Raya Bogor KM 20, Cibinong",
+      salary_amount: 5000000,
+      allowances: 750000,
+      bank_name: "BNI",
+      bank_account: "5555666677",
+      account_holder: "Rudi Hartono",
+      join_date: new Date("2023-03-10"),
+      status: "ACTIVE",
+      notes: "Mekanik senior untuk perawatan armada",
+    },
+  });
+
+  const staff4 = await prisma.staff.create({
+    data: {
+      staff_name: "Nina Kusuma",
+      nik: "3201015678900004",
+      position: "Customer Service",
+      phone_number: "08123456704",
+      email: "nina.kusuma@pembukuan.com",
+      address: "Jl. Tebet Raya No. 56, Jakarta Selatan",
+      salary_amount: 4000000,
+      allowances: 400000,
+      bank_name: "BCA",
+      bank_account: "1111222233",
+      account_holder: "Nina Kusuma",
+      join_date: new Date("2024-05-20"),
+      status: "ACTIVE",
+      notes: "Menangani customer service dan booking",
+    },
+  });
+
+  const staff5 = await prisma.staff.create({
+    data: {
+      staff_name: "Dimas Prasetya",
+      nik: "3201015678900005",
+      position: "Operasional",
+      phone_number: "08123456705",
+      email: "dimas.prasetya@pembukuan.com",
+      address: "Jl. Ciputat Raya No. 78, Tangerang Selatan",
+      salary_amount: 5500000,
+      allowances: 800000,
+      bank_name: "Mandiri",
+      bank_account: "7777888899",
+      account_holder: "Dimas Prasetya",
+      join_date: new Date("2023-09-01"),
+      status: "ACTIVE",
+      notes: "Koordinator operasional dan logistik",
+    },
+  });
+
+  const staff6 = await prisma.staff.create({
+    data: {
+      staff_name: "Lina Marlina",
+      nik: "3201015678900006",
+      position: "HR",
+      phone_number: "08123456706",
+      address: "Jl. Kemang Raya No. 90, Jakarta Selatan",
+      salary_amount: 5000000,
+      allowances: 600000,
+      bank_name: "BRI",
+      bank_account: "3333444455",
+      account_holder: "Lina Marlina",
+      join_date: new Date("2024-02-15"),
+      status: "ON_LEAVE",
+      notes: "Sedang cuti melahirkan",
+    },
+  });
+
+  const staff7 = await prisma.staff.create({
+    data: {
+      staff_name: "Bambang Suryadi",
+      nik: "3201015678900007",
+      position: "IT Support",
+      phone_number: "08123456707",
+      email: "bambang.suryadi@pembukuan.com",
+      address: "Jl. Cibubur No. 45, Depok",
+      salary_amount: 6500000,
+      allowances: 1200000,
+      bank_name: "BCA",
+      bank_account: "9999000011",
+      account_holder: "Bambang Suryadi",
+      join_date: new Date("2022-11-01"),
+      status: "ACTIVE",
+      notes: "Mengelola sistem IT dan website perusahaan",
+    },
+  });
+
+  const staff8 = await prisma.staff.create({
+    data: {
+      staff_name: "Fitri Handayani",
+      nik: "3201015678900008",
+      position: "Marketing",
+      phone_number: "08123456708",
+      address: "Jl. Pondok Indah No. 12, Jakarta Selatan",
+      salary_amount: 4500000,
+      allowances: 500000,
+      join_date: new Date("2024-08-01"),
+      status: "INACTIVE",
+      resign_date: new Date("2025-10-31"),
+      notes: "Resign untuk melanjutkan pendidikan",
+    },
+  });
+
+  console.log(`✅ Created staff: ${staff1.staff_name} (${staff1.position})`);
+  console.log(`✅ Created staff: ${staff2.staff_name} (${staff2.position})`);
+  console.log(`✅ Created staff: ${staff3.staff_name} (${staff3.position})`);
+  console.log(`✅ Created staff: ${staff4.staff_name} (${staff4.position})`);
+  console.log(`✅ Created staff: ${staff5.staff_name} (${staff5.position})`);
+  console.log(`✅ Created staff: ${staff6.staff_name} (${staff6.position})`);
+  console.log(`✅ Created staff: ${staff7.staff_name} (${staff7.position})`);
+  console.log(`✅ Created staff: ${staff8.staff_name} (${staff8.position})\n`);
+
+  // ========================================
+  // 7. CREATE TRANSACTIONS (Oktober 2025)
   // ========================================
   console.log("💰 Creating transactions for Oktober 2025...");
 
@@ -710,6 +873,7 @@ async function main() {
   console.log(`✅ Service packages: 8`);
   console.log(`✅ Vehicles (Armada): 4`);
   console.log(`✅ Drivers: 4`);
+  console.log(`✅ Staff: 8`);
   console.log(`✅ Transactions Oktober: 6`);
   console.log(`✅ Transactions November: 1`);
   console.log(`✅ Total Transactions: 7`);

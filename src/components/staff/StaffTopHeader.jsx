@@ -48,7 +48,7 @@ export default function StaffTopHeader({
             <option value="ACTIVE">Aktif</option>
             <option value="INACTIVE">Tidak Aktif</option>
             <option value="ON_LEAVE">Cuti</option>
-            <option value="TERMINATED">Resign</option>
+            {/* <option value="TERMINATED">Resign</option> */}
           </select>
         </div>
       </div>

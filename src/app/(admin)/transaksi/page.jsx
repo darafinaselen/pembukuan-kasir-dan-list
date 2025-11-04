@@ -285,7 +285,12 @@ export default function TransaksiPage() {
         credentials: "include",
         body: JSON.stringify({ payment_status: newStatus }),
       });
-      if (!res.ok) throw new Error("status update failed");
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "status update failed");
+      }
 
       // Update data di state secara manual (Optimistic UI)
       setData((prevData) =>
@@ -293,8 +298,16 @@ export default function TransaksiPage() {
           item.id === id ? { ...item, payment_status: newStatus } : item
         )
       );
+
+      // Show success toast
+      toast.success("Status Berhasil Diupdate", {
+        description: `Status pembayaran diubah menjadi ${newStatus}`,
+      });
     } catch (err) {
       console.error("Failed to update status", err);
+      toast.error("Update Status Gagal", {
+        description: err.message || "Gagal mengupdate status transaksi",
+      });
     }
   };
 

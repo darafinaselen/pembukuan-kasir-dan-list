@@ -18,6 +18,11 @@ async function handleGetExpenses(request) {
       orderBy: {
         date: "desc",
       },
+      include: {
+        armada: true,
+        driver: true,
+        staff: true,
+      },
     });
     return successResponse(data);
   } catch (error) {
@@ -39,6 +44,16 @@ async function handleCreateExpense(request) {
       return errorResponse("Data tidak lengkap", 400);
     }
 
+    // Validate amount is a number
+    const amount =
+      typeof body.amount === "number" ? body.amount : parseInt(body.amount, 10);
+    if (isNaN(amount) || amount <= 0) {
+      return errorResponse(
+        "Jumlah harus berupa angka yang valid dan lebih dari 0",
+        400
+      );
+    }
+
     let finalCategory = body.category;
     if (body.category === "LAINNYA" && body.kategoriLainnya) {
       finalCategory = body.kategoriLainnya;
@@ -46,15 +61,31 @@ async function handleCreateExpense(request) {
       return errorResponse("Kategori 'Lainnya' tidak boleh kosong", 400);
     }
 
+    // Build the data object with proper Prisma relations
+    const createData = {
+      date: body.date,
+      category: finalCategory,
+      description: body.description,
+      amount: amount,
+    };
+
+    // Add optional relations using connect
+    if (body.armadaId) {
+      createData.armada = { connect: { id: body.armadaId } };
+    }
+    if (body.driverId) {
+      createData.driver = { connect: { id: body.driverId } };
+    }
+    if (body.staffId) {
+      createData.staff = { connect: { id: body.staffId } };
+    }
+
     const newData = await prisma.expense.create({
-      data: {
-        date: body.date,
-        category: finalCategory,
-        description: body.description,
-        amount: body.amount,
-        armadaId: body.armadaId || null,
-        driverId: body.driverId || null,
-        staffId: body.staffId || null,
+      data: createData,
+      include: {
+        armada: true,
+        driver: true,
+        staff: true,
       },
     });
 

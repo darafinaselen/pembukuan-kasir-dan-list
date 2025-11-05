@@ -137,14 +137,16 @@ export default function PengeluaranDialog({
             <Label htmlFor="amount" className="text-right">
               Jumlah
             </Label>
-            <CurrencyInput
-              id="amount"
-              name="amount"
-              value={formData.amount}
-              onChange={handleInputChange}
-              className="col-span-3"
-              required
-            />
+            <div className="col-span-3">
+              <CurrencyInput
+                id="amount"
+                name="amount"
+                value={formData.amount}
+                onChange={handleInputChange}
+                className="w-full"
+                required
+              />
+            </div>
           </div>
 
           {armadaCategories.includes(formData.category) && (

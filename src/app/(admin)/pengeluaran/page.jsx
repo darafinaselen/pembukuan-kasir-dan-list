@@ -18,7 +18,7 @@ const INITIAL_FORM_STATE = {
   category: "",
   kategoriLainnya: "",
   description: "",
-  amount: "",
+  amount: 0,
   armadaId: null,
   driverId: null,
   staffId: null,
@@ -218,7 +218,19 @@ export default function PengeluaranPage() {
 
   const handleInputChange = (e) => {
     const { id, value } = e.target;
-    setFormData((prev) => ({ ...prev, [id]: value }));
+
+    // Handle numeric fields (including CurrencyInput which sends string numbers)
+    const numericFields = ["amount"];
+
+    let newValue = value;
+    if (numericFields.includes(id)) {
+      // Convert to number for amount, keep empty string as 0
+      newValue = value === "" ? 0 : parseFloat(value) || 0;
+    } else if (e.target.type === "number") {
+      newValue = parseFloat(value) || 0;
+    }
+
+    setFormData((prev) => ({ ...prev, [id]: newValue }));
   };
 
   const handleSelectChange = (id, value) => {
@@ -233,14 +245,13 @@ export default function PengeluaranPage() {
   };
 
   const openEditDialog = (item) => {
-    console.log("Mencoba meng-edit item:", item);
     setEditingData(item);
     const isLainnya = !kategoriOptions.includes(item.category);
 
     setFormData({
       ...item,
       date: new Date(item.date).toISOString().split("T")[0],
-      amount: item.amount.toString(),
+      amount: item.amount || 0,
       armadaId: item.armadaId,
       driverId: item.driverId,
       staffId: item.staffId,
@@ -276,20 +287,14 @@ export default function PengeluaranPage() {
         ? `/api/expenses/${editingData.id}`
         : "/api/expenses";
 
-      // let finalCategory = formData.category;
-      // if (formData.category === "LAINNYA" && formData.kategoriLainnya) {
-      //   finalCategory = formData.kategoriLainnya;
-      // }
-
-      const cleanAmount = parseInt(
-        String(formData.amount).replace(/[^0-9]/g, ""),
-        10
-      );
+      // Ensure amount is a valid number
+      const cleanAmount =
+        typeof formData.amount === "number"
+          ? formData.amount
+          : parseInt(String(formData.amount).replace(/[^0-9]/g, ""), 10);
 
       if (isNaN(cleanAmount) || cleanAmount <= 0) {
-        console.error(
-          "Validasi Gagal: Jumlah (amount) harus diisi dan lebih dari 0."
-        );
+        alert("Jumlah (amount) harus diisi dan lebih dari 0.");
         return;
       }
 
@@ -304,13 +309,13 @@ export default function PengeluaranPage() {
         staffId: formData.staffId || null,
       });
 
-      console.log("Submitting:", method, url, body);
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: body,
       });
+
       if (!res.ok) {
         const errorData = await res.json();
         console.error("Server menolak data:", errorData);
@@ -323,6 +328,7 @@ export default function PengeluaranPage() {
       await fetchData();
     } catch (err) {
       console.error("Failed to save", err.message);
+      alert("Gagal menyimpan: " + err.message);
     }
   };
 

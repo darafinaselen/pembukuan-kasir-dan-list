@@ -45,6 +45,7 @@ export default function PengeluaranDialog({
   formData,
   handleInputChange,
   handleSelectChange,
+  handleAmountChange,
   handleSubmit,
   armadaList,
   driverList,
@@ -141,7 +142,7 @@ export default function PengeluaranDialog({
               id="amount"
               name="amount"
               value={formData.amount}
-              onChange={handleInputChange}
+              onChange={handleAmountChange}
               className="col-span-3"
               required
             />

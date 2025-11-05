@@ -225,6 +225,13 @@ export default function PengeluaranPage() {
     setFormData((prev) => ({ ...prev, [id]: value }));
   };
 
+  const handleAmountChange = (value) => {
+    setFormData((prev) => ({
+      ...prev,
+      amount: String(value || ""),
+    }));
+  };
+
   const openNewDialog = () => {
     setEditingData(null);
     setFormData(INITIAL_FORM_STATE);
@@ -358,6 +365,7 @@ export default function PengeluaranPage() {
         formData={formData}
         handleInputChange={handleInputChange}
         handleSelectChange={handleSelectChange}
+        handleAmountChange={handleAmountChange}
         handleSubmit={handleSubmit}
         armadaList={armadaList}
         driverList={driverList}

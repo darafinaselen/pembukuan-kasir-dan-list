@@ -45,6 +45,7 @@ export default function PengeluaranDialog({
   formData,
   handleInputChange,
   handleSelectChange,
+  handleAmountChange,
   handleSubmit,
   armadaList,
   driverList,

@@ -41,7 +41,7 @@ const PROTECTED_API_PATHS = [
 // Admin-only paths
 const ADMIN_PATHS = ["/api/auth/register", "/api/users", "/api/audit"];
 
-export function proxy(request) {
+export default function proxy(request) {
   const { pathname } = request.nextUrl;
 
   // Allow public paths

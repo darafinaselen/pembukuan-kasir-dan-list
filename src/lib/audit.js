@@ -138,7 +138,9 @@ export async function logExpenseEvent(
   ipAddress,
   userAgent
 ) {
-  const description = `${action} expense: ${changes.category} - ${changes.description}`;
+  const description = changes
+    ? `${action} expense: ${changes.category} - ${changes.description}`
+    : `${action} expense ID: ${expenseId}`;
 
   return await createAuditLog({
     userId,
@@ -146,7 +148,7 @@ export async function logExpenseEvent(
     resource: "Expense",
     resourceId: expenseId,
     description,
-    metadata: changes,
+    metadata: changes || {},
     ipAddress,
     userAgent,
   });

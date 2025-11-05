@@ -17,14 +17,21 @@ async function handleUpdateExpense(request, { params }) {
     }
 
     const body = await request.json();
+    let finalCategory = body.category;
+    if (body.category === "LAINNYA" && body.kategoriLainnya) {
+      finalCategory = body.kategoriLainnya;
+    }
+
     const updatedData = await prisma.expense.update({
       where: { id: idFromParams },
       data: {
         date: body.date,
-        category: body.category,
+        category: finalCategory,
         description: body.description,
         amount: body.amount,
-        armadaId: body.armadaId,
+        armadaId: body.armadaId || null,
+        driverId: body.driverId || null,
+        staffId: body.staffId || null,
       },
     });
 

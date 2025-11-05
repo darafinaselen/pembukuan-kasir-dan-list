@@ -155,14 +155,24 @@ export default function TransaksiDetailModal({
               label="Tarif Overtime"
               value={`${formatCurrency(data.overtime_rate_per_hour)} /jam`}
             />
-            <DetailItem
-              label="Biaya BBM"
-              value={formatCurrency(data.fuel_cost)}
-            />
-            <DetailItem
-              label="Gaji Sopir"
-              value={formatCurrency(data.driver_fee)}
-            />
+            {data.dp_amount && data.dp_amount > 0 && (
+              <>
+                <DetailItem
+                  label="Jumlah DP Diterima"
+                  value={formatCurrency(data.dp_amount)}
+                />
+                <DetailItem
+                  label="Sisa Tagihan"
+                  value={
+                    <span className="font-semibold text-orange-600">
+                      {formatCurrency(
+                        calculatedData.totalTagihan - data.dp_amount
+                      )}
+                    </span>
+                  }
+                />
+              </>
+            )}
           </div>
         </div>
 

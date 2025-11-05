@@ -14,7 +14,7 @@ import { prisma } from "@/lib/prisma";
 async function handleUpdateStatus(request, context) {
   try {
     // Check permissions
-    if (!permissions.canEditTransaction(request.auth.user)) {
+    if (!permissions.canUpdateTransaction(request.auth.user)) {
       return errorResponse("Insufficient permissions", 403);
     }
 
@@ -29,7 +29,7 @@ async function handleUpdateStatus(request, context) {
     const { payment_status } = body;
 
     // Validate payment_status
-    const validStatuses = ["PENDING", "PAID", "CANCELLED"];
+    const validStatuses = ["UNPAID", "DOWN_PAYMENT", "PAID"];
     if (!payment_status || !validStatuses.includes(payment_status)) {
       return errorResponse(
         `Invalid payment status. Must be one of: ${validStatuses.join(", ")}`,
@@ -51,7 +51,7 @@ async function handleUpdateStatus(request, context) {
       where: { id },
       data: {
         payment_status,
-        updated_at: new Date(),
+        updatedAt: new Date(),
       },
       include: {
         package: true,

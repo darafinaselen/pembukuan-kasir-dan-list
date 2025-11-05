@@ -6,6 +6,15 @@ export function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 
+// Format currency to Indonesian Rupiah
+export function formatCurrency(amount) {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+  }).format(amount || 0);
+}
+
 // DEPRECATED: Use calculateTransactionFinancials from @/lib/accounting instead
 // This function is kept for backward compatibility but will be removed in future versions
 export function calculateFinancials(tx) {

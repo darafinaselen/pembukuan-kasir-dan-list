@@ -74,10 +74,10 @@ export default function LaporanPage() {
       />
 
       <Tabs defaultValue="laporan-transaksi" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 md:w-[700px]">
+        <TabsList className="grid w-full grid-cols-3 md:w-[600px]">
           <TabsTrigger value="laporan-transaksi">Laporan Transaksi</TabsTrigger>
           <TabsTrigger value="laporan-laba-rugi">Laporan Laba Rugi</TabsTrigger>
-          <TabsTrigger value="laporan-rekap">Rekapitulasi</TabsTrigger>
+          <TabsTrigger value="rekapitulasi">Rekapitulasi</TabsTrigger>
         </TabsList>
 
         <TabsContent value="laporan-transaksi" className="mt-4">
@@ -94,11 +94,14 @@ export default function LaporanPage() {
           />
         </TabsContent>
 
-        <TabsContent value="laporan-rekap" className="mt-4">
+        <TabsContent value="rekapitulasi" className="mt-4">
           <LaporanRekapTab
-            rekapBBM={reportData?.rekapBBM}
-            rekapGaji={reportData?.rekapGaji}
-            isLoading={isLoading}
+            startDate={
+              dateRange.from ? dateRange.from.toISOString().split("T")[0] : null
+            }
+            endDate={
+              dateRange.to ? dateRange.to.toISOString().split("T")[0] : null
+            }
           />
         </TabsContent>
       </Tabs>

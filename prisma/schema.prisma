@@ -217,8 +217,7 @@ model Transaction {
   // Data Keuangan
   all_in_rate            Int // Tarif sewa
   overtime_rate_per_hour Int
-  fuel_cost              Int // Biaya BBM (dicatat per transaksi)
-  driver_fee             Int // Biaya Gaji Sopir (dicatat per transaksi)
+  dp_amount              Int? // Jumlah Down Payment yang diterima (opsional)
   payment_status         PaymentStatus @default(UNPAID)
 
   // Data Tambahan untuk Paket Wisata

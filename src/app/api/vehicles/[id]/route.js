@@ -1,6 +1,9 @@
 import { prisma } from "@/lib/prisma";
-import { protectedRoute } from "@/lib/middleware/auth";
-import { successResponse, errorResponse } from "@/lib/utils/response";
+import {
+  protectedRoute,
+  successResponse,
+  errorResponse,
+} from "@/lib/middleware";
 
 /**
  * GET /api/vehicles/[id]

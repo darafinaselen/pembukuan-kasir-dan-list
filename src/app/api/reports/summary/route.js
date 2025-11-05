@@ -59,11 +59,8 @@ async function handleGetSummaryReport(request) {
     });
 
     let totalPemasukanSewa = 0;
-    let totalBiayaOps = 0;
+    let totalBiayaOps = 0; // operational costs from tx-level fields removed
     let totalLabaKotor = 0;
-
-    const bbmMap = new Map();
-    const gajiMap = new Map();
 
     for (const tx of transactions) {
       const financials = calculateTxFinancials(tx);
@@ -71,39 +68,7 @@ async function handleGetSummaryReport(request) {
       totalBiayaOps += financials.totalBiayaOps;
       totalLabaKotor += financials.labaKotor;
 
-      // Format bulan untuk key dan display
-      const bulanKey = format(new Date(tx.booking_date), "yyyy-MM");
-      const bulanDisplay = format(new Date(tx.booking_date), "MMMM yyyy", {
-        locale: id,
-      });
-
-      // Rekap BBM per bulan per armada
-      if (tx.armada) {
-        const key = `${tx.armadaId}-${bulanKey}`;
-        const current = bbmMap.get(key) || {
-          armadaId: tx.armadaId,
-          bulan: bulanKey,
-          bulanDisplay: bulanDisplay,
-          platMobil: `${tx.armada.license_plate} (${tx.armada.model})`,
-          totalBBM: 0,
-        };
-        current.totalBBM += tx.fuel_cost || 0;
-        bbmMap.set(key, current);
-      }
-
-      // Rekap Gaji per bulan per sopir
-      if (tx.driver) {
-        const key = `${tx.driverId}-${bulanKey}`;
-        const current = gajiMap.get(key) || {
-          driverId: tx.driverId,
-          bulan: bulanKey,
-          bulanDisplay: bulanDisplay,
-          namaSopir: tx.driver.driver_name,
-          totalGaji: 0,
-        };
-        current.totalGaji += tx.driver_fee || 0;
-        gajiMap.set(key, current);
-      }
+      // BBM and driver fee are removed from transaction-level; skip rekap accumulation
     }
 
     const expenseAggregation = await prisma.expense.aggregate({
@@ -141,15 +106,6 @@ async function handleGetSummaryReport(request) {
           : "0%",
     };
 
-    // Sort rekap by bulan descending (newest first)
-    const rekapBBM = Array.from(bbmMap.values()).sort((a, b) =>
-      b.bulan.localeCompare(a.bulan)
-    );
-
-    const rekapGaji = Array.from(gajiMap.values()).sort((a, b) =>
-      b.bulan.localeCompare(a.bulan)
-    );
-
     // Log report access for audit trail
     await logReportAccess(
       request.auth.user.id,
@@ -162,8 +118,6 @@ async function handleGetSummaryReport(request) {
     return successResponse({
       laporanTransaksi,
       laporanLabaRugi,
-      rekapBBM,
-      rekapGaji,
     });
   } catch (error) {
     console.error("Error fetching report data:", error);

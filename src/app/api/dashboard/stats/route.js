@@ -11,7 +11,7 @@ import { permissions } from "@/lib/middleware";
  * GET /api/dashboard/stats?period=today|month|year
  * Returns:
  * - totalRevenue: sum of all_in_rate + overtime
- * - grossProfit: sum of (revenue - fuel_cost - driver_fee)
+ * - grossProfit: sum of revenue (transaction-level ops removed)
  * - transactionCount: count of transactions
  * - fleetCount: count of armadas
  * - transactionTrend: array of { date, count, revenue } for chart
@@ -54,8 +54,6 @@ async function handleGetDashboardStats(request) {
         checkin_datetime: true,
         all_in_rate: true,
         overtime_rate_per_hour: true,
-        fuel_cost: true,
-        driver_fee: true,
         payment_status: true,
         armadaId: true,
         armada: {

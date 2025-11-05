@@ -508,8 +508,7 @@ async function main() {
       checkin_datetime: new Date("2025-10-05T20:00:00"),
       all_in_rate: 500000,
       overtime_rate_per_hour: 50000,
-      fuel_cost: 150000,
-      driver_fee: 100000,
+      dp_amount: null,
       payment_status: "PAID",
       packageId: paket12Jam.id,
       armadaId: innova1.id,
@@ -528,8 +527,7 @@ async function main() {
       checkin_datetime: new Date("2025-10-08T22:00:00"), // 15 jam (overtime 3 jam)
       all_in_rate: 800000,
       overtime_rate_per_hour: 40000,
-      fuel_cost: 180000,
-      driver_fee: 120000,
+      dp_amount: null,
       payment_status: "PAID",
       packageId: paket24Jam.id,
       armadaId: innova2.id,
@@ -548,8 +546,7 @@ async function main() {
       checkin_datetime: new Date("2025-10-12T18:00:00"),
       all_in_rate: 1200000,
       overtime_rate_per_hour: 50000,
-      fuel_cost: 250000,
-      driver_fee: 150000,
+      dp_amount: null,
       payment_status: "PAID",
       packageId: paket12Jam.id,
       armadaId: hiace.id,
@@ -568,8 +565,7 @@ async function main() {
       checkin_datetime: new Date("2025-10-16T20:00:00"), // 2 hari
       all_in_rate: 1500000,
       overtime_rate_per_hour: 0,
-      fuel_cost: 400000,
-      driver_fee: 200000,
+      dp_amount: null,
       payment_status: "PAID",
       packageId: paketLuarKota.id,
       armadaId: innova1.id,
@@ -588,8 +584,7 @@ async function main() {
       checkin_datetime: new Date("2025-10-20T22:00:00"),
       all_in_rate: 500000,
       overtime_rate_per_hour: 50000,
-      fuel_cost: 120000,
-      driver_fee: 100000,
+      dp_amount: null,
       payment_status: "PAID",
       packageId: paket12Jam.id,
       armadaId: innova2.id,
@@ -608,8 +603,7 @@ async function main() {
       checkin_datetime: new Date("2025-10-26T08:00:00"), // 24 jam tepat
       all_in_rate: 800000,
       overtime_rate_per_hour: 40000,
-      fuel_cost: 200000,
-      driver_fee: 120000,
+      dp_amount: null,
       payment_status: "PAID",
       packageId: paket24Jam.id,
       armadaId: hiace.id,
@@ -637,7 +631,7 @@ async function main() {
   );
 
   // ========================================
-  // 7. CREATE TRANSACTIONS (November 2025)
+  // 8. CREATE TRANSACTIONS (November 2025)
   // ========================================
   console.log("💰 Creating transactions for November 2025...");
 
@@ -652,8 +646,7 @@ async function main() {
       checkin_datetime: new Date("2025-11-02T19:00:00"),
       all_in_rate: 500000,
       overtime_rate_per_hour: 50000,
-      fuel_cost: 140000,
-      driver_fee: 100000,
+      dp_amount: null,
       payment_status: "UNPAID",
       packageId: paket12Jam.id,
       armadaId: innova1.id,
@@ -661,12 +654,56 @@ async function main() {
     },
   });
 
+  // Transaksi 8: 3 November 2025 (dengan DP)
+  const tx8 = await prisma.transaction.create({
+    data: {
+      invoice_code: "INV-2025-11-002",
+      customer_name: "PT. Berkah Sejahtera",
+      customer_phone: "021-77778888",
+      booking_date: new Date("2025-11-03"),
+      checkout_datetime: new Date("2025-11-03T09:00:00"),
+      checkin_datetime: new Date("2025-11-04T09:00:00"), // 24 jam
+      all_in_rate: 800000,
+      overtime_rate_per_hour: 40000,
+      dp_amount: 400000, // DP 50%
+      payment_status: "DOWN_PAYMENT",
+      packageId: paket24Jam.id,
+      armadaId: innova2.id,
+      driverId: driver2.id,
+    },
+  });
+
+  // Transaksi 9: 4 November 2025 (dengan DP)
+  const tx9 = await prisma.transaction.create({
+    data: {
+      invoice_code: "INV-2025-11-003",
+      customer_name: "Keluarga Ibu Ratna",
+      customer_phone: "08567891234",
+      booking_date: new Date("2025-11-04"),
+      checkout_datetime: new Date("2025-11-04T08:00:00"),
+      checkin_datetime: new Date("2025-11-04T20:00:00"),
+      all_in_rate: 1200000,
+      overtime_rate_per_hour: 50000,
+      dp_amount: 300000, // DP 25%
+      payment_status: "DOWN_PAYMENT",
+      packageId: paket12Jam.id,
+      armadaId: hiace.id,
+      driverId: driver3.id,
+    },
+  });
+
   console.log(
-    `✅ Created transaction: ${tx7.customer_name} (Rp ${tx7.all_in_rate.toLocaleString()})\n`
+    `✅ Created transaction: ${tx7.customer_name} (Rp ${tx7.all_in_rate.toLocaleString()})`
+  );
+  console.log(
+    `✅ Created transaction: ${tx8.customer_name} (Rp ${tx8.all_in_rate.toLocaleString()}, DP: Rp ${tx8.dp_amount.toLocaleString()})`
+  );
+  console.log(
+    `✅ Created transaction: ${tx9.customer_name} (Rp ${tx9.all_in_rate.toLocaleString()}, DP: Rp ${tx9.dp_amount.toLocaleString()})\n`
   );
 
   // ========================================
-  // 8. CREATE EXPENSES (Oktober 2025)
+  // 9. CREATE EXPENSES (Oktober 2025)
   // ========================================
   console.log("📝 Creating expenses for Oktober 2025...");
 
@@ -837,7 +874,7 @@ async function main() {
   console.log(`✅ Created ${16} expense records for Oktober 2025\n`);
 
   // ========================================
-  // 9. CREATE EXPENSES (November 2025)
+  // 10. CREATE EXPENSES (November 2025)
   // ========================================
   console.log("📝 Creating expenses for November 2025...");
 
@@ -861,7 +898,47 @@ async function main() {
     },
   });
 
-  console.log(`✅ Created ${2} expense records for November 2025\n`);
+  const exp19 = await prisma.expense.create({
+    data: {
+      date: new Date("2025-11-03"),
+      category: "BBM",
+      description: "BBM untuk B 5678 DEF - PT Berkah Sejahtera",
+      amount: 200000,
+      armadaId: innova2.id,
+    },
+  });
+
+  const exp20 = await prisma.expense.create({
+    data: {
+      date: new Date("2025-11-03"),
+      category: "GAJI_SOPIR",
+      description: "Gaji sopir Ahmad Wijaya - PT Berkah Sejahtera",
+      amount: 120000,
+      armadaId: innova2.id,
+    },
+  });
+
+  const exp21 = await prisma.expense.create({
+    data: {
+      date: new Date("2025-11-04"),
+      category: "BBM",
+      description: "BBM untuk B 9012 GHI - Keluarga Ibu Ratna",
+      amount: 250000,
+      armadaId: hiace.id,
+    },
+  });
+
+  const exp22 = await prisma.expense.create({
+    data: {
+      date: new Date("2025-11-04"),
+      category: "GAJI_SOPIR",
+      description: "Gaji sopir Dedi Kurniawan - Keluarga Ibu Ratna",
+      amount: 150000,
+      armadaId: hiace.id,
+    },
+  });
+
+  console.log(`✅ Created ${6} expense records for November 2025\n`);
 
   // ========================================
   // SUMMARY
@@ -874,12 +951,12 @@ async function main() {
   console.log(`✅ Vehicles (Armada): 4`);
   console.log(`✅ Drivers: 4`);
   console.log(`✅ Staff: 8`);
-  console.log(`✅ Transactions Oktober: 6`);
-  console.log(`✅ Transactions November: 1`);
-  console.log(`✅ Total Transactions: 7`);
+  console.log(`✅ Transactions Oktober: 6 (all PAID)`);
+  console.log(`✅ Transactions November: 3 (1 UNPAID, 2 DOWN_PAYMENT)`);
+  console.log(`✅ Total Transactions: 9`);
   console.log(`✅ Expenses Oktober: 16`);
-  console.log(`✅ Expenses November: 2`);
-  console.log(`✅ Total Expenses: 18`);
+  console.log(`✅ Expenses November: 6`);
+  console.log(`✅ Total Expenses: 22`);
   console.log("─────────────────────────────────────────\n");
 }
 

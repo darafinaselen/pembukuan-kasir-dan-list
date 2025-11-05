@@ -45,7 +45,7 @@ async function handleGetTransaction(request, { params }) {
 async function handleUpdateTransaction(request, { params }) {
   try {
     // Check permissions
-    if (!permissions.canEditTransaction(request.auth.user)) {
+    if (!permissions.canUpdateTransaction(request.auth.user)) {
       return errorResponse("Insufficient permissions", 403);
     }
 
@@ -57,8 +57,6 @@ async function handleUpdateTransaction(request, { params }) {
       return errorResponse("Transaction ID is required", 400);
     }
 
-    const { armadaId, driverId, packageId, ...transactionData } = body;
-
     // Check if transaction exists
     const existingTransaction = await prisma.transaction.findUnique({
       where: { id },
@@ -68,15 +66,37 @@ async function handleUpdateTransaction(request, { params }) {
       return errorResponse("Transaction not found", 404);
     }
 
+    // Build update data object explicitly
+    const updateData = {
+      // Customer data
+      customer_name: body.customer_name,
+      customer_phone: body.customer_phone,
+
+      // Dates
+      booking_date: body.booking_date,
+      checkout_datetime: body.checkout_datetime,
+      checkin_datetime: body.checkin_datetime,
+
+      // Financial data
+      all_in_rate: body.all_in_rate,
+      overtime_rate_per_hour: body.overtime_rate_per_hour,
+      dp_amount: body.dp_amount,
+      payment_status: body.payment_status,
+
+      // Optional tour package data
+      hotel_name: body.hotel_name,
+      pax_count: body.pax_count,
+
+      // Relations
+      armadaId: body.armadaId,
+      driverId: body.driverId,
+      packageId: body.packageId,
+    };
+
     // Update transaction
     const updatedTransaction = await prisma.transaction.update({
       where: { id },
-      data: {
-        ...transactionData,
-        armada: armadaId ? { connect: { id: armadaId } } : undefined,
-        driver: driverId ? { connect: { id: driverId } } : undefined,
-        package: packageId ? { connect: { id: packageId } } : undefined,
-      },
+      data: updateData,
       include: {
         package: true,
         armada: true,

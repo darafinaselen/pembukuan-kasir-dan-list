@@ -22,11 +22,8 @@ export function calculateTransactionFinancials(transaction) {
       lamaOvertimeJam: 0,
       totalOvertimeFee: 0,
       totalPendapatan: transaction.all_in_rate || 0,
-      totalBiayaOps:
-        (transaction.fuel_cost || 0) + (transaction.driver_fee || 0),
-      labaKotor:
-        (transaction.all_in_rate || 0) -
-        ((transaction.fuel_cost || 0) + (transaction.driver_fee || 0)),
+      totalBiayaOps: 0,
+      labaKotor: transaction.all_in_rate || 0,
       error: "Invalid date format",
     };
   }
@@ -38,11 +35,8 @@ export function calculateTransactionFinancials(transaction) {
       lamaOvertimeJam: 0,
       totalOvertimeFee: 0,
       totalPendapatan: transaction.all_in_rate || 0,
-      totalBiayaOps:
-        (transaction.fuel_cost || 0) + (transaction.driver_fee || 0),
-      labaKotor:
-        (transaction.all_in_rate || 0) -
-        ((transaction.fuel_cost || 0) + (transaction.driver_fee || 0)),
+      totalBiayaOps: 0,
+      labaKotor: transaction.all_in_rate || 0,
     };
   }
 
@@ -60,9 +54,8 @@ export function calculateTransactionFinancials(transaction) {
   // Calculate total revenue (base rate + overtime)
   const totalPendapatan = (transaction.all_in_rate || 0) + totalOvertimeFee;
 
-  // Calculate total operational costs
-  const totalBiayaOps =
-    (transaction.fuel_cost || 0) + (transaction.driver_fee || 0);
+  // Operational costs from transaction-level fuel/driver are removed
+  const totalBiayaOps = 0;
 
   // Calculate gross profit
   const labaKotor = totalPendapatan - totalBiayaOps;
@@ -150,14 +143,6 @@ export function validateTransactionFinancials(transaction) {
 
   if (transaction.overtime_rate_per_hour < 0) {
     errors.push("Overtime rate cannot be negative");
-  }
-
-  if (transaction.fuel_cost < 0) {
-    errors.push("Fuel cost cannot be negative");
-  }
-
-  if (transaction.driver_fee < 0) {
-    errors.push("Driver fee cannot be negative");
   }
 
   return {

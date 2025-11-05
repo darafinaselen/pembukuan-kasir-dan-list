@@ -302,22 +302,17 @@ export default function TransaksiDialog({
                       required
                     />
                   </div>
-                  <div className="grid gap-1.5">
-                    <Label htmlFor="fuel_cost">BBM</Label>
+                  <div className="grid gap-1.5 col-span-2">
+                    <Label htmlFor="dp_amount">
+                      Jumlah DP (Down Payment){" "}
+                      <span className="text-xs text-muted-foreground">
+                        (Opsional, isi jika status DP)
+                      </span>
+                    </Label>
                     <CurrencyInput
-                      id="fuel_cost"
-                      value={formData.fuel_cost}
+                      id="dp_amount"
+                      value={formData.dp_amount}
                       onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                  <div className="grid gap-1.5">
-                    <Label htmlFor="driver_fee">Gaji Sopir</Label>
-                    <CurrencyInput
-                      id="driver_fee"
-                      value={formData.driver_fee}
-                      onChange={handleInputChange}
-                      required
                     />
                   </div>
                 </div>

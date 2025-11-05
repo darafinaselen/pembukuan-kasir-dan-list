@@ -37,8 +37,7 @@ const INITIAL_FORM_STATE = {
   driverId: "",
   all_in_rate: 0,
   overtime_rate_per_hour: 0,
-  fuel_cost: 0,
-  driver_fee: 0,
+  dp_amount: 0,
   hotel_name: "",
   pax_count: "",
 };
@@ -203,8 +202,23 @@ export default function TransaksiPage() {
 
   const handleFormInputChange = (e) => {
     const { id, value } = e.target;
-    const newValue =
-      e.target.type === "number" ? parseFloat(value) || 0 : value;
+
+    // Handle numeric fields (including CurrencyInput which sends string numbers)
+    const numericFields = [
+      "all_in_rate",
+      "overtime_rate_per_hour",
+      "dp_amount",
+      "pax_count",
+    ];
+
+    let newValue = value;
+    if (numericFields.includes(id)) {
+      // Convert to number, keep empty string as 0
+      newValue = value === "" ? 0 : parseFloat(value) || 0;
+    } else if (e.target.type === "number") {
+      newValue = parseFloat(value) || 0;
+    }
+
     setFormData((prev) => ({ ...prev, [id]: newValue }));
   };
 
@@ -247,11 +261,11 @@ export default function TransaksiPage() {
       packageId: item.packageId || null,
       all_in_rate: item.all_in_rate || 0,
       overtime_rate_per_hour: item.overtime_rate_per_hour || 0,
-      fuel_cost: item.fuel_cost || 0,
-      driver_fee: item.driver_fee || 0,
+      dp_amount: item.dp_amount != null ? item.dp_amount : 0,
       hotel_name: item.hotel_name || "",
       pax_count: item.pax_count || "",
     });
+
     fetchDependencies();
     setIsDialogOpen(true);
   };
@@ -313,6 +327,7 @@ export default function TransaksiPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (!formData.armadaId) {
       toast.error("Validasi Gagal", {
         description: "Silakan pilih Armada terlebih dahulu.",
@@ -345,8 +360,10 @@ export default function TransaksiPage() {
         // Data Keuangan (format ke Angka)
         all_in_rate: Number(formData.all_in_rate),
         overtime_rate_per_hour: Number(formData.overtime_rate_per_hour),
-        fuel_cost: Number(formData.fuel_cost),
-        driver_fee: Number(formData.driver_fee),
+        dp_amount:
+          formData.dp_amount && Number(formData.dp_amount) > 0
+            ? Number(formData.dp_amount)
+            : null,
 
         // Data Tambahan untuk Paket Wisata (opsional)
         hotel_name: formData.hotel_name || null,

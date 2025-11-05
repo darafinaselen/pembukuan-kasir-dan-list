@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,129 +11,203 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { exportToExcel } from "@/lib/utils";
-import { cn } from "@/lib/utils";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { exportToExcel, formatCurrency } from "@/lib/utils";
 
-// Helper
-const formatCurrency = (amount) =>
-  new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-  }).format(amount || 0);
+export default function LaporanRekapTab({ startDate, endDate }) {
+  const [rekapData, setRekapData] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-export default function LaporanRekapTab({ rekapBBM, rekapGaji, isLoading }) {
-  const handleDownloadBBM = () => {
-    console.log("--- DEBUG: handleDownloadBBM dipanggil ---");
-    console.log("Menerima rekapBBM:", rekapBBM);
-    if (!rekapBBM || rekapBBM.length === 0) return;
+  const fetchRekapData = async () => {
+    if (!startDate || !endDate) return;
 
-    const cleanData = rekapBBM.map((item) => ({
-      Bulan: item.bulan,
-      "Plat Mobil (Model)": item.platMobil,
-      "Total Biaya BBM": item.totalBBM,
-    }));
+    setIsLoading(true);
+    try {
+      const params = new URLSearchParams({
+        startDate: startDate,
+        endDate: endDate,
+      });
 
-    exportToExcel(cleanData, "Laporan_Rekap_BBM");
+      const response = await fetch(`/api/reports/rekap?${params}`);
+      const result = await response.json();
+
+      if (result.success) {
+        setRekapData(result.data);
+      } else {
+        console.error("Failed to fetch rekap:", result.message);
+      }
+    } catch (error) {
+      console.error("Error fetching rekap:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleDownloadGaji = () => {
-    console.log("--- DEBUG: handleDownloadGaji dipanggil ---");
-    console.log("Menerima rekapGaji:", rekapGaji);
-    if (!rekapGaji || rekapGaji.length === 0) return;
+  useEffect(() => {
+    fetchRekapData();
+  }, [startDate, endDate]);
 
-    const cleanData = rekapGaji.map((item) => ({
-      Bulan: item.bulan,
-      "Nama Sopir": item.namaSopir,
-      "Total Gaji": item.totalGaji,
+  const handleDownloadCategory = (categoryData) => {
+    if (
+      !categoryData ||
+      !categoryData.months ||
+      categoryData.months.length === 0
+    )
+      return;
+
+    const cleanData = categoryData.months.map((monthData) => ({
+      Bulan: new Date(monthData.month + "-01").toLocaleDateString("id-ID", {
+        year: "numeric",
+        month: "long",
+      }),
+      "Jumlah Transaksi": monthData.count,
+      Total: monthData.total,
+      "Rata-rata": Math.round(monthData.total / monthData.count),
     }));
 
-    exportToExcel(cleanData, "Laporan_Rekap_Gaji_Sopir");
+    exportToExcel(
+      cleanData,
+      `Laporan_Rekap_${categoryData.category.replace(/\s+/g, "_")}`
+    );
   };
 
   if (isLoading) {
     return <Skeleton className="h-96 w-full" />;
   }
 
+  if (!rekapData) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <p className="text-muted-foreground">
+          Silakan pilih rentang tanggal untuk melihat rekapitulasi pengeluaran
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div className="rounded-md border">
-        <div className="flex justify-between items-center p-4">
-          <h3 className="font-semibold">Rekap Biaya BBM per Armada</h3>
-          <Button onClick={handleDownloadBBM} size="sm" variant="outline">
-            <Download className="mr-2 h-4 w-4" /> Download
-          </Button>
-        </div>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Bulan</TableHead>
-              <TableHead>Plat Mobil (Model)</TableHead>
-              <TableHead className="text-right">Total Biaya BBM</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rekapBBM && rekapBBM.length > 0 ? (
-              rekapBBM.map((item, index) => (
-                <TableRow key={index}>
-                  <TableCell className="whitespace-nowrap">
-                    {item.bulan}
-                  </TableCell>
-                  <TableCell>{item.platMobil}</TableCell>
-                  <TableCell className="text-right">
-                    {formatCurrency(item.totalBBM)}
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={3} className="text-center h-24">
-                  Tidak ada data.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+    <div className="space-y-6">
+      {/* Summary Cards */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total Pengeluaran
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {formatCurrency(rekapData.summary.totalExpenses)}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Jumlah Transaksi
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {rekapData.summary.totalTransactions}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Kategori
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {rekapData.summary.categories}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="rounded-md border">
-        <div className="flex justify-between items-center p-4">
-          <h3 className="font-semibold">Rekap Gaji per Sopir</h3>
-          <Button onClick={handleDownloadGaji} size="sm" variant="outline">
-            <Download className="mr-2 h-4 w-4" /> Download
-          </Button>
+      {/* Rekap by Category */}
+      {rekapData.rekap.length === 0 ? (
+        <Card>
+          <CardContent className="py-8 text-center">
+            <p className="text-muted-foreground">
+              Tidak ada data pengeluaran pada periode ini
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-6">
+          {rekapData.rekap.map((categoryData) => (
+            <Card key={categoryData.category}>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>{categoryData.category}</CardTitle>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <div className="text-lg font-bold">
+                        {formatCurrency(categoryData.totalAmount)}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {categoryData.totalCount} transaksi
+                      </div>
+                    </div>
+                    <Button
+                      onClick={() => handleDownloadCategory(categoryData)}
+                      size="sm"
+                      variant="outline"
+                    >
+                      <Download className="mr-2 h-4 w-4" /> Download
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Bulan</TableHead>
+                      <TableHead className="text-right">
+                        Jumlah Transaksi
+                      </TableHead>
+                      <TableHead className="text-right">Total</TableHead>
+                      <TableHead className="text-right">Rata-rata</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {categoryData.months.map((monthData) => (
+                      <TableRow key={monthData.month}>
+                        <TableCell className="font-medium">
+                          {new Date(monthData.month + "-01").toLocaleDateString(
+                            "id-ID",
+                            {
+                              year: "numeric",
+                              month: "long",
+                            }
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {monthData.count}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(monthData.total)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(
+                            Math.round(monthData.total / monthData.count)
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          ))}
         </div>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Bulan</TableHead>
-              <TableHead>Nama Sopir</TableHead>
-              <TableHead className="text-right">Total Gaji</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rekapGaji && rekapGaji.length > 0 ? (
-              rekapGaji.map((item, index) => (
-                <TableRow key={index}>
-                  <TableCell className="whitespace-nowrap">
-                    {item.bulan}
-                  </TableCell>
-                  <TableCell>{item.namaSopir}</TableCell>
-                  <TableCell className="text-right">
-                    {formatCurrency(item.totalGaji)}
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={3} className="text-center h-24">
-                  Tidak ada data.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      )}
     </div>
   );
 }

@@ -40,9 +40,8 @@ async function handleCreateTransaction(request) {
     }
 
     const body = await request.json();
-    const { armadaId, driverId, packageId, ...transactionData } = body;
 
-    if (!armadaId || !driverId) {
+    if (!body.armadaId || !body.driverId) {
       return errorResponse("Armada dan Sopir wajib diisi", 400);
     }
 
@@ -61,21 +60,42 @@ async function handleCreateTransaction(request) {
     const [newTransaction] = await prisma.$transaction([
       prisma.transaction.create({
         data: {
-          ...transactionData,
+          // Customer data
+          customer_name: body.customer_name,
+          customer_phone: body.customer_phone,
+
+          // Dates
+          booking_date: body.booking_date,
+          checkout_datetime: body.checkout_datetime,
+          checkin_datetime: body.checkin_datetime,
+
+          // Financial data
+          all_in_rate: body.all_in_rate,
+          overtime_rate_per_hour: body.overtime_rate_per_hour,
+          dp_amount: body.dp_amount,
+          payment_status: body.payment_status || "UNPAID",
+
+          // Optional tour package data
+          hotel_name: body.hotel_name,
+          pax_count: body.pax_count,
+
+          // Generated
           invoice_code: invoice_code,
-          armadaId: armadaId,
-          driverId: driverId,
-          packageId: packageId || null,
+
+          // Relations
+          armadaId: body.armadaId,
+          driverId: body.driverId,
+          packageId: body.packageId || null,
         },
       }),
 
       prisma.armada.update({
-        where: { id: armadaId },
+        where: { id: body.armadaId },
         data: { status: armadaStatus },
       }),
 
       prisma.driver.update({
-        where: { id: driverId },
+        where: { id: body.driverId },
         data: { status: driverStatus },
       }),
     ]);

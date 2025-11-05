@@ -210,10 +210,10 @@ describe("Transaction Status Update Tests", () => {
   // ==========================================
 
   describe("Permission Requirements", () => {
-    it("should require edit transaction permission", () => {
-      const requiredPermission = "canEditTransaction";
+    it("should require update transaction permission", () => {
+      const requiredPermission = "canUpdateTransaction";
 
-      expect(requiredPermission).toBe("canEditTransaction");
+      expect(requiredPermission).toBe("canUpdateTransaction");
     });
 
     it("should return 403 for insufficient permissions", () => {

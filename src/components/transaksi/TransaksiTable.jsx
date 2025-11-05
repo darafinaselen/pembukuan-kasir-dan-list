@@ -73,7 +73,10 @@ export default function TransaksiTable({
     const end = new Date(item.checkin_datetime);
 
     if (end <= start) {
-      return { totalTagihan: Number(item.all_in_rate) || 0 };
+      return {
+        totalTagihan: Number(item.all_in_rate) || 0,
+        sisaTagihan: 0,
+      };
     }
 
     const lamaSewaJam = Math.round(
@@ -85,8 +88,23 @@ export default function TransaksiTable({
       lamaOvertimeJam * (item.overtime_rate_per_hour || 0);
     const totalTagihan = (item.all_in_rate || 0) + totalOvertimeFee;
 
-    return { totalTagihan };
+    // Hitung sisa tagihan jika ada DP
+    const dpAmount = item.dp_amount || 0;
+    const sisaTagihan =
+      item.payment_status === "DOWN_PAYMENT" && dpAmount > 0
+        ? Math.max(0, totalTagihan - dpAmount)
+        : 0;
+
+    return { totalTagihan, sisaTagihan };
   };
+
+  // Check if any transaction has DP status with dp_amount
+  const hasAnyDP = data.some(
+    (item) =>
+      item.payment_status === "DOWN_PAYMENT" &&
+      item.dp_amount &&
+      item.dp_amount > 0
+  );
 
   if (isLoading) {
     return (
@@ -99,6 +117,7 @@ export default function TransaksiTable({
               <TableHead>Pelanggan</TableHead>
               <TableHead>Jasa</TableHead>
               <TableHead className="text-right">Total Tagihan</TableHead>
+              <TableHead className="text-right">Sisa Tagihan</TableHead>
               <TableHead className="w-[180px]">Status Pembayaran</TableHead>
               <TableHead className="w-[180px]">Aksi</TableHead>
             </TableRow>
@@ -117,6 +136,9 @@ export default function TransaksiTable({
                 </TableCell>
                 <TableCell>
                   <Skeleton className="h-4 w-20" />
+                </TableCell>
+                <TableCell className="text-right">
+                  <Skeleton className="h-4 w-20 ml-auto" />
                 </TableCell>
                 <TableCell className="text-right">
                   <Skeleton className="h-4 w-20 ml-auto" />
@@ -156,13 +178,21 @@ export default function TransaksiTable({
             <TableHead>Pelanggan</TableHead>
             <TableHead>Jasa</TableHead>
             <TableHead className="text-right">Total Tagihan</TableHead>
+            {hasAnyDP && (
+              <TableHead className="text-right">Sisa Tagihan</TableHead>
+            )}
             <TableHead className="w-[180px]">Status Pembayaran</TableHead>
             <TableHead className="w-[180px]">Aksi</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {data.map((item) => {
-            const { totalTagihan } = getCalculatedData(item);
+            const { totalTagihan, sisaTagihan } = getCalculatedData(item);
+            const showSisaTagihan =
+              item.payment_status === "DOWN_PAYMENT" &&
+              item.dp_amount &&
+              item.dp_amount > 0;
+
             return (
               <TableRow key={item.id}>
                 <TableCell>{formatDate(item.booking_date)}</TableCell>
@@ -172,6 +202,17 @@ export default function TransaksiTable({
                 <TableCell className="text-right">
                   {formatCurrency(totalTagihan)}
                 </TableCell>
+                {hasAnyDP && (
+                  <TableCell className="text-right">
+                    {showSisaTagihan ? (
+                      <span className="font-semibold text-orange-600">
+                        {formatCurrency(sisaTagihan)}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
+                )}
                 <TableCell>
                   <Select
                     value={item.payment_status}

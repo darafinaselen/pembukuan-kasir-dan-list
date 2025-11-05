@@ -290,7 +290,7 @@ totalOvertimeFee = lamaOvertimeJam × overtime_rate_per_hour
 totalPendapatan = all_in_rate + totalOvertimeFee
 
 // 5. Total Biaya Operasional
-totalBiayaOps = fuel_cost + driver_fee
+Catatan: Sejak perubahan terbaru, biaya operasional per transaksi (BBM dan gaji sopir) tidak lagi dicatat. totalBiayaOps pada perhitungan transaksi kini bernilai 0.
 
 // 6. Laba Kotor
 labaKotor = totalPendapatan - totalBiayaOps

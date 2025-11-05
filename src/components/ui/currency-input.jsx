@@ -2,7 +2,10 @@ import * as React from "react";
 import { Input } from "@/components/ui/input";
 
 const CurrencyInput = React.forwardRef(
-  ({ value, onChange, className, disabled, placeholder, ...props }, ref) => {
+  (
+    { id, value, onChange, className, disabled, placeholder, ...props },
+    ref
+  ) => {
     const [displayValue, setDisplayValue] = React.useState("");
 
     // Format number to IDR currency format
@@ -35,12 +38,13 @@ const CurrencyInput = React.forwardRef(
       // Update display with formatted value
       setDisplayValue(formatCurrency(numericValue));
 
-      // Call onChange with numeric value
+      // Call onChange with numeric value and preserve id
       if (onChange) {
         const syntheticEvent = {
           ...e,
           target: {
             ...e.target,
+            id: id, // Preserve id from props
             value: numericValue,
           },
         };
@@ -55,6 +59,7 @@ const CurrencyInput = React.forwardRef(
         </span>
         <Input
           ref={ref}
+          id={id}
           type="text"
           inputMode="numeric"
           value={displayValue}

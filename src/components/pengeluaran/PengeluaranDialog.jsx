@@ -21,6 +21,23 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+const kategoriOptions = [
+  { value: "LISTRIK", label: "Listrik" },
+  { value: "INTERNET", label: "Internet" },
+  { value: "PAKET_DATA", label: "Paket Data" },
+  { value: "KONSUMSI", label: "Konsumsi" },
+  { value: "GAJI_STAF_OPERASIONAL", label: "Gaji Staf Operasional" },
+  { value: "GAJI_STAF_ADMIN", label: "Gaji Staf Admin" },
+  { value: "PAJAK", label: "Pajak" },
+  { value: "ALAT_TULIS_KANTOR", label: "Alat Tulis Kantor (ATK)" },
+  { value: "KOMPUTER_SUPPLIES", label: "Komputer Supplies" },
+  { value: "OPERASIONAL_LAINNYA", label: "Operasional Lainnya" },
+  { value: "BBM", label: "BBM (Armada)" },
+  { value: "PERAWATAN_ARMADA", label: "Perawatan Armada" },
+  { value: "GAJI_SOPIR", label: "Gaji Sopir" },
+  { value: "LAINNYA", label: "Lainnya..." },
+];
+
 export default function PengeluaranDialog({
   open,
   onOpenChange,
@@ -29,7 +46,14 @@ export default function PengeluaranDialog({
   handleInputChange,
   handleSelectChange,
   handleSubmit,
+  armadaList,
+  driverList,
+  stafList,
+  isLoadingDependencies,
 }) {
+  const armadaCategories = ["BBM", "PERAWATAN_ARMADA", "PAJAK"];
+  const stafCategories = ["GAJI_STAF_OPERASIONAL", "GAJI_STAF_ADMIN"];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
@@ -71,15 +95,30 @@ export default function PengeluaranDialog({
                 <SelectValue placeholder="Pilih kategori..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="BBM">BBM</SelectItem>
-                <SelectItem value="GAJI_SOPIR">Gaji Sopir</SelectItem>
-                <SelectItem value="PERAWATAN_ARMADA">
-                  Perawatan Armada
-                </SelectItem>
-                <SelectItem value="OPERASIONAL">Operasional</SelectItem>
+                {kategoriOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
+
+          {formData.category === "LAINNYA" && (
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="kategoriLainnya" className="text-right">
+                Kategori Lainnya
+              </Label>
+              <Input
+                id="kategoriLainnya"
+                value={formData.kategoriLainnya}
+                onChange={handleInputChange}
+                className="col-span-3"
+                placeholder="Tulis kategori kustom..."
+                required
+              />
+            </div>
+          )}
 
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="description" className="text-right">
@@ -100,6 +139,7 @@ export default function PengeluaranDialog({
             </Label>
             <CurrencyInput
               id="amount"
+              name="amount"
               value={formData.amount}
               onChange={handleInputChange}
               className="col-span-3"
@@ -107,7 +147,104 @@ export default function PengeluaranDialog({
             />
           </div>
 
-          {/* TODO: Tambah Dropdown "Terkait Armada" jika kategori == SERVIS_ARMADA */}
+          {armadaCategories.includes(formData.category) && (
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="armadaId" className="text-right">
+                Plat Mobil
+              </Label>
+              <Select
+                value={formData.armadaId || ""}
+                onValueChange={(value) =>
+                  handleSelectChange(
+                    "armadaId",
+                    value === "NONE" ? null : value
+                  )
+                }
+                disabled={isLoadingDependencies}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue
+                    placeholder={
+                      isLoadingDependencies ? "Memuat..." : "Pilih armada..."
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="NONE">Tidak Terkait</SelectItem>
+                  {armadaList.map((item) => (
+                    <SelectItem key={item.id} value={item.id}>
+                      {item.license_plate} ({item.model})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {formData.category === "GAJI_SOPIR" && (
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="driverId" className="text-right">
+                Nama Sopir
+              </Label>
+              <Select
+                value={formData.driverId || ""}
+                onValueChange={(value) =>
+                  handleSelectChange(
+                    "driverId",
+                    value === "NONE" ? null : value
+                  )
+                }
+                disabled={isLoadingDependencies}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue
+                    placeholder={
+                      isLoadingDependencies ? "Memuat..." : "Pilih sopir..."
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="NONE">Tidak Terkait</SelectItem>
+                  {driverList.map((item) => (
+                    <SelectItem key={item.id} value={item.id}>
+                      {item.driver_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {stafCategories.includes(formData.category) && (
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="staffId" className="text-right">
+                Nama Staf
+              </Label>
+              <Select
+                value={formData.staffId || ""}
+                onValueChange={(value) =>
+                  handleSelectChange("staffId", value === "NONE" ? null : value)
+                }
+                disabled={isLoadingDependencies}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue
+                    placeholder={
+                      isLoadingDependencies ? "Memuat..." : "Pilih staf..."
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="NONE">Tidak Terkait</SelectItem>
+                  {stafList.map((item) => (
+                    <SelectItem key={item.id} value={item.id}>
+                      {item.staff_name} ({item.position})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </form>
 
         <DialogFooter>

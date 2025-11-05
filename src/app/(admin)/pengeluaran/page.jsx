@@ -16,10 +16,29 @@ function getTodayDateString() {
 const INITIAL_FORM_STATE = {
   date: getTodayDateString(),
   category: "",
+  kategoriLainnya: "",
   description: "",
   amount: "",
   armadaId: null,
+  driverId: null,
+  staffId: null,
 };
+
+const kategoriOptions = [
+  "LISTRIK",
+  "INTERNET",
+  "PAKET_DATA",
+  "KONSUMSI",
+  "GAJI_STAF_OPERASIONAL",
+  "GAJI_STAF_ADMIN",
+  "PAJAK",
+  "ALAT_TULIS_KANTOR",
+  "KOMPUTER_SUPPLIES",
+  "OPERASIONAL_LAINNYA",
+  "BBM",
+  "PERAWATAN_ARMADA",
+  "GAJI_SOPIR",
+];
 
 export default function PengeluaranPage() {
   const [data, setData] = useState([]);
@@ -35,6 +54,11 @@ export default function PengeluaranPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingData, setEditingData] = useState(null);
   const [formData, setFormData] = useState(INITIAL_FORM_STATE);
+
+  const [armadaList, setArmadaList] = useState([]);
+  const [driverList, setDriverList] = useState([]);
+  const [stafList, setStafList] = useState([]);
+  const [isLoadingDependencies, setIsLoadingDependencies] = useState(false);
 
   // --- Data Fetching ---
   async function fetchData() {
@@ -63,10 +87,39 @@ export default function PengeluaranPage() {
       setData(dataArray);
     } catch (err) {
       console.error("Failed to load data", err);
-      setData([]); // Fallback to empty array
-      // TODO: Tampilkan notifikasi error (toast)
+      setData([]);
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function fetchDependencies() {
+    try {
+      setIsLoadingDependencies(true);
+      const [armadaRes, driverRes, stafRes] = await Promise.all([
+        fetch("/api/vehicles"),
+        fetch("/api/drivers"),
+        fetch("/api/staff?status=ACTIVE"),
+      ]);
+
+      const armadaData = await armadaRes.json();
+      const driverData = await driverRes.json();
+      const stafData = await stafRes.json();
+
+      setArmadaList(
+        Array.isArray(armadaData) ? armadaData : armadaData.data || []
+      );
+      setDriverList(
+        Array.isArray(driverData) ? driverData : driverData.data || []
+      );
+      setStafList(stafData.staff || []);
+    } catch (err) {
+      console.error("Failed to load dependencies", err);
+      setArmadaList([]);
+      setDriverList([]);
+      setStafList([]);
+    } finally {
+      setIsLoadingDependencies(false);
     }
   }
 
@@ -175,17 +228,26 @@ export default function PengeluaranPage() {
   const openNewDialog = () => {
     setEditingData(null);
     setFormData(INITIAL_FORM_STATE);
+    fetchDependencies();
     setIsDialogOpen(true);
   };
 
   const openEditDialog = (item) => {
     console.log("Mencoba meng-edit item:", item);
     setEditingData(item);
+    const isLainnya = !kategoriOptions.includes(item.category);
+
     setFormData({
       ...item,
       date: new Date(item.date).toISOString().split("T")[0],
       amount: item.amount.toString(),
+      armadaId: item.armadaId,
+      driverId: item.driverId,
+      staffId: item.staffId,
+      category: isLainnya ? "LAINNYA" : item.category,
+      kategoriLainnya: isLainnya ? item.category : "",
     });
+    fetchDependencies();
     setIsDialogOpen(true);
   };
 
@@ -201,10 +263,8 @@ export default function PengeluaranPage() {
 
       // Optimistic UI: Hapus dari state
       setData((prev) => prev.filter((item) => item.id !== id));
-      // TODO: Tampilkan notifikasi sukses (toast)
     } catch (err) {
       console.error("Failed to delete", err);
-      // TODO: Tampilkan notifikasi error (toast)
     }
   };
 
@@ -216,10 +276,32 @@ export default function PengeluaranPage() {
         ? `/api/expenses/${editingData.id}`
         : "/api/expenses";
 
+      // let finalCategory = formData.category;
+      // if (formData.category === "LAINNYA" && formData.kategoriLainnya) {
+      //   finalCategory = formData.kategoriLainnya;
+      // }
+
+      const cleanAmount = parseInt(
+        String(formData.amount).replace(/[^0-9]/g, ""),
+        10
+      );
+
+      if (isNaN(cleanAmount) || cleanAmount <= 0) {
+        console.error(
+          "Validasi Gagal: Jumlah (amount) harus diisi dan lebih dari 0."
+        );
+        return;
+      }
+
       const body = JSON.stringify({
-        ...formData,
-        amount: parseInt(formData.amount, 10),
         date: new Date(formData.date).toISOString(),
+        category: formData.category,
+        kategoriLainnya: formData.kategoriLainnya || null,
+        description: formData.description,
+        amount: cleanAmount,
+        armadaId: formData.armadaId || null,
+        driverId: formData.driverId || null,
+        staffId: formData.staffId || null,
       });
 
       console.log("Submitting:", method, url, body);
@@ -229,14 +311,18 @@ export default function PengeluaranPage() {
         credentials: "include",
         body: body,
       });
-      if (!res.ok) throw new Error("save failed");
+      if (!res.ok) {
+        const errorData = await res.json();
+        console.error("Server menolak data:", errorData);
+        throw new Error(
+          errorData.message || "Terjadi kesalahan saat menyimpan"
+        );
+      }
 
       setIsDialogOpen(false);
       await fetchData();
-      // TODO: Tampilkan notifikasi sukses (toast)
     } catch (err) {
-      console.error("Failed to save", err);
-      // TODO: Tampilkan notifikasi error (toast)
+      console.error("Failed to save", err.message);
     }
   };
 
@@ -273,6 +359,10 @@ export default function PengeluaranPage() {
         handleInputChange={handleInputChange}
         handleSelectChange={handleSelectChange}
         handleSubmit={handleSubmit}
+        armadaList={armadaList}
+        driverList={driverList}
+        stafList={stafList}
+        isLoadingDependencies={isLoadingDependencies}
       />
     </div>
   );

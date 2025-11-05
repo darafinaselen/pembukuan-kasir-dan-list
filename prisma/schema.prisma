@@ -177,6 +177,7 @@ model Driver {
 
   // Relasi: Satu sopir bisa ditugaskan di banyak transaksi
   transactions Transaction[]
+  expenses     Expense[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -198,9 +199,18 @@ model Expense {
   armadaId String?
   armada   Armada? @relation(fields: [armadaId], references: [id], onDelete: SetNull)
 
+  driverId String?
+  driver   Driver?  @relation(fields: [driverId], references: [id], onDelete: SetNull)
+
+  staffId  String?  
+  staff    Staff?   @relation(fields: [staffId], references: [id], onDelete: SetNull)
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([armadaId])
+  @@index([driverId])
+  @@index([staffId])
   @@map("expenses")
 }
 
@@ -319,6 +329,7 @@ model Staff {
 
   // Notes
   notes String?
+  expenses  Expense[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

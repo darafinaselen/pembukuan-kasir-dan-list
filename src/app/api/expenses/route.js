@@ -39,13 +39,22 @@ async function handleCreateExpense(request) {
       return errorResponse("Data tidak lengkap", 400);
     }
 
+    let finalCategory = body.category;
+    if (body.category === "LAINNYA" && body.kategoriLainnya) {
+      finalCategory = body.kategoriLainnya;
+    } else if (body.category === "LAINNYA" && !body.kategoriLainnya) {
+      return errorResponse("Kategori 'Lainnya' tidak boleh kosong", 400);
+    }
+
     const newData = await prisma.expense.create({
       data: {
         date: body.date,
-        category: body.category,
+        category: finalCategory,
         description: body.description,
         amount: body.amount,
-        armadaId: body.armadaId,
+        armadaId: body.armadaId || null,
+        driverId: body.driverId || null,
+        staffId: body.staffId || null,
       },
     });
 

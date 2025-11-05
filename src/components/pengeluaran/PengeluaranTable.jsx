@@ -37,10 +37,20 @@ function formatDate(dateString) {
 
 function formatCategory(category) {
   const categoryMap = {
-    BBM: "BBM",
-    GAJI_SOPIR: "Gaji Sopir",
+    LISTRIK: "Listrik",
+    INTERNET: "Internet",
+    PAKET_DATA: "Paket Data",
+    KONSUMSI: "Konsumsi",
+    GAJI_STAF_OPERASIONAL: "Gaji Staf Operasional",
+    GAJI_STAF_ADMIN: "Gaji Staf Admin",
+    PAJAK: "Pajak",
+    ALAT_TULIS_KANTOR: "Alat Tulis Kantor (ATK)",
+    KOMPUTER_SUPPLIES: "Komputer Supplies",
+    OPERASIONAL_LAINNYA: "Operasional Lainnya",
+    BBM: "BBM (Armada)",
     PERAWATAN_ARMADA: "Perawatan Armada",
-    OPERASIONAL: "Operasional",
+    GAJI_SOPIR: "Gaji Sopir",
+    LAINNYA: "Lainnya",
   };
   return categoryMap[category] || category;
 }

@@ -228,7 +228,7 @@ export default function TransaksiTable({
                       {isCompleted && (
                         <Badge
                           variant="outline"
-                          className="bg-green-50 text-green-700 border-green-300 flex-shrink-0"
+                          className="bg-green-50 text-green-700 border-green-300 shrink-0"
                         >
                           <CheckCircle className="mr-1 h-3 w-3" />
                           Selesai

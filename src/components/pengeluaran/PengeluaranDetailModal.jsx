@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -27,11 +27,9 @@ import {
   Car,
   User,
   Briefcase,
-  Download,
-  File,
-  Image,
-  FileSpreadsheet,
 } from "lucide-react";
+import ExpenseFilePreview from "./ExpenseFilePreview";
+import { useAlertDialog } from "@/components/ui/alert-dialog-provider";
 
 function formatCurrency(amount) {
   return new Intl.NumberFormat("id-ID", {
@@ -85,22 +83,9 @@ function formatFileSize(bytes) {
   return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
 }
 
-function getFileIcon(mimeType) {
-  if (mimeType.startsWith("image/")) {
-    return <Image className="h-5 w-5 text-blue-500" alt="" />;
-  } else if (
-    mimeType.includes("spreadsheet") ||
-    mimeType.includes("excel") ||
-    mimeType.includes("csv")
-  ) {
-    return <FileSpreadsheet className="h-5 w-5 text-green-500" />;
-  } else if (mimeType.includes("pdf")) {
-    return <FileText className="h-5 w-5 text-red-500" />;
-  }
-  return <File className="h-5 w-5 text-gray-500" />;
-}
-
 export default function PengeluaranDetailModal({ open, onOpenChange, data }) {
+  const { showAlert } = useAlertDialog();
+
   if (!data) return null;
 
   const handleDownloadFile = async (fileId, fileName) => {
@@ -124,7 +109,10 @@ export default function PengeluaranDetailModal({ open, onOpenChange, data }) {
       document.body.removeChild(a);
     } catch (err) {
       console.error("Error downloading file:", err);
-      alert("Gagal mendownload file: " + err.message);
+      await showAlert({
+        message: "Gagal mendownload file: " + err.message,
+        type: "error",
+      });
     }
   };
 
@@ -182,7 +170,6 @@ export default function PengeluaranDetailModal({ open, onOpenChange, data }) {
 
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <DollarSign className="h-4 w-4" />
                   <span>Jumlah</span>
                 </div>
                 <p className="text-2xl font-bold text-primary">
@@ -247,36 +234,16 @@ export default function PengeluaranDetailModal({ open, onOpenChange, data }) {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {data.attachments.map((file) => (
-                    <div
+                    <ExpenseFilePreview
                       key={file.id}
-                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        {getFileIcon(file.mimeType)}
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">
-                            {file.fileName}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {formatFileSize(file.fileSize)} •{" "}
-                            {new Date(file.createdAt).toLocaleDateString(
-                              "id-ID"
-                            )}
-                          </p>
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          handleDownloadFile(file.id, file.fileName)
-                        }
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
-                    </div>
+                      file={file}
+                      expenseId={data.id}
+                      onDownload={handleDownloadFile}
+                      showThumbnail={true}
+                      thumbnailHeight="h-40"
+                    />
                   ))}
                 </div>
               </CardContent>

@@ -2,12 +2,14 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
+import { useAlertDialog } from "@/components/ui/alert-dialog-provider";
 
 import StaffCard from "@/components/staff/StaffCard";
 import StaffTopHeader from "@/components/staff/StaffTopHeader";
 import StaffDialog from "@/components/staff/StaffDialog";
 
 export default function StaffPage() {
+  const { showConfirm } = useAlertDialog();
   const [staff, setStaff] = useState([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState(null);
@@ -148,25 +150,37 @@ export default function StaffPage() {
   };
 
   const handleDelete = async (id) => {
-    if (
-      confirm(
-        "Apakah Anda yakin ingin menghapus staff ini? Status akan diubah menjadi TERMINATED."
-      )
-    ) {
+    const confirmed = await showConfirm({
+      message:
+        "Apakah Anda yakin ingin menghapus staff ini? Status akan diubah menjadi TERMINATED.",
+      title: "Konfirmasi Hapus Staff",
+      confirmText: "Hapus",
+      cancelText: "Batal",
+    });
+
+    if (confirmed) {
       try {
         const response = await fetch(`/api/staff/${id}`, {
           method: "DELETE",
           credentials: "include",
         });
 
-        const result = await response.json();
-
-        if (response.ok) {
-          toast.success("Staff berhasil dihapus");
-          fetchStaff();
-        } else {
-          toast.error(result.error || "Gagal menghapus staff");
+        if (!response.ok) {
+          let errorData;
+          try {
+            errorData = await response.json();
+          } catch (parseErr) {
+            errorData = {
+              error: `Server Error: ${response.status} ${response.statusText}`,
+            };
+          }
+          toast.error(errorData.error || "Gagal menghapus staff");
+          return;
         }
+
+        const result = await response.json();
+        toast.success("Staff berhasil dihapus");
+        fetchStaff();
       } catch (error) {
         console.error("Failed to delete staff", error);
         toast.error("Gagal menghapus staff");

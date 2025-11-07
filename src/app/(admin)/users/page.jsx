@@ -111,12 +111,20 @@ export default function UsersPage() {
         return;
       }
 
+      if (!res.ok) {
+        let errorData;
+        try {
+          errorData = await res.json();
+        } catch (parseErr) {
+          errorData = {
+            message: `Server Error: ${res.status} ${res.statusText}`,
+          };
+        }
+        throw new Error(errorData.message || "Gagal menghapus user");
+      }
+
       const result = await res.json();
       console.log("📦 Delete response data:", result);
-
-      if (!res.ok) {
-        throw new Error(result.message || "Gagal menghapus user");
-      }
 
       toast.success("User berhasil dihapus!", {
         description: `${userToDelete.name} telah dihapus dari sistem`,

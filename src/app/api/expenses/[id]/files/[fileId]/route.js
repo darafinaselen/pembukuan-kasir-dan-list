@@ -5,7 +5,7 @@ import {
   permissions,
 } from "@/lib/middleware";
 import { prisma } from "@/lib/prisma";
-import { getFile, deleteFile } from "@/lib/minio";
+import { getFileStream, deleteFile } from "@/lib/file-storage";
 import { NextResponse } from "next/server";
 
 /**
@@ -32,11 +32,11 @@ async function handleDownloadFile(request, { params }) {
       return errorResponse("File tidak ditemukan", 404);
     }
 
-    // Get file from MinIO
-    const fileBuffer = await getFile(attachment.filePath);
+    // Get file from storage
+    const fileData = await getFileStream(attachment.filePath);
 
     // Return file as response
-    return new NextResponse(fileBuffer, {
+    return new NextResponse(fileData, {
       headers: {
         "Content-Type": attachment.mimeType,
         "Content-Disposition": `attachment; filename="${attachment.fileName}"`,
@@ -73,7 +73,7 @@ async function handleDeleteFile(request, { params }) {
       return errorResponse("File tidak ditemukan", 404);
     }
 
-    // Delete from MinIO
+    // Delete from storage
     await deleteFile(attachment.filePath);
 
     // Delete from database

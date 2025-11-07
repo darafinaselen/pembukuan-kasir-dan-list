@@ -2,12 +2,14 @@
 
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useAlertDialog } from "@/components/ui/alert-dialog-provider";
 import ArmadaHeader from "@/components/armada/ArmadaHeader";
 import ArmadaFilters from "@/components/armada/ArmadaFilters";
 import ArmadaCard from "@/components/armada/ArmadaCard";
 import ArmadaDialog from "@/components/armada/ArmadaDialog";
 
 export default function ArmadaPage() {
+  const { showConfirm } = useAlertDialog();
   const [armadas, setArmadas] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -112,7 +114,15 @@ export default function ArmadaPage() {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm("Hapus armada ini?")) return;
+    const confirmed = await showConfirm({
+      message: "Hapus armada ini?",
+      title: "Konfirmasi Hapus",
+      confirmText: "Hapus",
+      cancelText: "Batal",
+    });
+
+    if (!confirmed) return;
+
     try {
       const res = await fetch(`/api/vehicles/${id}`, {
         method: "DELETE",

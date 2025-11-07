@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
+import { useAlertDialog } from "@/components/ui/alert-dialog-provider";
 import TransaksiHeader from "@/components/transaksi/TransaksiHeader";
 import TransaksiFilters from "@/components/transaksi/TransaksiFilters";
 import TransaksiTable from "@/components/transaksi/TransaksiTable";
@@ -79,6 +80,7 @@ const INITIAL_FORM_STATE = {
 // }
 
 export default function TransaksiPage() {
+  const { showConfirm } = useAlertDialog();
   const [data, setData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -310,7 +312,14 @@ export default function TransaksiPage() {
       return;
     }
 
-    if (!confirm("Yakin ingin menghapus transaksi ini?")) return;
+    const confirmed = await showConfirm({
+      message: "Yakin ingin menghapus transaksi ini?",
+      title: "Konfirmasi Hapus",
+      confirmText: "Hapus",
+      cancelText: "Batal",
+    });
+
+    if (!confirmed) return;
     try {
       const res = await fetch(`/api/transactions/${id}`, {
         method: "DELETE",

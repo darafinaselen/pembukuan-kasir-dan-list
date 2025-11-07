@@ -29,6 +29,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useAlertDialog } from "@/components/ui/alert-dialog-provider";
 
 function formatFileSize(bytes) {
   if (bytes === 0) return "0 Bytes";
@@ -54,6 +55,7 @@ function getFileIcon(mimeType) {
 }
 
 export default function ExpenseFileUpload({ expenseId }) {
+  const { showAlert, showConfirm } = useAlertDialog();
   const [files, setFiles] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -62,12 +64,6 @@ export default function ExpenseFileUpload({ expenseId }) {
   const [previewFile, setPreviewFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
-
-  useEffect(() => {
-    if (expenseId) {
-      fetchFiles();
-    }
-  }, [expenseId, fetchFiles]);
 
   const fetchFiles = useCallback(async () => {
     if (!expenseId) return;
@@ -91,6 +87,12 @@ export default function ExpenseFileUpload({ expenseId }) {
       setIsLoading(false);
     }
   }, [expenseId]);
+
+  useEffect(() => {
+    if (expenseId) {
+      fetchFiles();
+    }
+  }, [expenseId, fetchFiles]);
 
   async function handleFileUpload(e) {
     const file = e.target.files?.[0];
@@ -182,6 +184,7 @@ export default function ExpenseFileUpload({ expenseId }) {
     setPreviewFile(file);
     setIsPreviewLoading(true);
     setPreviewUrl(null);
+    setError(null);
 
     try {
       const res = await fetch(`/api/expenses/${expenseId}/files/${file.id}`, {
@@ -189,23 +192,27 @@ export default function ExpenseFileUpload({ expenseId }) {
       });
 
       if (!res.ok) {
-        throw new Error("Gagal memuat preview file");
+        throw new Error(`Gagal memuat preview: ${res.statusText}`);
       }
 
       const blob = await res.blob();
 
-      // For images, create object URL
-      if (file.mimeType.startsWith("image/")) {
+      // For images and PDFs, create object URL
+      if (
+        file.mimeType.startsWith("image/") ||
+        file.mimeType === "application/pdf"
+      ) {
         const url = window.URL.createObjectURL(blob);
+        console.log("Preview URL created:", url, "for file:", file.fileName);
         setPreviewUrl(url);
-      } else if (file.mimeType === "application/pdf") {
-        // For PDFs, we'll use an embed or iframe
-        const url = window.URL.createObjectURL(blob);
-        setPreviewUrl(url);
+      } else {
+        throw new Error(
+          `Tipe file tidak didukung untuk preview: ${file.mimeType}`
+        );
       }
     } catch (err) {
       console.error("Error loading preview:", err);
-      setError("Gagal memuat preview file");
+      setError(`Gagal memuat preview: ${err.message}`);
     } finally {
       setIsPreviewLoading(false);
     }
@@ -213,10 +220,54 @@ export default function ExpenseFileUpload({ expenseId }) {
 
   function closePreview() {
     if (previewUrl) {
-      window.URL.revokeObjectURL(previewUrl);
+      try {
+        window.URL.revokeObjectURL(previewUrl);
+      } catch (err) {
+        console.error("Error revoking preview URL:", err);
+      }
     }
     setPreviewFile(null);
     setPreviewUrl(null);
+  }
+
+  async function handleDelete(fileId) {
+    const confirmed = await showConfirm({
+      message: "Hapus file ini?",
+      title: "Konfirmasi Hapus",
+      confirmText: "Hapus",
+      cancelText: "Batal",
+    });
+
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`/api/expenses/${expenseId}/files/${fileId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Gagal menghapus file");
+      }
+
+      // Refresh file list
+      await fetchFiles();
+
+      await showAlert({
+        message: "File berhasil dihapus",
+        type: "success",
+      });
+    } catch (err) {
+      console.error("Error deleting file:", err);
+      setError(err.message);
+
+      await showAlert({
+        message: err.message || "Gagal menghapus file",
+        type: "error",
+        title: "Error",
+      });
+    }
   }
 
   if (!expenseId) {
@@ -293,7 +344,13 @@ export default function ExpenseFileUpload({ expenseId }) {
                   <div className="flex items-center gap-2">
                     {(file.mimeType.startsWith("image/") ||
                       file.mimeType === "application/pdf") && (
-                      <Dialog>
+                      <Dialog
+                        onOpenChange={(open) => {
+                          if (!open) {
+                            closePreview();
+                          }
+                        }}
+                      >
                         <DialogTrigger asChild>
                           <Button
                             variant="ghost"
@@ -303,33 +360,62 @@ export default function ExpenseFileUpload({ expenseId }) {
                             <Eye className="h-4 w-4" />
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="max-w-4xl max-h-[80vh]">
+                        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
                           <DialogHeader>
-                            <DialogTitle>{file.fileName}</DialogTitle>
+                            <DialogTitle className="truncate">
+                              {file.fileName}
+                            </DialogTitle>
                           </DialogHeader>
-                          <div className="flex justify-center items-center min-h-[400px]">
+                          <div
+                            className="flex justify-center items-center bg-muted/50 rounded-lg overflow-auto"
+                            style={{ height: "calc(80vh - 100px)" }}
+                          >
                             {isPreviewLoading ? (
-                              <div className="flex items-center gap-2">
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                Memuat preview...
+                              <div className="flex flex-col items-center gap-2 py-12">
+                                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                                <span className="text-sm text-muted-foreground">
+                                  Memuat preview...
+                                </span>
                               </div>
                             ) : previewUrl ? (
                               file.mimeType.startsWith("image/") ? (
                                 <img
                                   src={previewUrl}
                                   alt={file.fileName}
-                                  className="max-w-full max-h-full object-contain"
+                                  className="max-w-full max-h-full object-contain p-4"
+                                  onLoad={() =>
+                                    console.log("Image loaded successfully")
+                                  }
+                                  onError={(e) => {
+                                    console.error("Image load error:", e);
+                                    setError("Gagal menampilkan gambar");
+                                  }}
                                 />
                               ) : file.mimeType === "application/pdf" ? (
                                 <iframe
-                                  src={previewUrl}
-                                  className="w-full h-[600px] border rounded"
+                                  key={previewUrl}
+                                  src={`${previewUrl}#toolbar=0&navpanes=0&scrollbar=1`}
+                                  className="w-full h-full border-0"
                                   title={file.fileName}
+                                  onError={() => {
+                                    console.error("PDF load error");
+                                    setError("Gagal menampilkan PDF");
+                                  }}
                                 />
                               ) : null
                             ) : (
-                              <div className="text-muted-foreground">
-                                Tidak dapat memuat preview
+                              <div className="text-muted-foreground text-center py-12 px-4">
+                                <p className="font-medium">
+                                  Tidak dapat memuat preview
+                                </p>
+                                <p className="text-sm mt-2">
+                                  Type: {file.mimeType}
+                                </p>
+                                {error && (
+                                  <p className="text-sm text-red-500 mt-2">
+                                    {error}
+                                  </p>
+                                )}
                               </div>
                             )}
                           </div>

@@ -1,12 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useAlertDialog } from "@/components/ui/alert-dialog-provider";
 
 import SopirCard from "@/components/sopir/SopirCard";
 import SopirTopHeader from "@/components/sopir/SopirTopHeader";
 import SopirDialog from "@/components/sopir/SopirDialog";
 
 export default function SopirPage() {
+  const { showConfirm } = useAlertDialog();
   const [drivers, setDrivers] = useState([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingDriver, setEditingDriver] = useState(null);
@@ -97,7 +99,14 @@ export default function SopirPage() {
   };
 
   const handleDelete = async (id) => {
-    if (confirm("Are you sure you want to delete this driver?")) {
+    const confirmed = await showConfirm({
+      message: "Are you sure you want to delete this driver?",
+      title: "Konfirmasi Hapus",
+      confirmText: "Hapus",
+      cancelText: "Batal",
+    });
+
+    if (confirmed) {
       const response = await fetch(`/api/drivers/${id}`, {
         method: "DELETE",
         credentials: "include",

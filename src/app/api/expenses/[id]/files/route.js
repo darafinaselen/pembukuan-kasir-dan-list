@@ -5,8 +5,14 @@ import {
   permissions,
 } from "@/lib/middleware";
 import { prisma } from "@/lib/prisma";
-import { uploadFile, deleteFile, getFile } from "@/lib/minio";
+import {
+  initStorage,
+  uploadFile,
+  deleteFile,
+  getFileStream,
+} from "@/lib/file-storage";
 import { NextResponse } from "next/server";
+import { v4 as uuidv4 } from "uuid";
 
 // Helper function to generate file name
 function generateFileName(expenseId, category, date, originalFileName) {
@@ -80,22 +86,19 @@ async function handleUploadFile(request, { params }) {
     const buffer = Buffer.from(await file.arrayBuffer());
 
     // Generate file name
-    const fileName = generateFileName(
-      expenseId,
-      expense.category,
-      expense.date,
-      file.name
-    );
+    const fileExt = file.name.split(".").pop();
+    const fileName = `expense-${expenseId}-${uuidv4()}.${fileExt}`;
 
-    // Upload to MinIO
-    await uploadFile(buffer, fileName, file.type);
+    // Initialize storage and upload file
+    await initStorage();
+    const filePath = await uploadFile(fileName, buffer, file.type);
 
     // Save to database
     const attachment = await prisma.expenseAttachment.create({
       data: {
         expenseId,
         fileName: file.name,
-        filePath: fileName,
+        filePath: filePath,
         fileSize: file.size,
         mimeType: file.type,
       },

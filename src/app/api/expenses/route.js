@@ -6,6 +6,8 @@ import {
 } from "@/lib/middleware";
 import { prisma } from "@/lib/prisma";
 import { logExpenseEvent } from "@/lib/audit";
+import { initStorage, uploadFile } from "@/lib/file-storage";
+import { v4 as uuidv4 } from "uuid";
 
 async function handleGetExpenses(request) {
   try {
@@ -14,7 +16,17 @@ async function handleGetExpenses(request) {
       return errorResponse("Insufficient permissions", 403);
     }
 
+    const url = new URL(request.url);
+    const page = parseInt(url.searchParams.get("page")) || 1;
+    const limit = parseInt(url.searchParams.get("limit")) || 10;
+    const offset = (page - 1) * limit;
+
+    // Get total count for pagination
+    const totalCount = await prisma.expense.count();
+
     const data = await prisma.expense.findMany({
+      skip: offset,
+      take: limit,
       orderBy: {
         date: "desc",
       },
@@ -33,7 +45,20 @@ async function handleGetExpenses(request) {
         },
       },
     });
-    return successResponse(data);
+
+    const totalPages = Math.ceil(totalCount / limit);
+
+    return successResponse({
+      data,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalItems: totalCount,
+        itemsPerPage: limit,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+    });
   } catch (error) {
     console.error("Error fetching pengeluaran:", error);
     return errorResponse("Gagal mengambil data", 500);
@@ -47,7 +72,26 @@ async function handleCreateExpense(request) {
       return errorResponse("Insufficient permissions", 403);
     }
 
-    const body = await request.json();
+    const formData = await request.formData();
+
+    // Extract fields from FormData
+    const body = {};
+    for (const [key, value] of formData.entries()) {
+      if (key === "file") {
+        // Handle file separately if needed
+        body.file = value;
+      } else {
+        body[key] = value;
+      }
+    }
+
+    // Parse date and paymentMonth if present
+    if (body.date) {
+      body.date = new Date(body.date);
+    }
+    if (body.paymentMonth) {
+      body.paymentMonth = new Date(body.paymentMonth);
+    }
 
     if (!body.date || !body.category || !body.description || !body.amount) {
       return errorResponse("Data tidak lengkap", 400);
@@ -77,6 +121,7 @@ async function handleCreateExpense(request) {
       category: finalCategory,
       description: body.description,
       amount: amount,
+      namaPenerima: body.namaPenerima || null,
     };
 
     // Add optional relations using connect
@@ -100,20 +145,62 @@ async function handleCreateExpense(request) {
       },
     });
 
+    // Handle file upload if present
+    if (body.file && body.file instanceof File) {
+      try {
+        await initStorage();
+
+        const fileBuffer = Buffer.from(await body.file.arrayBuffer());
+        const fileExt = body.file.name.split(".").pop();
+        const fileName = `expense-${newData.id}-${uuidv4()}.${fileExt}`;
+
+        const filePath = await uploadFile(fileName, fileBuffer, body.file.type);
+
+        // Create attachment record
+        await prisma.expenseAttachment.create({
+          data: {
+            expenseId: newData.id,
+            fileName: body.file.name,
+            filePath: filePath,
+            fileSize: body.file.size,
+            mimeType: body.file.type,
+          },
+        });
+      } catch (fileError) {
+        console.error("Error uploading file:", fileError);
+        // Don't fail the whole request if file upload fails
+      }
+    }
+
+    // Fetch updated data with attachments
+    const finalData = await prisma.expense.findUnique({
+      where: { id: newData.id },
+      include: {
+        armada: true,
+        driver: true,
+        staff: true,
+        attachments: true,
+      },
+    });
+
     // Log audit event
     await logExpenseEvent(
       request.auth.user.id,
       "CREATE",
-      newData.id,
-      newData,
+      finalData.id,
+      finalData,
       request.auth.ipAddress,
       request.auth.userAgent
     );
 
-    return successResponse(newData, 201);
+    return successResponse(finalData, 201);
   } catch (error) {
     console.error("Error creating pengeluaran:", error);
-    return errorResponse("Gagal membuat data", 500);
+    console.error("Error stack:", error.stack);
+    return errorResponse(
+      error.message || "Gagal membuat data",
+      error.statusCode || 500
+    );
   }
 }
 

@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Upload, X, FileText, Image as ImageIcon } from "lucide-react";
+import ExpenseFilePreview from "./ExpenseFilePreview";
 
 const kategoriOptions = [
   { value: "LISTRIK", label: "Listrik" },
@@ -86,14 +87,28 @@ export default function PengeluaranDialog({
   driverList,
   stafList,
   isLoadingDependencies,
+  existingAttachments = [],
+  expenseId,
 }) {
+  const [insentifType, setInsentifType] = React.useState("custom");
+
+  React.useEffect(() => {
+    if (formData.staffId) {
+      setInsentifType("staff");
+    } else if (formData.driverId) {
+      setInsentifType("driver");
+    } else {
+      setInsentifType("custom");
+    }
+  }, [formData.staffId, formData.driverId]);
+
   const armadaCategories = ["BBM", "PERAWATAN_ARMADA", "PAJAK"];
   const stafCategories = ["GAJI_STAF_OPERASIONAL", "GAJI_STAF_ADMIN"];
   const insentifCategories = ["INSENTIF_BONUS"];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[800px] max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {isEditing ? "Edit Pengeluaran" : "Tambah Pengeluaran Baru"}
@@ -103,34 +118,29 @@ export default function PengeluaranDialog({
         <form
           id="pengeluaran-form"
           onSubmit={handleSubmit}
-          className="grid gap-4 py-4"
+          className="space-y-4 py-4"
         >
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="tanggal" className="text-right">
-              Tanggal
-            </Label>
+          <div className="space-y-2">
+            <Label htmlFor="date">Tanggal</Label>
             <Input
               id="date"
               type="date"
               value={formData.date}
               onChange={handleInputChange}
-              className="col-span-3"
+              placeholder="Pilih tanggal pengeluaran..."
               required
             />
           </div>
-
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="paymentMonth" className="text-right">
-              Alokasi Bulan
-            </Label>
+          <div className="space-y-2">
+            <Label htmlFor="paymentMonth">Alokasi Bulan</Label>
             <Select
-              value={formData.paymentMonth || ""}
+              value={formData.paymentMonth || undefined}
               onValueChange={(value) =>
                 handleSelectChange("paymentMonth", value)
               }
               required
             >
-              <SelectTrigger className="col-span-3">
+              <SelectTrigger>
                 <SelectValue placeholder="Pilih bulan alokasi..." />
               </SelectTrigger>
               <SelectContent>
@@ -143,16 +153,14 @@ export default function PengeluaranDialog({
             </Select>
           </div>
 
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="category" className="text-right">
-              Kategori
-            </Label>
+          <div className="space-y-2">
+            <Label htmlFor="category">Kategori</Label>
             <Select
               value={formData.category}
               onValueChange={(value) => handleSelectChange("category", value)}
               required
             >
-              <SelectTrigger className="col-span-3">
+              <SelectTrigger>
                 <SelectValue placeholder="Pilih kategori..." />
               </SelectTrigger>
               <SelectContent>
@@ -166,53 +174,44 @@ export default function PengeluaranDialog({
           </div>
 
           {formData.category === "LAINNYA" && (
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="kategoriLainnya" className="text-right">
-                Kategori Lainnya
-              </Label>
+            <div className="space-y-2">
+              <Label htmlFor="kategoriLainnya">Kategori Lainnya</Label>
               <Input
                 id="kategoriLainnya"
                 value={formData.kategoriLainnya}
                 onChange={handleInputChange}
-                className="col-span-3"
-                placeholder="Tulis kategori kustom..."
+                placeholder="Contoh: Transportasi, Marketing, dll..."
                 required
               />
             </div>
           )}
 
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="description" className="text-right">
-              Deskripsi
-            </Label>
+          <div className="space-y-2">
+            <Label htmlFor="description">Deskripsi</Label>
             <Input
               id="description"
               value={formData.description}
               onChange={handleInputChange}
-              className="col-span-3"
+              placeholder="Masukkan deskripsi pengeluaran..."
               required
             />
           </div>
 
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="amount" className="text-right">
-              Jumlah
-            </Label>
-            <div className="col-span-3">
-              <CurrencyInput
-                id="amount"
-                name="amount"
-                value={formData.amount}
-                onChange={handleInputChange}
-                className="w-full"
-                required
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="amount">Jumlah</Label>
+            <CurrencyInput
+              id="amount"
+              name="amount"
+              value={formData.amount}
+              onChange={handleInputChange}
+              placeholder="Masukkan jumlah pengeluaran..."
+              required
+            />
           </div>
 
-          <div className="grid grid-cols-4 items-start gap-4">
-            <Label className="text-right pt-2">Bukti Transaksi</Label>
-            <div className="col-span-3 space-y-3">
+          <div className="space-y-2">
+            <Label>Bukti Transaksi</Label>
+            <div className="space-y-3">
               {/* File Upload Area */}
               {!formData.file && (
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors">
@@ -280,11 +279,36 @@ export default function PengeluaranDialog({
             </div>
           </div>
 
+          {/* Existing Attachments for Edit */}
+          {isEditing && existingAttachments.length > 0 && !formData.file && (
+            <div className="space-y-2">
+              <Label>Lampiran yang Ada</Label>
+              <div className="text-sm text-muted-foreground mb-2">
+                Upload file baru akan mengganti file yang ada
+              </div>
+              <div className="space-y-3">
+                {existingAttachments.map((attachment) => (
+                  <ExpenseFilePreview
+                    key={attachment.id}
+                    file={attachment}
+                    expenseId={expenseId}
+                    onDownload={(fileId, fileName) =>
+                      window.open(
+                        `/api/expenses/${expenseId}/files/${fileId}`,
+                        "_blank"
+                      )
+                    }
+                    showThumbnail={true}
+                    thumbnailHeight="h-24"
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
           {armadaCategories.includes(formData.category) && (
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="armadaId" className="text-right">
-                Plat Mobil
-              </Label>
+            <div className="space-y-2">
+              <Label htmlFor="armadaId">Plat Mobil</Label>
               <Select
                 value={formData.armadaId || ""}
                 onValueChange={(value) =>
@@ -295,7 +319,7 @@ export default function PengeluaranDialog({
                 }
                 disabled={isLoadingDependencies}
               >
-                <SelectTrigger className="col-span-3">
+                <SelectTrigger>
                   <SelectValue
                     placeholder={
                       isLoadingDependencies ? "Memuat..." : "Pilih armada..."
@@ -315,10 +339,8 @@ export default function PengeluaranDialog({
           )}
 
           {formData.category === "GAJI_SOPIR" && (
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="driverId" className="text-right">
-                Nama Sopir
-              </Label>
+            <div className="space-y-2">
+              <Label htmlFor="driverId">Nama Sopir</Label>
               <Select
                 value={formData.driverId || ""}
                 onValueChange={(value) =>
@@ -329,7 +351,7 @@ export default function PengeluaranDialog({
                 }
                 disabled={isLoadingDependencies}
               >
-                <SelectTrigger className="col-span-3">
+                <SelectTrigger>
                   <SelectValue
                     placeholder={
                       isLoadingDependencies ? "Memuat..." : "Pilih sopir..."
@@ -349,10 +371,8 @@ export default function PengeluaranDialog({
           )}
 
           {stafCategories.includes(formData.category) && (
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="staffId" className="text-right">
-                Nama Staf
-              </Label>
+            <div className="space-y-2">
+              <Label htmlFor="staffId">Nama Staf</Label>
               <Select
                 value={formData.staffId || ""}
                 onValueChange={(value) =>
@@ -360,7 +380,7 @@ export default function PengeluaranDialog({
                 }
                 disabled={isLoadingDependencies}
               >
-                <SelectTrigger className="col-span-3">
+                <SelectTrigger>
                   <SelectValue
                     placeholder={
                       isLoadingDependencies ? "Memuat..." : "Pilih staf..."
@@ -380,18 +400,112 @@ export default function PengeluaranDialog({
           )}
 
           {insentifCategories.includes(formData.category) && (
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="namaPenerima" className="text-right">
-                Nama Penerima
-              </Label>
-              <Input
-                id="namaPenerima"
-                value={formData.namaPenerima || ""}
-                onChange={handleInputChange}
-                className="col-span-3"
-                placeholder="Masukkan nama penerima insentif..."
-                required
-              />
+            <div className="space-y-4 border rounded-lg p-3 bg-blue-50">
+              <div className="space-y-2">
+                <Label htmlFor="insentifType">Jenis Penerima</Label>
+                <Select
+                  value={insentifType}
+                  onValueChange={(value) => {
+                    setInsentifType(value);
+                    if (value === "staff") {
+                      handleSelectChange("driverId", null);
+                      handleSelectChange("namaPenerima", null);
+                    } else if (value === "driver") {
+                      handleSelectChange("staffId", null);
+                      handleSelectChange("namaPenerima", null);
+                    } else {
+                      handleSelectChange("staffId", null);
+                      handleSelectChange("driverId", null);
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih jenis penerima..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="staff">Staff</SelectItem>
+                    <SelectItem value="driver">Sopir</SelectItem>
+                    <SelectItem value="custom">Nama Bebas</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {insentifType === "staff" && (
+                <div className="space-y-2">
+                  <Label htmlFor="staffId">Pilih Staff</Label>
+                  <Select
+                    value={formData.staffId || ""}
+                    onValueChange={(value) =>
+                      handleSelectChange(
+                        "staffId",
+                        value === "NONE" ? null : value
+                      )
+                    }
+                    disabled={isLoadingDependencies}
+                  >
+                    <SelectTrigger>
+                      <SelectValue
+                        placeholder={
+                          isLoadingDependencies ? "Memuat..." : "Pilih staff..."
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="NONE">Tidak Terkait</SelectItem>
+                      {stafList.map((item) => (
+                        <SelectItem key={item.id} value={item.id}>
+                          {item.staff_name} ({item.position})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {insentifType === "driver" && (
+                <div className="space-y-2">
+                  <Label htmlFor="driverId">Pilih Sopir</Label>
+                  <Select
+                    value={formData.driverId || ""}
+                    onValueChange={(value) =>
+                      handleSelectChange(
+                        "driverId",
+                        value === "NONE" ? null : value
+                      )
+                    }
+                    disabled={isLoadingDependencies}
+                  >
+                    <SelectTrigger>
+                      <SelectValue
+                        placeholder={
+                          isLoadingDependencies ? "Memuat..." : "Pilih sopir..."
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="NONE">Tidak Terkait</SelectItem>
+                      {driverList.map((item) => (
+                        <SelectItem key={item.id} value={item.id}>
+                          {item.driver_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {insentifType === "custom" && (
+                <div className="space-y-2">
+                  <Label htmlFor="namaPenerima">Nama Penerima</Label>
+                  <Input
+                    id="namaPenerima"
+                    value={formData.namaPenerima || ""}
+                    onChange={handleInputChange}
+                    placeholder="Contoh: John Doe, PT ABC, dll..."
+                    required
+                  />
+                </div>
+              )}
             </div>
           )}
         </form>

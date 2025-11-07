@@ -3,7 +3,7 @@
 import React from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, Search } from "lucide-react";
+import { CalendarDays, Search, X } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -20,6 +20,7 @@ export default function PengeluaranFilters({
   onSearchChange,
   dateRange,
   onDateChange,
+  onDateReset,
   quickFilter,
   onQuickFilterChange,
 }) {
@@ -103,6 +104,19 @@ export default function PengeluaranFilters({
           </PopoverContent>
         </Popover>
       </div>
+
+      {/* Reset Date Button */}
+      {(dateRange.from || dateRange.to) && (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={onDateReset}
+          className="flex items-center gap-2"
+        >
+          <X className="h-4 w-4" />
+          Reset Tanggal
+        </Button>
+      )}
 
       <div className="flex items-center gap-2">
         <Button

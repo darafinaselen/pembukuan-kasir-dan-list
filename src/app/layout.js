@@ -1,5 +1,15 @@
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
+import { AlertDialogProvider } from "@/components/ui/alert-dialog-provider";
+import { initStorage } from "@/lib/file-storage";
+
+// Initialize storage on app startup
+if (typeof window === "undefined") {
+  // This runs only on server
+  initStorage().catch((err) => {
+    console.error("Failed to initialize storage:", err);
+  });
+}
 
 export const metadata = {
   title: {
@@ -55,8 +65,10 @@ export default function RootLayout({ children }) {
   return (
     <html lang="id">
       <body suppressHydrationWarning className="antialiased">
-        {children}
-        <Toaster />
+        <AlertDialogProvider>
+          {children}
+          <Toaster />
+        </AlertDialogProvider>
       </body>
     </html>
   );

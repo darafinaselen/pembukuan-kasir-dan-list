@@ -210,6 +210,8 @@ model Expense {
   staffId String?
   staff   Staff?  @relation(fields: [staffId], references: [id], onDelete: SetNull)
 
+  namaPenerima String? // Nama penerima insentif/bonus (untuk kategori INSENTIF_BONUS)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

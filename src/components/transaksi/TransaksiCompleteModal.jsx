@@ -15,6 +15,7 @@ import { CurrencyInput } from "@/components/ui/currency-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Car, User, Calculator } from "lucide-react";
+import { useAlertDialog } from "@/components/ui/alert-dialog-provider";
 import {
   calculateOvertime,
   formatCurrency,
@@ -28,6 +29,7 @@ export default function TransaksiCompleteModal({
   onComplete,
   isLoading,
 }) {
+  const { showAlert } = useAlertDialog();
   const [actualCheckinTime, setActualCheckinTime] = useState("");
   const [overtimeCost, setOvertimeCost] = useState(0);
   const [calculatedOvertimeHours, setCalculatedOvertimeHours] = useState(0);
@@ -75,9 +77,12 @@ export default function TransaksiCompleteModal({
     calculateOvertimeLocal(newTime);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!actualCheckinTime) {
-      alert("Waktu mobil kembali harus diisi");
+      await showAlert({
+        message: "Waktu mobil kembali harus diisi",
+        type: "warning",
+      });
       return;
     }
 
@@ -93,7 +98,10 @@ export default function TransaksiCompleteModal({
       );
     } catch (error) {
       console.error("Error converting date:", error);
-      alert("Format waktu tidak valid");
+      await showAlert({
+        message: "Format waktu tidak valid",
+        type: "error",
+      });
       return;
     }
 

@@ -6,6 +6,8 @@ import {
 } from "@/lib/middleware";
 import { prisma } from "@/lib/prisma";
 import { logExpenseEvent } from "@/lib/audit";
+import { initStorage, uploadFile, deleteFile } from "@/lib/file-storage";
+import { v4 as uuidv4 } from "uuid";
 
 async function handleUpdateExpense(request, { params }) {
   const { id: idFromParams } = await params;
@@ -16,7 +18,26 @@ async function handleUpdateExpense(request, { params }) {
       return errorResponse("Insufficient permissions", 403);
     }
 
-    const body = await request.json();
+    const formData = await request.formData();
+
+    // Extract fields from FormData
+    const body = {};
+    for (const [key, value] of formData.entries()) {
+      if (key === "file") {
+        // Handle file separately if needed
+        body.file = value;
+      } else {
+        body[key] = value;
+      }
+    }
+
+    // Parse date and paymentMonth if present
+    if (body.date) {
+      body.date = new Date(body.date);
+    }
+    if (body.paymentMonth) {
+      body.paymentMonth = new Date(body.paymentMonth);
+    }
 
     // Validate amount is a number
     const amount =
@@ -40,6 +61,7 @@ async function handleUpdateExpense(request, { params }) {
       category: finalCategory,
       description: body.description,
       amount: amount,
+      namaPenerima: body.namaPenerima || null,
     };
 
     // Handle optional relations - disconnect if null, connect if provided
@@ -72,20 +94,83 @@ async function handleUpdateExpense(request, { params }) {
       },
     });
 
+    // Handle file upload if present
+    if (body.file && body.file instanceof File) {
+      try {
+        await initStorage();
+
+        // If replacing existing file, delete old one first
+        if (body.replaceExisting === "true" && body.oldFileId) {
+          const oldAttachment = await prisma.expenseAttachment.findUnique({
+            where: { id: body.oldFileId },
+          });
+
+          if (oldAttachment) {
+            // Delete file from storage
+            try {
+              await deleteFile(oldAttachment.filePath);
+            } catch (delError) {
+              console.error("Error deleting old file from storage:", delError);
+            }
+
+            // Delete from database
+            await prisma.expenseAttachment.delete({
+              where: { id: body.oldFileId },
+            });
+          }
+        }
+
+        const fileBuffer = Buffer.from(await body.file.arrayBuffer());
+        const fileExt = body.file.name.split(".").pop();
+        const fileName = `expense-${updatedData.id}-${uuidv4()}.${fileExt}`;
+
+        const filePath = await uploadFile(fileName, fileBuffer, body.file.type);
+
+        // Create new attachment record
+        await prisma.expenseAttachment.create({
+          data: {
+            expenseId: updatedData.id,
+            fileName: body.file.name,
+            filePath: filePath,
+            fileSize: body.file.size,
+            mimeType: body.file.type,
+          },
+        });
+      } catch (fileError) {
+        console.error("Error uploading file:", fileError);
+        // Don't fail the whole request if file upload fails
+      }
+    }
+
+    // Fetch updated data with attachments
+    const finalData = await prisma.expense.findUnique({
+      where: { id: idFromParams },
+      include: {
+        armada: true,
+        driver: true,
+        staff: true,
+        attachments: true,
+      },
+    });
+
     // Log audit event
     await logExpenseEvent(
       request.auth.user.id,
       "UPDATE",
-      updatedData.id,
-      updatedData,
+      finalData.id,
+      finalData,
       request.auth.ipAddress,
       request.auth.userAgent
     );
 
-    return successResponse(updatedData);
+    return successResponse(finalData);
   } catch (error) {
     console.error(`Error updating pengeluaran ${idFromParams}:`, error);
-    return errorResponse("Gagal mengupdate data", 500);
+    console.error("Error stack:", error.stack);
+    return errorResponse(
+      error.message || "Gagal mengupdate data",
+      error.statusCode || 500
+    );
   }
 }
 

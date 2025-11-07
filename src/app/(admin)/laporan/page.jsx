@@ -7,6 +7,7 @@ import LaporanTransaksiTab from "@/components/laporan/LaporanTransaksiTab";
 import LaporanLabaRugiTab from "@/components/laporan/LaporanLabaRugiTab";
 import LaporanPemasukanTab from "@/components/laporan/LaporanPemasukanTab";
 import LaporanRekapTab from "@/components/laporan/LaporanRekapTab";
+import LaporanPengeluaranTab from "@/components/laporan/LaporanPengeluaranTab";
 
 const getThisMonthRange = () => {
   const start = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
@@ -63,10 +64,24 @@ export default function LaporanPage() {
       const incomeResult = await incomeRes.json();
       const incomeData = incomeResult.data || incomeResult;
 
+      // Fetch expense report
+      const expenseRes = await fetch(
+        `/api/reports/expenses?${params.toString()}`,
+        {
+          credentials: "include",
+        }
+      );
+      if (!expenseRes.ok)
+        throw new Error("Gagal mengambil data laporan pengeluaran");
+
+      const expenseResult = await expenseRes.json();
+      const expenseData = expenseResult.data || expenseResult;
+
       // Combine data
       const combinedData = {
         ...summaryData,
         laporanPemasukan: incomeData,
+        laporanPengeluaran: expenseData,
       };
 
       console.log("📊 Combined report data received:", combinedData);
@@ -93,10 +108,13 @@ export default function LaporanPage() {
       />
 
       <Tabs defaultValue="laporan-transaksi" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 md:w-[600px]">
+        <TabsList className="grid w-full grid-cols-5 md:w-[750px]">
           <TabsTrigger value="laporan-transaksi">Laporan Transaksi</TabsTrigger>
           <TabsTrigger value="laporan-laba-rugi">Laporan Laba Rugi</TabsTrigger>
           <TabsTrigger value="laporan-pemasukan">Laporan Pemasukan</TabsTrigger>
+          <TabsTrigger value="laporan-pengeluaran">
+            Laporan Pengeluaran
+          </TabsTrigger>
           <TabsTrigger value="rekapitulasi">Rekapitulasi</TabsTrigger>
         </TabsList>
 
@@ -117,6 +135,14 @@ export default function LaporanPage() {
         <TabsContent value="laporan-pemasukan" className="mt-4">
           <LaporanPemasukanTab
             data={reportData?.laporanPemasukan}
+            isLoading={isLoading}
+            dateRange={dateRange}
+          />
+        </TabsContent>
+
+        <TabsContent value="laporan-pengeluaran" className="mt-4">
+          <LaporanPengeluaranTab
+            data={reportData?.laporanPengeluaran}
             isLoading={isLoading}
             dateRange={dateRange}
           />

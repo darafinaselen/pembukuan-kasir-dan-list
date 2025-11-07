@@ -1,0 +1,579 @@
+"use client";
+
+import React, { useState, useMemo } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  ChevronDown,
+  ChevronRight,
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  FileText,
+  Download,
+} from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import * as XLSX from "xlsx";
+import { useAlertDialog } from "@/components/ui/alert-dialog-provider";
+
+// Helper function untuk format mata uang
+function formatCurrency(amount) {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+  }).format(amount);
+}
+
+// Helper function untuk format kategori
+function formatCategory(category) {
+  const categoryMap = {
+    LISTRIK: "Listrik",
+    INTERNET: "Internet",
+    PAKET_DATA: "Paket Data",
+    KONSUMSI: "Konsumsi",
+    GAJI_STAF_OPERASIONAL: "Gaji Staf Operasional",
+    GAJI_STAF_ADMIN: "Gaji Staf Admin",
+    INSENTIF_BONUS: "Insentif Bonus",
+    PAJAK: "Pajak",
+    ALAT_TULIS_KANTOR: "Alat Tulis Kantor (ATK)",
+    KOMPUTER_SUPPLIES: "Komputer Supplies",
+    OPERASIONAL_LAINNYA: "Operasional Lainnya",
+    BBM: "BBM (Armada)",
+    PERAWATAN_ARMADA: "Perawatan Armada",
+    GAJI_SOPIR: "Gaji Sopir",
+  };
+  return categoryMap[category] || category;
+}
+
+// Helper function untuk mendapatkan warna badge berdasarkan kategori
+function getCategoryColor(category) {
+  const colorMap = {
+    LISTRIK: "bg-blue-100 text-blue-800",
+    INTERNET: "bg-green-100 text-green-800",
+    PAKET_DATA: "bg-purple-100 text-purple-800",
+    KONSUMSI: "bg-orange-100 text-orange-800",
+    GAJI_STAF_OPERASIONAL: "bg-red-100 text-red-800",
+    GAJI_STAF_ADMIN: "bg-pink-100 text-pink-800",
+    INSENTIF_BONUS: "bg-yellow-100 text-yellow-800",
+    PAJAK: "bg-gray-100 text-gray-800",
+    ALAT_TULIS_KANTOR: "bg-indigo-100 text-indigo-800",
+    KOMPUTER_SUPPLIES: "bg-cyan-100 text-cyan-800",
+    OPERASIONAL_LAINNYA: "bg-slate-100 text-slate-800",
+    BBM: "bg-emerald-100 text-emerald-800",
+    PERAWATAN_ARMADA: "bg-violet-100 text-violet-800",
+    GAJI_SOPIR: "bg-rose-100 text-rose-800",
+  };
+  return colorMap[category] || "bg-gray-100 text-gray-800";
+}
+
+export default function LaporanPengeluaranTab({ data, isLoading, dateRange }) {
+  const [expandedCategories, setExpandedCategories] = useState(new Set());
+  const { showAlert } = useAlertDialog();
+
+  // Function to export data to Excel
+  const exportToExcel = async () => {
+    if (!data || !data.data) {
+      await showAlert({
+        message: "Tidak ada data untuk diekspor",
+        type: "warning",
+        title: "Data Kosong",
+      });
+      return;
+    }
+
+    try {
+      const { summary, data: groupedData, rawExpenses } = data;
+      const workbook = XLSX.utils.book_new();
+
+      // Helper function to format currency for Excel
+      const formatCurrencyExcel = (amount) => {
+        return `Rp ${amount.toLocaleString("id-ID")}`;
+      };
+
+      // Helper function to format date for Excel
+      const formatDateExcel = (dateString) => {
+        return new Date(dateString).toLocaleDateString("id-ID");
+      };
+
+      // Get all expenses (prefer rawExpenses if available)
+      const allExpenses =
+        rawExpenses || groupedData.flatMap((cat) => cat.expenses);
+
+      // 1. Summary Sheet
+      const summaryData = [
+        ["Laporan Pengeluaran - Ringkasan"],
+        [
+          "Periode",
+          `${dateRange?.from?.toLocaleDateString("id-ID")} - ${dateRange?.to?.toLocaleDateString("id-ID")}`,
+        ],
+        ["Tanggal Export", new Date().toLocaleString("id-ID")],
+        [""],
+        ["Total Pengeluaran", formatCurrencyExcel(summary.totalAmount)],
+        ["Jumlah Transaksi", summary.totalExpenses],
+        ["Jumlah Kategori", summary.categoriesCount],
+        [
+          "Rata-rata per Transaksi",
+          formatCurrencyExcel(
+            Math.round(summary.totalAmount / summary.totalExpenses)
+          ),
+        ],
+        [""],
+        ["Breakdown per Kategori:"],
+        ["Kategori", "Total Amount", "Jumlah Transaksi", "Persentase"],
+      ];
+
+      // Add category breakdown to summary
+      groupedData
+        .sort((a, b) => b.totalAmount - a.totalAmount)
+        .forEach((category) => {
+          const percentage = (
+            (category.totalAmount / summary.totalAmount) *
+            100
+          ).toFixed(1);
+          summaryData.push([
+            formatCategory(category.category),
+            formatCurrencyExcel(category.totalAmount),
+            category.count,
+            `${percentage}%`,
+          ]);
+        });
+
+      const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+      // Set column widths for summary sheet
+      summarySheet["!cols"] = [
+        { wch: 20 }, // Kategori
+        { wch: 15 }, // Total Amount
+        { wch: 15 }, // Jumlah Transaksi
+        { wch: 12 }, // Persentase
+      ];
+      XLSX.utils.book_append_sheet(workbook, summarySheet, "Ringkasan");
+
+      // 2. Detail per Kategori Sheet
+      const detailData = [
+        ["Laporan Pengeluaran - Detail per Kategori"],
+        [
+          "Periode",
+          `${dateRange?.from?.toLocaleDateString("id-ID")} - ${dateRange?.to?.toLocaleDateString("id-ID")}`,
+        ],
+        [""],
+        [
+          "Tanggal",
+          "Kategori",
+          "Deskripsi",
+          "Jumlah",
+          "Penerima",
+          "Armada",
+          "Sopir",
+          "Staff",
+        ],
+      ];
+
+      // Add all expenses sorted by date
+      allExpenses
+        .sort((a, b) => new Date(b.date) - new Date(a.date))
+        .forEach((expense) => {
+          detailData.push([
+            formatDateExcel(expense.date),
+            formatCategory(expense.category),
+            expense.description,
+            expense.amount, // Raw number for Excel calculations
+            expense.namaPenerima || "-",
+            expense.armada?.license_plate || "-",
+            expense.driver?.driver_name || "-",
+            expense.staff?.name || "-",
+          ]);
+        });
+
+      const detailSheet = XLSX.utils.aoa_to_sheet(detailData);
+      // Set column widths for detail sheet
+      detailSheet["!cols"] = [
+        { wch: 12 }, // Tanggal
+        { wch: 20 }, // Kategori
+        { wch: 40 }, // Deskripsi
+        { wch: 15 }, // Jumlah
+        { wch: 20 }, // Penerima
+        { wch: 15 }, // Armada
+        { wch: 20 }, // Sopir
+        { wch: 20 }, // Staff
+      ];
+      XLSX.utils.book_append_sheet(workbook, detailSheet, "Detail Transaksi");
+
+      // 3. Pivot Sheet (Summary per Category)
+      const pivotData = [
+        ["Laporan Pengeluaran - Pivot per Kategori"],
+        [
+          "Periode",
+          `${dateRange?.from?.toLocaleDateString("id-ID")} - ${dateRange?.to?.toLocaleDateString("id-ID")}`,
+        ],
+        [""],
+        [
+          "Kategori",
+          "Total Amount",
+          "Jumlah Transaksi",
+          "Rata-rata per Transaksi",
+          "Persentase dari Total",
+        ],
+      ];
+
+      groupedData
+        .sort((a, b) => b.totalAmount - a.totalAmount)
+        .forEach((category) => {
+          const percentage = (
+            (category.totalAmount / summary.totalAmount) *
+            100
+          ).toFixed(1);
+          const average = Math.round(category.totalAmount / category.count);
+          pivotData.push([
+            formatCategory(category.category),
+            category.totalAmount, // Raw number
+            category.count,
+            average,
+            `${percentage}%`,
+          ]);
+        });
+
+      const pivotSheet = XLSX.utils.aoa_to_sheet(pivotData);
+      // Set column widths for pivot sheet
+      pivotSheet["!cols"] = [
+        { wch: 25 }, // Kategori
+        { wch: 15 }, // Total Amount
+        { wch: 18 }, // Jumlah Transaksi
+        { wch: 20 }, // Rata-rata
+        { wch: 18 }, // Persentase
+      ];
+      XLSX.utils.book_append_sheet(workbook, pivotSheet, "Pivot Kategori");
+
+      // Generate filename with date range
+      const startDate = dateRange?.from?.toISOString().split("T")[0] || "start";
+      const endDate = dateRange?.to?.toISOString().split("T")[0] || "end";
+      const filename = `Laporan_Pengeluaran_${startDate}_${endDate}.xlsx`;
+
+      // Save file
+      XLSX.writeFile(workbook, filename);
+
+      // Show success message
+      await showAlert({
+        message: `File Excel berhasil diekspor: ${filename}`,
+        type: "success",
+        title: "Export Berhasil",
+      });
+    } catch (error) {
+      console.error("Error exporting to Excel:", error);
+      await showAlert({
+        message: "Gagal mengekspor file Excel. Silakan coba lagi.",
+        type: "error",
+        title: "Export Gagal",
+      });
+    }
+  };
+
+  // Calculate summary statistics
+  const summaryStats = useMemo(() => {
+    if (!data?.summary) return null;
+
+    const { summary, data: groupedData } = data;
+
+    return {
+      totalExpenses: summary.totalExpenses,
+      totalAmount: summary.totalAmount,
+      categoriesCount: summary.categoriesCount,
+      topCategory: groupedData?.reduce(
+        (max, cat) => (cat.totalAmount > max.totalAmount ? cat : max),
+        groupedData[0] || {}
+      ),
+      averageExpense:
+        summary.totalExpenses > 0
+          ? summary.totalAmount / summary.totalExpenses
+          : 0,
+    };
+  }, [data]);
+
+  const toggleCategory = (category) => {
+    const newExpanded = new Set(expandedCategories);
+    if (newExpanded.has(category)) {
+      newExpanded.delete(category);
+    } else {
+      newExpanded.add(category);
+    }
+    setExpandedCategories(newExpanded);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        {/* Summary Cards Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="pb-2">
+                <Skeleton className="h-4 w-24" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-20" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Table Skeleton */}
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-48" />
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex justify-between items-center">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!data || !data.data || data.data.length === 0) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-medium text-muted-foreground mb-2">
+            Tidak ada data pengeluaran
+          </h3>
+          <p className="text-sm text-muted-foreground text-center">
+            Belum ada pengeluaran yang tercatat dalam periode waktu yang
+            dipilih.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const { summary, data: groupedData } = data;
+
+  return (
+    <div className="space-y-6">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Total Pengeluaran
+            </CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {formatCurrency(summaryStats?.totalAmount || 0)}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {summaryStats?.totalExpenses || 0} transaksi
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Kategori Terbesar
+            </CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {formatCategory(summaryStats?.topCategory?.category || "")}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {formatCurrency(summaryStats?.topCategory?.totalAmount || 0)}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Rata-rata per Transaksi
+            </CardTitle>
+            <TrendingDown className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {formatCurrency(summaryStats?.averageExpense || 0)}
+            </div>
+            <p className="text-xs text-muted-foreground">Per pengeluaran</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Jumlah Kategori
+            </CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {summaryStats?.categoriesCount || 0}
+            </div>
+            <p className="text-xs text-muted-foreground">Kategori aktif</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Detailed Report */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Rincian Pengeluaran per Kategori</CardTitle>
+              <CardDescription>
+                Breakdown pengeluaran berdasarkan kategori untuk periode{" "}
+                {dateRange?.from?.toLocaleDateString("id-ID")} -{" "}
+                {dateRange?.to?.toLocaleDateString("id-ID")}
+              </CardDescription>
+            </div>
+            <Button
+              onClick={exportToExcel}
+              disabled={!data || !data.data || data.data.length === 0}
+              className="flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Export Excel
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {groupedData
+              .sort((a, b) => b.totalAmount - a.totalAmount) // Sort by amount descending
+              .map((categoryGroup) => {
+                const isExpanded = expandedCategories.has(
+                  categoryGroup.category
+                );
+                const percentage =
+                  summary.totalAmount > 0
+                    ? (
+                        (categoryGroup.totalAmount / summary.totalAmount) *
+                        100
+                      ).toFixed(1)
+                    : 0;
+
+                return (
+                  <Collapsible
+                    key={categoryGroup.category}
+                    open={isExpanded}
+                    onOpenChange={() => toggleCategory(categoryGroup.category)}
+                  >
+                    <div className="border rounded-lg p-4">
+                      <CollapsibleTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          className="w-full justify-between p-0 h-auto hover:bg-transparent"
+                        >
+                          <div className="flex items-center space-x-4 flex-1">
+                            <div className="flex items-center space-x-2">
+                              {isExpanded ? (
+                                <ChevronDown className="h-4 w-4" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4" />
+                              )}
+                              <Badge
+                                variant="secondary"
+                                className={getCategoryColor(
+                                  categoryGroup.category
+                                )}
+                              >
+                                {formatCategory(categoryGroup.category)}
+                              </Badge>
+                            </div>
+                            <div className="flex-1">
+                              <div className="w-full bg-gray-200 rounded-full h-2">
+                                <div
+                                  className="bg-blue-600 h-2 rounded-full"
+                                  style={{ width: `${percentage}%` }}
+                                ></div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-semibold">
+                                {formatCurrency(categoryGroup.totalAmount)}
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                {categoryGroup.count} transaksi • {percentage}%
+                              </div>
+                            </div>
+                          </div>
+                        </Button>
+                      </CollapsibleTrigger>
+
+                      <CollapsibleContent className="mt-4">
+                        <div className="border-t pt-4">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Tanggal</TableHead>
+                                <TableHead>Deskripsi</TableHead>
+                                <TableHead>Jumlah</TableHead>
+                                <TableHead>Penerima</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {categoryGroup.expenses.map((expense) => (
+                                <TableRow key={expense.id}>
+                                  <TableCell>
+                                    {new Date(expense.date).toLocaleDateString(
+                                      "id-ID"
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="max-w-xs truncate">
+                                    {expense.description}
+                                  </TableCell>
+                                  <TableCell className="font-medium">
+                                    {formatCurrency(expense.amount)}
+                                  </TableCell>
+                                  <TableCell>
+                                    {expense.namaPenerima ||
+                                      expense.staff?.name ||
+                                      expense.driver?.driver_name ||
+                                      "-"}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </CollapsibleContent>
+                    </div>
+                  </Collapsible>
+                );
+              })}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

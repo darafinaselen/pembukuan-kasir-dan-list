@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import {
   Card,
   CardHeader,
@@ -24,20 +25,30 @@ import {
   Hotel,
 } from "lucide-react";
 
-export function PackageList({ packages, onEdit, onDelete, onView }) {
-  const fmt = (v) => {
-    if (v == null) return "-";
-    try {
-      return new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-        maximumFractionDigits: 0,
-      }).format(v);
-    } catch (e) {
-      return v;
-    }
-  };
+const fmt = (v) => {
+  if (v == null) return "-";
+  if (typeof v === "string" && v.trim() === "") return "-";
+  const num = Number(v);
+  if (isNaN(num)) {
+    // For actual NaN values, return "RpNaN"
+    if (typeof v === "number" && isNaN(v)) return `Rp${v}`;
+    // For invalid strings, return the string as-is
+    return String(v);
+  }
+  try {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      maximumFractionDigits: 0,
+    }).format(num);
+  } catch (e) {
+    return String(v);
+  }
+};
 
+export { fmt };
+
+export function PackageList({ packages, onEdit, onDelete, onView }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {!packages || packages.length === 0 ? (
@@ -83,10 +94,10 @@ export function PackageList({ packages, onEdit, onDelete, onView }) {
               pkg.durationDays != null
                 ? `${pkg.durationDays} Hari ${pkg.durationNights ?? 0} Malam`
                 : pkg.durationHours
-                ? `${pkg.durationHours} Jam`
-                : pkg.durasi
-                ? `${pkg.durasi.hari} Hari ${pkg.durasi.malam ?? 0} Malam`
-                : "-";
+                  ? `${pkg.durationHours} Jam`
+                  : pkg.durasi
+                    ? `${pkg.durasi.hari} Hari ${pkg.durasi.malam ?? 0} Malam`
+                    : "-";
           }
 
           const price = pkg.price ?? pkg.hargaDefault ?? 0;
@@ -178,6 +189,12 @@ export function PackageList({ packages, onEdit, onDelete, onView }) {
                   </div>
                 ) : (
                   <div className="space-y-2">
+                    <div className="px-3 py-2.5 bg-blue-50 rounded-lg border border-blue-100">
+                      <div className="flex items-center justify-between">
+                        <p className="text-blue-600">Harga</p>
+                        <p className="text-blue-900">{fmt(price)}</p>
+                      </div>
+                    </div>
                     <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 rounded-lg border border-amber-100">
                       <Hotel className="h-4 w-4 text-amber-600" />
                       <p className="text-amber-700">

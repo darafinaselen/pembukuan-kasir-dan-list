@@ -223,7 +223,7 @@ export function PackageForm({
         reset({
           ...base,
           durasiHari: durasiHari || 1,
-          durasiMalam: durasiMalam || 0,
+          durasiMalam: 0, // Car rental doesn't have nights
           hargaDefault: hargaDefault || 0,
           tarifOvertime: tarifOvertime || 0,
           tarifHotel: [],
@@ -236,7 +236,7 @@ export function PackageForm({
         tipePaket: "Sewa Mobil",
         deskripsi: "",
         durasiHari: 1,
-        durasiMalam: 0,
+        durasiMalam: 0, // Car rental doesn't have nights
         isCustomizable: false,
         customizableItems: [],
         hargaDefault: 0,
@@ -268,6 +268,10 @@ export function PackageForm({
       // clear price fields
       setValue("hargaDefault", 0);
       setValue("tarifOvertime", 0);
+      // ensure durasiMalam is set for tour packages
+      if (getValues("durasiMalam") === undefined) {
+        setValue("durasiMalam", 0);
+      }
     } else if (tipePaket === "Full Day Trip") {
       // ensure price fields present, clear hotel tiers
       setValue("hargaDefault", getValues("hargaDefault") ?? 0);
@@ -279,12 +283,18 @@ export function PackageForm({
       ) {
         setValue("itinerary", [{ hari: 1, aktivitas: "" }]);
       }
+      // ensure durasiMalam is set for full day trip
+      if (getValues("durasiMalam") === undefined) {
+        setValue("durasiMalam", 0);
+      }
     } else {
       // Sewa Mobil or other: clear tour-specific data
       setValue("tarifHotel", []);
       setValue("itinerary", [{ hari: 1, aktivitas: "" }]);
       setValue("hargaDefault", getValues("hargaDefault") ?? 0);
       setValue("tarifOvertime", getValues("tarifOvertime") ?? 0);
+      // clear durasiMalam for car rental
+      setValue("durasiMalam", 0);
     }
   }, [tipePaket, open, setValue, getValues]);
 
@@ -464,37 +474,26 @@ export function PackageForm({
                         const tarifHotel = getValues("tarifHotel") || [];
                         const itinerary = getValues("itinerary") || [];
                         const price = Number(getValues("hargaDefault") || 0);
-                        const overtime = Number(
-                          getValues("tarifOvertime") || 0
-                        );
+                        const overtime = Number(getValues("tarifOvertime") || 0);
+                        const durasiMalam = Number(getValues("durasiMalam") || 0);
 
-                        // Tour -> switching away will remove hotel tiers + itineraries
-                        if (
-                          oldType === "Paket Tour" &&
-                          newType !== "Paket Tour" &&
-                          ((Array.isArray(tarifHotel) &&
-                            tarifHotel.length > 0) ||
-                            (Array.isArray(itinerary) && itinerary.length > 0))
-                        )
-                          return true;
+                        // Tour -> switching away will remove hotel tiers + itineraries + nights
+                        if (oldType === "Paket Tour" && newType !== "Paket Tour") {
+                          return (Array.isArray(tarifHotel) && tarifHotel.length > 0) ||
+                                 (Array.isArray(itinerary) && itinerary.length > 0) ||
+                                 durasiMalam > 0;
+                        }
 
                         // Sewa Mobil -> switching away may remove price/overtime
-                        if (
-                          oldType === "Sewa Mobil" &&
-                          newType !== "Sewa Mobil" &&
-                          (price > 0 || overtime > 0)
-                        )
-                          return true;
+                        if (oldType === "Sewa Mobil" && newType !== "Sewa Mobil") {
+                          return price > 0 || overtime > 0;
+                        }
 
                         // Full Day Trip -> switching away may remove itinerary or price
-                        if (
-                          oldType === "Full Day Trip" &&
-                          newType !== "Full Day Trip" &&
-                          ((Array.isArray(itinerary) && itinerary.length > 0) ||
-                            price > 0 ||
-                            overtime > 0)
-                        )
-                          return true;
+                        if (oldType === "Full Day Trip" && newType !== "Full Day Trip") {
+                          return (Array.isArray(itinerary) && itinerary.length > 0) ||
+                                 price > 0 || overtime > 0;
+                        }
 
                         return false;
                       };
@@ -861,33 +860,41 @@ export function PackageForm({
                 </FormItem>
               </FormField>
 
-              <FormField>
-                <FormItem>
-                  <FormLabel htmlFor="durasiMalam">
-                    Durasi (Malam) <span className="text-red-500">*</span>
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      id="durasiMalam"
-                      type="number"
-                      placeholder="3"
-                      {...register("durasiMalam", {
-                        required: "Durasi malam harus diisi",
-                        min: {
-                          value: 0,
-                          message: "Minimal 0 malam",
-                        },
-                        valueAsNumber: true,
-                      })}
-                    />
-                  </FormControl>
-                  {errors.durasiMalam && (
-                    <FormMessage className="text-red-500">
-                      {errors.durasiMalam.message}
-                    </FormMessage>
-                  )}
-                </FormItem>
-              </FormField>
+              {tipePaket === "Paket Tour" || tipePaket === "Full Day Trip" ? (
+                <FormField>
+                  <FormItem>
+                    <FormLabel htmlFor="durasiMalam">
+                      Durasi (Malam) <span className="text-red-500">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        id="durasiMalam"
+                        type="number"
+                        placeholder={tipePaket === "Full Day Trip" ? "0" : "3"}
+                        {...register("durasiMalam", {
+                          required: "Durasi malam harus diisi",
+                          min: {
+                            value: 0,
+                            message: "Minimal 0 malam",
+                          },
+                          valueAsNumber: true,
+                        })}
+                      />
+                    </FormControl>
+                    {errors.durasiMalam && (
+                      <FormMessage className="text-red-500">
+                        {errors.durasiMalam.message}
+                      </FormMessage>
+                    )}
+                  </FormItem>
+                </FormField>
+              ) : (
+                <div className="flex items-center justify-center p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+                  <p className="text-sm text-gray-500 text-center">
+                    Sewa Mobil tidak memiliki durasi malam
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -920,428 +927,451 @@ export function PackageForm({
               </FormField>
             </div>
 
-            {tipePaket === "Sewa Mobil" || tipePaket === "Full Day Trip" ? (
-              <>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField>
-                    <FormItem>
-                      <FormLabel htmlFor="hargaDefault">
-                        Harga Default (per PAX){" "}
-                        <span className="text-red-500">*</span>
-                      </FormLabel>
-                      <FormControl>
-                        <CurrencyInput
-                          id="hargaDefault"
-                          placeholder="500.000"
-                          {...register("hargaDefault", {
-                            required:
-                              tipePaket === "Sewa Mobil" ||
-                              tipePaket === "Full Day Trip"
-                                ? "Harga harus diisi"
-                                : false,
-                            min: {
-                              value: 0,
-                              message: "Harga minimal 0",
-                            },
-                            valueAsNumber: true,
-                          })}
-                        />
-                      </FormControl>
-                      {errors.hargaDefault && (
-                        <FormMessage className="text-red-500">
-                          {errors.hargaDefault.message}
-                        </FormMessage>
-                      )}
-                    </FormItem>
-                  </FormField>
+            <div className="space-y-4">
+              {tipePaket === "Paket Tour" && (
+                <div className="space-y-4">
+                  <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Hotel className="h-4 w-4 text-purple-600" />
+                      <h3 className="font-medium text-purple-900">Konfigurasi Paket Tour</h3>
+                    </div>
 
-                  <FormField>
-                    <FormItem>
-                      <FormLabel htmlFor="tarifOvertime">
-                        Tarif Overtime (per Jam)
-                      </FormLabel>
-                      <FormControl>
-                        <CurrencyInput
-                          id="tarifOvertime"
-                          placeholder="50.000"
-                          {...register("tarifOvertime", {
-                            min: {
-                              value: 0,
-                              message: "Tarif minimal 0",
-                            },
-                            valueAsNumber: true,
-                          })}
-                        />
-                      </FormControl>
-                      {errors.tarifOvertime && (
-                        <FormMessage className="text-red-500">
-                          {errors.tarifOvertime.message}
-                        </FormMessage>
-                      )}
-                    </FormItem>
-                  </FormField>
-                </div>
+                    <Tabs defaultValue="hotel" className="w-full">
+                      <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger
+                          value="hotel"
+                          className="flex items-center gap-2"
+                        >
+                          <Hotel className="h-4 w-4" />
+                          Tarif Hotel
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value="itinerary"
+                          className="flex items-center gap-2"
+                        >
+                          <Map className="h-4 w-4" />
+                          Itinerary
+                        </TabsTrigger>
+                      </TabsList>
 
-                {tipePaket === "Full Day Trip" && (
-                  <div className="space-y-3">
-                    <Label>Itinerary</Label>
-                    {itineraryFields.map((field, index) => (
-                      <div
-                        key={field.id}
-                        className="p-3 bg-gray-50 rounded-lg border space-y-2"
-                      >
-                        <FormField>
-                          <FormItem>
-                            <FormLabel>Aktivitas</FormLabel>
-                            <FormControl>
-                              <Textarea
-                                placeholder="Deskripsi aktivitas sepanjang hari..."
-                                rows={4}
-                                {...register(`itinerary.${index}.aktivitas`, {
-                                  required: "Aktivitas harus diisi",
-                                })}
-                              />
-                            </FormControl>
-                            {errors?.itinerary?.[index]?.aktivitas && (
-                              <FormMessage className="text-red-500">
-                                {errors.itinerary[index].aktivitas.message}
-                              </FormMessage>
-                            )}
-                            <input
-                              type="hidden"
-                              {...register(`itinerary.${index}.hari`)}
-                              value={1}
-                            />
-                          </FormItem>
-                        </FormField>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>
-            ) : (
-              <Tabs defaultValue="hotel" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger
-                    value="hotel"
-                    className="flex items-center gap-2"
-                  >
-                    <Hotel className="h-4 w-4" />
-                    Tarif Hotel
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="itinerary"
-                    className="flex items-center gap-2"
-                  >
-                    <Map className="h-4 w-4" />
-                    Itinerary
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="hotel" className="space-y-3 mt-4">
-                  {hotelFields.map((field, index) => (
-                    <div
-                      key={field.id}
-                      className="p-4 bg-gray-50 rounded-lg border space-y-3"
-                    >
-                      <div className="flex gap-3 items-start">
-                        <div className="flex-1 grid grid-cols-2 gap-3">
-                          <FormField>
-                            <FormItem>
-                              <FormLabel>Tingkat Hotel</FormLabel>
-                              <FormControl>
-                                <Controller
-                                  name={`tarifHotel.${index}.tingkat`}
-                                  control={control}
-                                  rules={{
-                                    required: "Tingkat hotel harus dipilih",
-                                  }}
-                                  render={({ field }) => (
-                                    <Select
-                                      className="w-full min-w-0"
-                                      onValueChange={field.onChange}
-                                      value={field.value}
-                                    >
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Pilih tingkat" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem
-                                          value="Bintang 2"
-                                          className="w-full"
-                                        >
-                                          Bintang 2
-                                        </SelectItem>
-                                        <SelectItem value="Bintang 3">
-                                          Bintang 3
-                                        </SelectItem>
-                                        <SelectItem value="Bintang 4">
-                                          Bintang 4
-                                        </SelectItem>
-                                        <SelectItem value="Bintang 5">
-                                          Bintang 5
-                                        </SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  )}
-                                />
-                              </FormControl>
-                            </FormItem>
-                          </FormField>
-
-                          <FormField>
-                            <FormItem>
-                              <FormLabel>Tarif per PAX</FormLabel>
-                              <FormControl>
-                                <CurrencyInput
-                                  placeholder="1.500.000"
-                                  {...register(
-                                    `tarifHotel.${index}.tarifPerPax`,
-                                    {
-                                      required: "Tarif per PAX harus diisi",
-                                      min: {
-                                        value: 0,
-                                        message: "Tarif minimal 0",
-                                      },
-                                      valueAsNumber: true,
-                                    }
-                                  )}
-                                />
-                              </FormControl>
-                            </FormItem>
-                          </FormField>
-                        </div>
-                        {hotelFields.length > 1 && (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            className="border-red-200 text-red-600 hover:bg-red-50"
-                            onClick={() => removeHotel(index)}
+                      <TabsContent value="hotel" className="space-y-3 mt-4">
+                        {hotelFields.map((field, index) => (
+                          <div
+                            key={field.id}
+                            className="p-4 bg-gray-50 rounded-lg border space-y-3"
                           >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                      <FormField>
-                        <FormItem>
-                          <FormLabel>Daftar Hotel</FormLabel>
-                          <FormControl>
-                            <Controller
-                              name={`tarifHotel.${index}.daftarHotel`}
-                              control={control}
-                              render={({ field }) => (
-                                <HotelListInput
-                                  hotels={field.value || []}
-                                  onChange={field.onChange}
-                                />
-                              )}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      </FormField>
+                            <div className="flex gap-3 items-start">
+                              <div className="flex-1 grid grid-cols-2 gap-3">
+                                <FormField>
+                                  <FormItem>
+                                    <FormLabel>Tingkat Hotel</FormLabel>
+                                    <FormControl>
+                                      <Controller
+                                        name={`tarifHotel.${index}.tingkat`}
+                                        control={control}
+                                        rules={{
+                                          required: "Tingkat hotel harus dipilih",
+                                        }}
+                                        render={({ field }) => (
+                                          <Select
+                                            className="w-full min-w-0"
+                                            onValueChange={field.onChange}
+                                            value={field.value}
+                                          >
+                                            <SelectTrigger>
+                                              <SelectValue placeholder="Pilih tingkat" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem
+                                                value="Bintang 2"
+                                                className="w-full"
+                                              >
+                                                Bintang 2
+                                              </SelectItem>
+                                              <SelectItem value="Bintang 3">
+                                                Bintang 3
+                                              </SelectItem>
+                                              <SelectItem value="Bintang 4">
+                                                Bintang 4
+                                              </SelectItem>
+                                              <SelectItem value="Bintang 5">
+                                                Bintang 5
+                                              </SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        )}
+                                      />
+                                    </FormControl>
+                                  </FormItem>
+                                </FormField>
 
-                      <FormField>
-                        <FormItem>
-                          <FormLabel>Price Ranges (per Pax)</FormLabel>
-                          <FormControl>
-                            <div className="space-y-2">
-                              {(
-                                getValues(`tarifHotel.${index}.priceRanges`) ||
-                                []
-                              ).map((r, ri) => {
-                                const fieldError =
-                                  errors?.tarifHotel?.[index]?.priceRanges?.[ri]
-                                    ?.minPax?.message ||
-                                  errors?.tarifHotel?.[index]?.priceRanges?.[ri]
-                                    ?.maxPax?.message ||
-                                  errors?.tarifHotel?.[index]?.priceRanges?.[ri]
-                                    ?.price?.message;
-                                return (
-                                  <div
-                                    key={ri}
-                                    className="flex gap-2 items-center"
-                                  >
-                                    <Input
-                                      type="number"
-                                      className={`w-24 ${
-                                        fieldError ? "border-red-500" : ""
-                                      }`}
-                                      {...register(
-                                        `tarifHotel.${index}.priceRanges.${ri}.minPax`,
-                                        { valueAsNumber: true }
-                                      )}
-                                      placeholder="min"
-                                    />
-                                    <span className="text-sm">-</span>
-                                    <Input
-                                      type="number"
-                                      className={`w-24 ${
-                                        fieldError ? "border-red-500" : ""
-                                      }`}
-                                      {...register(
-                                        `tarifHotel.${index}.priceRanges.${ri}.maxPax`,
-                                        { valueAsNumber: true }
-                                      )}
-                                      placeholder="max"
-                                    />
-                                    <CurrencyInput
-                                      className={`w-40 ${
-                                        fieldError ? "border-red-500" : ""
-                                      }`}
-                                      {...register(
-                                        `tarifHotel.${index}.priceRanges.${ri}.price`,
-                                        { valueAsNumber: true }
-                                      )}
-                                      placeholder="Harga"
-                                    />
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      size="icon"
-                                      onClick={() => {
-                                        const arr =
-                                          getValues(
-                                            `tarifHotel.${index}.priceRanges`
-                                          ) || [];
-                                        const next = arr.filter(
-                                          (_, i) => i !== ri
-                                        );
-                                        setValue(
-                                          `tarifHotel.${index}.priceRanges`,
-                                          next
-                                        );
-                                      }}
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                    {fieldError && (
-                                      <p className="text-red-600 text-sm ml-2">
-                                        {fieldError}
-                                      </p>
-                                    )}
-                                  </div>
-                                );
-                              })}
-
-                              <div>
+                                <FormField>
+                                  <FormItem>
+                                    <FormLabel>Tarif per PAX</FormLabel>
+                                    <FormControl>
+                                      <CurrencyInput
+                                        placeholder="1.500.000"
+                                        {...register(
+                                          `tarifHotel.${index}.tarifPerPax`,
+                                          {
+                                            required: "Tarif per PAX harus diisi",
+                                            min: {
+                                              value: 0,
+                                              message: "Tarif minimal 0",
+                                            },
+                                            valueAsNumber: true,
+                                          }
+                                        )}
+                                      />
+                                    </FormControl>
+                                  </FormItem>
+                                </FormField>
+                              </div>
+                              {hotelFields.length > 1 && (
                                 <Button
                                   type="button"
                                   variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    const arr =
-                                      getValues(
-                                        `tarifHotel.${index}.priceRanges`
-                                      ) || [];
-                                    setValue(
-                                      `tarifHotel.${index}.priceRanges`,
-                                      [
-                                        ...arr,
-                                        { minPax: 1, maxPax: 1, price: 0 },
-                                      ]
-                                    );
-                                  }}
+                                  size="icon"
+                                  className="border-red-200 text-red-600 hover:bg-red-50"
+                                  onClick={() => removeHotel(index)}
                                 >
-                                  <Plus className="mr-2 h-4 w-4" />
-                                  Tambah Rentang
+                                  <Trash2 className="h-4 w-4" />
                                 </Button>
-                              </div>
-                              {errors?.tarifHotel?.[index]?.priceRanges && (
-                                <p className="text-red-600 text-sm mt-1">
-                                  {errors.tarifHotel[index].priceRanges.message}
-                                </p>
                               )}
                             </div>
-                          </FormControl>
-                        </FormItem>
-                      </FormField>
-                    </div>
-                  ))}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="w-full border-teal-200 text-teal-600 hover:bg-teal-50"
-                    onClick={() =>
-                      appendHotel({
-                        tingkat: "Bintang 3",
-                        tarifPerPax: 0,
-                        daftarHotel: [],
-                        priceRanges: [],
-                      })
-                    }
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Tambah Tingkat Hotel
-                  </Button>
-                </TabsContent>
+                            <FormField>
+                              <FormItem>
+                                <FormLabel>Daftar Hotel</FormLabel>
+                                <FormControl>
+                                  <Controller
+                                    name={`tarifHotel.${index}.daftarHotel`}
+                                    control={control}
+                                    render={({ field }) => (
+                                      <HotelListInput
+                                        hotels={field.value || []}
+                                        onChange={field.onChange}
+                                      />
+                                    )}
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            </FormField>
 
-                <TabsContent value="itinerary" className="space-y-3 mt-4">
-                  {itineraryFields.map((field, index) => (
-                    <div
-                      key={field.id}
-                      className="flex gap-3 items-start p-3 bg-gray-50 rounded-lg border"
-                    >
-                      <div className="flex-1 grid gap-2">
-                        <FormField>
-                          <FormItem>
-                            <FormLabel>Hari ke-{index + 1}</FormLabel>
-                            <FormControl>
-                              <Textarea
-                                placeholder="Aktivitas hari ini..."
-                                rows={2}
-                                {...register(`itinerary.${index}.aktivitas`, {
-                                  required: "Aktivitas harus diisi",
-                                })}
-                              />
-                            </FormControl>
-                            {errors?.itinerary?.[index]?.aktivitas && (
-                              <FormMessage className="text-red-500">
-                                {errors.itinerary[index].aktivitas.message}
-                              </FormMessage>
-                            )}
-                            <input
-                              type="hidden"
-                              {...register(`itinerary.${index}.hari`)}
-                              value={index + 1}
-                            />
-                          </FormItem>
-                        </FormField>
-                      </div>
-                      {itineraryFields.length > 1 && (
+                            <FormField>
+                              <FormItem>
+                                <FormLabel>Price Ranges (per Pax)</FormLabel>
+                                <FormControl>
+                                  <div className="space-y-2">
+                                    {(
+                                      getValues(`tarifHotel.${index}.priceRanges`) ||
+                                      []
+                                    ).map((r, ri) => {
+                                      const fieldError =
+                                        errors?.tarifHotel?.[index]?.priceRanges?.[ri]
+                                          ?.minPax?.message ||
+                                        errors?.tarifHotel?.[index]?.priceRanges?.[ri]
+                                          ?.maxPax?.message ||
+                                        errors?.tarifHotel?.[index]?.priceRanges?.[ri]
+                                          ?.price?.message;
+                                      return (
+                                        <div
+                                          key={ri}
+                                          className="flex gap-2 items-center"
+                                        >
+                                          <Input
+                                            type="number"
+                                            className={`w-24 ${
+                                              fieldError ? "border-red-500" : ""
+                                            }`}
+                                            {...register(
+                                              `tarifHotel.${index}.priceRanges.${ri}.minPax`,
+                                              { valueAsNumber: true }
+                                            )}
+                                            placeholder="min"
+                                          />
+                                          <span className="text-sm">-</span>
+                                          <Input
+                                            type="number"
+                                            className={`w-24 ${
+                                              fieldError ? "border-red-500" : ""
+                                            }`}
+                                            {...register(
+                                              `tarifHotel.${index}.priceRanges.${ri}.maxPax`,
+                                              { valueAsNumber: true }
+                                            )}
+                                            placeholder="max"
+                                          />
+                                          <CurrencyInput
+                                            className={`w-40 ${
+                                              fieldError ? "border-red-500" : ""
+                                            }`}
+                                            {...register(
+                                              `tarifHotel.${index}.priceRanges.${ri}.price`,
+                                              { valueAsNumber: true }
+                                            )}
+                                            placeholder="Harga"
+                                          />
+                                          <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="icon"
+                                            onClick={() => {
+                                              const arr =
+                                                getValues(
+                                                  `tarifHotel.${index}.priceRanges`
+                                                ) || [];
+                                              const next = arr.filter(
+                                                (_, i) => i !== ri
+                                              );
+                                              setValue(
+                                                `tarifHotel.${index}.priceRanges`,
+                                                next
+                                              );
+                                            }}
+                                          >
+                                            <Trash2 className="h-4 w-4" />
+                                          </Button>
+                                          {fieldError && (
+                                            <p className="text-red-600 text-sm ml-2">
+                                              {fieldError}
+                                            </p>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+
+                                    <div>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                          const arr =
+                                            getValues(
+                                              `tarifHotel.${index}.priceRanges`
+                                            ) || [];
+                                          setValue(
+                                            `tarifHotel.${index}.priceRanges`,
+                                            [
+                                              ...arr,
+                                              { minPax: 1, maxPax: 1, price: 0 },
+                                            ]
+                                          );
+                                        }}
+                                      >
+                                        <Plus className="mr-2 h-4 w-4" />
+                                        Tambah Rentang
+                                      </Button>
+                                    </div>
+                                    {errors?.tarifHotel?.[index]?.priceRanges && (
+                                      <p className="text-red-600 text-sm mt-1">
+                                        {errors.tarifHotel[index].priceRanges.message}
+                                      </p>
+                                    )}
+                                  </div>
+                                </FormControl>
+                              </FormItem>
+                            </FormField>
+                          </div>
+                        ))}
                         <Button
                           type="button"
                           variant="outline"
-                          size="icon"
-                          className="border-red-200 text-red-600 hover:bg-red-50"
-                          onClick={() => removeItinerary(index)}
+                          size="sm"
+                          className="w-full border-teal-200 text-teal-600 hover:bg-teal-50"
+                          onClick={() =>
+                            appendHotel({
+                              tingkat: "Bintang 3",
+                              tarifPerPax: 0,
+                              daftarHotel: [],
+                              priceRanges: [],
+                            })
+                          }
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Plus className="mr-2 h-4 w-4" />
+                          Tambah Tingkat Hotel
                         </Button>
-                      )}
+                      </TabsContent>
+
+                      <TabsContent value="itinerary" className="space-y-3 mt-4">
+                        {itineraryFields.map((field, index) => (
+                          <div
+                            key={field.id}
+                            className="flex gap-3 items-start p-3 bg-gray-50 rounded-lg border"
+                          >
+                            <div className="flex-1 grid gap-2">
+                              <FormField>
+                                <FormItem>
+                                  <FormLabel>Hari ke-{index + 1}</FormLabel>
+                                  <FormControl>
+                                    <Textarea
+                                      placeholder="Aktivitas hari ini..."
+                                      rows={2}
+                                      {...register(`itinerary.${index}.aktivitas`, {
+                                        required: "Aktivitas harus diisi",
+                                      })}
+                                    />
+                                  </FormControl>
+                                  {errors?.itinerary?.[index]?.aktivitas && (
+                                    <FormMessage className="text-red-500">
+                                      {errors.itinerary[index].aktivitas.message}
+                                    </FormMessage>
+                                  )}
+                                  <input
+                                    type="hidden"
+                                    {...register(`itinerary.${index}.hari`)}
+                                    value={index + 1}
+                                  />
+                                </FormItem>
+                              </FormField>
+                            </div>
+                            {itineraryFields.length > 1 && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="border-red-200 text-red-600 hover:bg-red-50"
+                                onClick={() => removeItinerary(index)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="w-full border-teal-200 text-teal-600 hover:bg-teal-50"
+                          onClick={() =>
+                            appendItinerary({
+                              hari: itineraryFields.length + 1,
+                              aktivitas: "",
+                            })
+                          }
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          Tambah Hari
+                        </Button>
+                      </TabsContent>
+                    </Tabs>
+                  </div>
+                </div>
+              )}
+
+              {(tipePaket === "Sewa Mobil" || tipePaket === "Full Day Trip") && (
+                <>
+                  <div className="space-y-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      <h3 className="font-medium text-blue-900">
+                        {tipePaket === "Sewa Mobil" ? "Konfigurasi Sewa Mobil" : "Konfigurasi Full Day Trip"}
+                      </h3>
                     </div>
-                  ))}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="w-full border-teal-200 text-teal-600 hover:bg-teal-50"
-                    onClick={() =>
-                      appendItinerary({
-                        hari: itineraryFields.length + 1,
-                        aktivitas: "",
-                      })
-                    }
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Tambah Hari
-                  </Button>
-                </TabsContent>
-              </Tabs>
-            )}
-          </div>
-          <div className="flex items-center justify-end gap-2 mt-6">
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField>
+                        <FormItem>
+                          <FormLabel htmlFor="hargaDefault">
+                            Harga Default (per PAX){" "}
+                            <span className="text-red-500">*</span>
+                          </FormLabel>
+                          <FormControl>
+                            <CurrencyInput
+                              id="hargaDefault"
+                              placeholder="500.000"
+                              {...register("hargaDefault", {
+                                required:
+                                  tipePaket === "Sewa Mobil" ||
+                                  tipePaket === "Full Day Trip"
+                                    ? "Harga harus diisi"
+                                    : false,
+                                min: {
+                                  value: 0,
+                                  message: "Harga minimal 0",
+                                },
+                                valueAsNumber: true,
+                              })}
+                            />
+                          </FormControl>
+                          {errors.hargaDefault && (
+                            <FormMessage className="text-red-500">
+                              {errors.hargaDefault.message}
+                            </FormMessage>
+                          )}
+                        </FormItem>
+                      </FormField>
+
+                      <FormField>
+                        <FormItem>
+                          <FormLabel htmlFor="tarifOvertime">
+                            Tarif Overtime (per Jam)
+                          </FormLabel>
+                          <FormControl>
+                            <CurrencyInput
+                              id="tarifOvertime"
+                              placeholder="50.000"
+                              {...register("tarifOvertime", {
+                                min: {
+                                  value: 0,
+                                  message: "Tarif minimal 0",
+                                },
+                                valueAsNumber: true,
+                              })}
+                            />
+                          </FormControl>
+                          {errors.tarifOvertime && (
+                            <FormMessage className="text-red-500">
+                              {errors.tarifOvertime.message}
+                            </FormMessage>
+                          )}
+                        </FormItem>
+                      </FormField>
+                    </div>
+                  </div>
+
+                  {tipePaket === "Full Day Trip" && (
+                    <div className="space-y-3 p-4 bg-green-50 rounded-lg border border-green-200">
+                      <div className="flex items-center gap-2">
+                        <Map className="h-4 w-4 text-green-600" />
+                        <h3 className="font-medium text-green-900">Itinerary Full Day Trip</h3>
+                      </div>
+                      {itineraryFields.map((field, index) => (
+                        <div
+                          key={field.id}
+                          className="p-3 bg-white rounded-lg border space-y-2"
+                        >
+                          <FormField>
+                            <FormItem>
+                              <FormLabel>Aktivitas</FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  placeholder="Deskripsi aktivitas sepanjang hari..."
+                                  rows={4}
+                                  {...register(`itinerary.${index}.aktivitas`, {
+                                    required: "Aktivitas harus diisi",
+                                  })}
+                                />
+                              </FormControl>
+                              {errors?.itinerary?.[index]?.aktivitas && (
+                                <FormMessage className="text-red-500">
+                                  {errors.itinerary[index].aktivitas.message}
+                                </FormMessage>
+                              )}
+                              <input
+                                type="hidden"
+                                {...register(`itinerary.${index}.hari`)}
+                                value={1}
+                              />
+                            </FormItem>
+                          </FormField>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
             <Button
               type="button"
               variant="outline"

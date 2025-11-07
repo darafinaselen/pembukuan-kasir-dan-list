@@ -1,5 +1,8 @@
 const { PrismaClient } = require("@prisma/client");
 
+// Mock setImmediate for jsdom compatibility
+global.setImmediate = jest.fn((callback) => setTimeout(callback, 0));
+
 // Mock the minio functions
 jest.mock("../../lib/minio", () => ({
   uploadFile: jest.fn(),

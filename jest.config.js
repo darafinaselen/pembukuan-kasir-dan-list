@@ -1,5 +1,5 @@
 module.exports = {
-  testEnvironment: "node",
+  testEnvironment: "jsdom",
   testMatch: ["**/__tests__/**/*.test.js"],
   transform: {
     "^.+\\.jsx?$": ["babel-jest", { configFile: "./babel.config.test.js" }],
@@ -15,4 +15,5 @@ module.exports = {
   coverageDirectory: "coverage",
   coverageReporters: ["text", "lcov", "html"],
   verbose: true,
+  setupFilesAfterEnv: ["<rootDir>/src/lib/__tests__/setup.js"],
 };

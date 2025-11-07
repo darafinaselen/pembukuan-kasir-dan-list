@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import {
   Dialog,
   DialogContent,
@@ -11,34 +12,39 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Hotel, Map } from "lucide-react";
 
+const formatCurrency = (v) => {
+  if (v == null || v === 0) return "-";
+  const num = Number(v);
+  if (isNaN(num)) return String(v);
+  try {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      maximumFractionDigits: 0,
+    })
+      .format(num)
+      .replace("\u00A0", " "); // Replace non-breaking space with regular space
+  } catch (e) {
+    return String(v);
+  }
+};
+
+const takeWords = (text, limit = 20) => {
+  if (text == null) return "-";
+  const s = String(text).trim();
+  if (!s) return "-";
+  const words = s.split(/\s+/);
+  return words.length > limit ? words.slice(0, limit).join(" ") + "..." : s;
+};
+
+export { formatCurrency, takeWords };
+
 export function PackageDetail({ open, onOpenChange, pkg }) {
   if (!pkg) return null;
 
-  const formatCurrency = (v) => {
-    if (v == null) return "-";
-    try {
-      return new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-        maximumFractionDigits: 0,
-      }).format(v);
-    } catch (e) {
-      return String(v);
-    }
-  };
-
-  const isCar = pkg.type === "CAR_RENTAL" || pkg.tipePaket === "Sewa Mobil";
-  const hotelTiers = pkg.hotelTiers || pkg.tarifHotel || [];
-  const itineraries = pkg.itineraries || pkg.itinerary || [];
-
-  // Truncate long text to a few words and append ellipsis
-  const takeWords = (text, limit = 20) => {
-    if (text == null) return "-";
-    const s = String(text).trim();
-    if (!s) return "-";
-    const words = s.split(/\s+/);
-    return words.length > limit ? words.slice(0, limit).join(" ") + "..." : s;
-  };
+  const isCar = pkg?.type === "CAR_RENTAL";
+  const hotelTiers = pkg?.hotelTiers || [];
+  const itineraries = pkg?.itineraries || pkg?.itinerary || [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -60,6 +66,45 @@ export function PackageDetail({ open, onOpenChange, pkg }) {
               {takeWords(pkg.description ?? pkg.deskripsi, 20)}
             </p>
           </div>
+
+          {!isCar && pkg.durationDays && (
+            <div>
+              <h3 className="text-gray-500 mb-2">Durasi</h3>
+              <p className="text-gray-900">
+                {pkg.durationDays} Hari{" "}
+                {pkg.durationNights ?? pkg.durationDays - 1} Malam
+              </p>
+            </div>
+          )}
+
+          {!isCar && (
+            <div>
+              <h3 className="text-gray-500 mb-2">Tipe Paket</h3>
+              <p className="text-gray-900">Paket Tour</p>
+            </div>
+          )}
+
+          {!isCar && pkg.price && (
+            <div>
+              <h3 className="text-gray-500 mb-2">Harga</h3>
+              <p className="text-gray-900">{formatCurrency(pkg.price)}</p>
+            </div>
+          )}
+
+          {pkg.isCustomizable &&
+            pkg.customizableItems &&
+            pkg.customizableItems.length > 0 && (
+              <div>
+                <h3 className="text-purple-600 mb-2">🎨 Customizable Items</h3>
+                <div className="flex flex-wrap gap-2">
+                  {pkg.customizableItems.map((item, i) => (
+                    <Badge key={i} className="bg-purple-50 text-purple-800">
+                      {item}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
 
           {(pkg.includes || pkg.include) && (
             <div>
@@ -102,7 +147,7 @@ export function PackageDetail({ open, onOpenChange, pkg }) {
           )}
 
           {isCar ? (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
                 <p className="text-blue-600 mb-1">Harga Paket</p>
                 <p className="text-blue-900 text-xl">
@@ -113,6 +158,16 @@ export function PackageDetail({ open, onOpenChange, pkg }) {
                 <p className="text-orange-600 mb-1">Tarif Overtime</p>
                 <p className="text-orange-900 text-xl">
                   {formatCurrency(pkg.overtimeRate ?? pkg.tarifOvertime)}/jam
+                </p>
+              </div>
+              <div className="p-4 bg-purple-50 rounded-lg border border-purple-100">
+                <p className="text-purple-600 mb-1">Durasi</p>
+                <p className="text-purple-900 text-xl">
+                  {pkg.durationHours
+                    ? `${pkg.durationHours} Jam`
+                    : pkg.durationDays
+                      ? `${pkg.durationDays} Hari`
+                      : "-"}
                 </p>
               </div>
             </div>
@@ -224,7 +279,7 @@ export function PackageDetail({ open, onOpenChange, pkg }) {
                           <p className="text-gray-900">
                             {day.title ?? day.aktivitas}
                           </p>
-                          {day.description ?? day.deskripsi ? (
+                          {(day.description ?? day.deskripsi) ? (
                             <p className="text-gray-700 mt-1">
                               {day.description ?? day.deskripsi}
                             </p>

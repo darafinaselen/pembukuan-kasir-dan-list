@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,6 +14,9 @@ import {
 
 // Context untuk AlertDialog
 const AlertDialogContext = createContext();
+
+// Global reference untuk backward compatibility
+let globalAlertContext = null;
 
 export function AlertDialogProvider({ children }) {
   const [alerts, setAlerts] = useState([]);
@@ -78,8 +81,18 @@ export function AlertDialogProvider({ children }) {
     }
   };
 
+  const contextValue = { showAlert, showConfirm };
+
+  // Update global context reference
+  React.useEffect(() => {
+    globalAlertContext = contextValue;
+    return () => {
+      globalAlertContext = null;
+    };
+  }, []);
+
   return (
-    <AlertDialogContext.Provider value={{ showAlert, showConfirm }}>
+    <AlertDialogContext.Provider value={contextValue}>
       {children}
       {alerts.map((alert) => (
         <AlertDialog key={alert.id} open={true}>
@@ -120,9 +133,8 @@ export function useAlertDialog() {
 
 // Helper functions untuk backward compatibility
 export function showAlert(message, type = "info") {
-  const context = useContext(AlertDialogContext);
-  if (context) {
-    return context.showAlert({ message, type });
+  if (globalAlertContext) {
+    return globalAlertContext.showAlert({ message, type });
   }
   // Fallback ke browser alert jika context tidak tersedia
   alert(message);
@@ -130,9 +142,8 @@ export function showAlert(message, type = "info") {
 }
 
 export function showConfirm(message) {
-  const context = useContext(AlertDialogContext);
-  if (context) {
-    return context.showConfirm({ message });
+  if (globalAlertContext) {
+    return globalAlertContext.showConfirm({ message });
   }
   // Fallback ke browser confirm jika context tidak tersedia
   return Promise.resolve(confirm(message));

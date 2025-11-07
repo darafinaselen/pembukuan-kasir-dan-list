@@ -36,6 +36,7 @@ async function handleUpdateExpense(request, { params }) {
     // Build the update data object with proper Prisma relations
     const updateData = {
       date: body.date,
+      paymentMonth: body.paymentMonth || null,
       category: finalCategory,
       description: body.description,
       amount: amount,
@@ -67,6 +68,7 @@ async function handleUpdateExpense(request, { params }) {
         armada: true,
         driver: true,
         staff: true,
+        attachments: true,
       },
     });
 

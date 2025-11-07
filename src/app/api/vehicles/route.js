@@ -9,7 +9,13 @@ import { prisma } from "@/lib/prisma";
 async function handleGetArmadas(request) {
   try {
     // All roles can view armadas
+    const { searchParams } = new URL(request.url);
+    const statusFilter = searchParams.get("status");
+
+    const whereClause = statusFilter ? { status: statusFilter } : {};
+
     const armadas = await prisma.armada.findMany({
+      where: whereClause,
       orderBy: { createdAt: "desc" },
     });
     return successResponse(armadas);

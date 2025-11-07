@@ -22,6 +22,15 @@ async function handleGetExpenses(request) {
         armada: true,
         driver: true,
         staff: true,
+        attachments: {
+          select: {
+            id: true,
+            fileName: true,
+            fileSize: true,
+            mimeType: true,
+            createdAt: true,
+          },
+        },
       },
     });
     return successResponse(data);
@@ -64,6 +73,7 @@ async function handleCreateExpense(request) {
     // Build the data object with proper Prisma relations
     const createData = {
       date: body.date,
+      paymentMonth: body.paymentMonth || null,
       category: finalCategory,
       description: body.description,
       amount: amount,
@@ -86,6 +96,7 @@ async function handleCreateExpense(request) {
         armada: true,
         driver: true,
         staff: true,
+        attachments: true,
       },
     });
 

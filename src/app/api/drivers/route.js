@@ -8,7 +8,15 @@ import { prisma } from "@/lib/prisma";
 async function handleGetDrivers(request) {
   try {
     // All roles can view drivers
-    const drivers = await prisma.driver.findMany();
+    const { searchParams } = new URL(request.url);
+    const statusFilter = searchParams.get("status");
+
+    const whereClause = statusFilter ? { status: statusFilter } : {};
+
+    const drivers = await prisma.driver.findMany({
+      where: whereClause,
+      orderBy: { createdAt: "desc" },
+    });
     return successResponse(drivers);
   } catch (error) {
     console.error("Error fetching drivers:", error);

@@ -189,22 +189,26 @@ model Driver {
 
 // Modul 5: Manajemen Pengeluaran Operasional
 model Expense {
-  id          String   @id @default(uuid())
-  date        DateTime @db.Date
-  category    String // Misal: "Servis", "Biaya Kantor", "Gaji Admin"
-  description String
-  amount      Int
+  id           String    @id @default(uuid())
+  date         DateTime  @db.Date
+  paymentMonth DateTime? @db.Date // Bulan untuk periode pembayaran
+  category     String // Misal: "Servis", "Biaya Kantor", "Gaji Admin"
+  description  String
+  amount       Int
+
+  // File attachments
+  attachments ExpenseAttachment[]
 
   // Relasi: Pengeluaran ini (opsional) terkait dengan armada mana
   armadaId String?
   armada   Armada? @relation(fields: [armadaId], references: [id], onDelete: SetNull)
 
   driverId String?
-  driver   Driver?  @relation(fields: [driverId], references: [id], onDelete: SetNull)
+  driver   Driver? @relation(fields: [driverId], references: [id], onDelete: SetNull)
 
-  staffId  String?  
-  staff    Staff?   @relation(fields: [staffId], references: [id], onDelete: SetNull)
-  
+  staffId String?
+  staff   Staff?  @relation(fields: [staffId], references: [id], onDelete: SetNull)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -212,6 +216,23 @@ model Expense {
   @@index([driverId])
   @@index([staffId])
   @@map("expenses")
+}
+
+// Model untuk menyimpan attachment pengeluaran
+model ExpenseAttachment {
+  id        String  @id @default(uuid())
+  expenseId String
+  expense   Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+
+  fileName String // Original file name
+  filePath String // Path in MinIO
+  fileSize Int // File size in bytes
+  mimeType String // MIME type
+
+  createdAt DateTime @default(now())
+
+  @@index([expenseId])
+  @@map("expense_attachments")
 }
 
 // Modul 2: Manajemen Transaksi
@@ -328,8 +349,8 @@ model Staff {
   resign_date DateTime?   @db.Date
 
   // Notes
-  notes String?
-  expenses  Expense[]
+  notes    String?
+  expenses Expense[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

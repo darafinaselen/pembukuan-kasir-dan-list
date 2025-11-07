@@ -5,6 +5,7 @@ import PengeluaranHeader from "@/components/pengeluaran/PengeluaranHeader";
 import PengeluaranFilters from "@/components/pengeluaran/PengeluaranFilters";
 import PengeluaranTable from "@/components/pengeluaran/PengeluaranTable";
 import PengeluaranDialog from "@/components/pengeluaran/PengeluaranDialog";
+import PengeluaranDetailModal from "@/components/pengeluaran/PengeluaranDetailModal";
 import { startOfMonth, startOfYear, endOfToday } from "date-fns";
 
 // Helper untuk format tanggal YYYY-MM-DD
@@ -15,6 +16,7 @@ function getTodayDateString() {
 
 const INITIAL_FORM_STATE = {
   date: getTodayDateString(),
+  paymentMonth: getTodayDateString().substring(0, 7), // Format: YYYY-MM
   category: "",
   kategoriLainnya: "",
   description: "",
@@ -54,6 +56,10 @@ export default function PengeluaranPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingData, setEditingData] = useState(null);
   const [formData, setFormData] = useState(INITIAL_FORM_STATE);
+
+  // State untuk Detail Modal
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [selectedDetailData, setSelectedDetailData] = useState(null);
 
   const [armadaList, setArmadaList] = useState([]);
   const [driverList, setDriverList] = useState([]);
@@ -258,6 +264,9 @@ export default function PengeluaranPage() {
     setFormData({
       ...item,
       date: new Date(item.date).toISOString().split("T")[0],
+      paymentMonth: item.paymentMonth
+        ? new Date(item.paymentMonth).toISOString().substring(0, 7)
+        : new Date(item.date).toISOString().substring(0, 7),
       amount: item.amount || 0,
       armadaId: item.armadaId,
       driverId: item.driverId,
@@ -267,6 +276,11 @@ export default function PengeluaranPage() {
     });
     fetchDependencies();
     setIsDialogOpen(true);
+  };
+
+  const openDetailModal = (item) => {
+    setSelectedDetailData(item);
+    setIsDetailModalOpen(true);
   };
 
   const handleDelete = async (id) => {
@@ -307,6 +321,9 @@ export default function PengeluaranPage() {
 
       const body = JSON.stringify({
         date: new Date(formData.date).toISOString(),
+        paymentMonth: formData.paymentMonth
+          ? new Date(formData.paymentMonth + "-01").toISOString()
+          : null,
         category: formData.category,
         kategoriLainnya: formData.kategoriLainnya || null,
         description: formData.description,
@@ -360,6 +377,7 @@ export default function PengeluaranPage() {
           data={filteredData}
           onEdit={openEditDialog}
           onDelete={handleDelete}
+          onView={openDetailModal}
         />
       </div>
 
@@ -377,6 +395,14 @@ export default function PengeluaranPage() {
         driverList={driverList}
         stafList={stafList}
         isLoadingDependencies={isLoadingDependencies}
+        expenseId={editingData?.id}
+      />
+
+      {/* Detail Modal */}
+      <PengeluaranDetailModal
+        open={isDetailModalOpen}
+        onOpenChange={setIsDetailModalOpen}
+        data={selectedDetailData}
       />
     </div>
   );

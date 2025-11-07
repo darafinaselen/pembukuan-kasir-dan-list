@@ -16,7 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, Eye } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 function formatCurrency(amount) {
@@ -30,6 +30,14 @@ function formatCurrency(amount) {
 function formatDate(dateString) {
   return new Date(dateString).toLocaleDateString("id-ID", {
     day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function formatMonth(dateString) {
+  if (!dateString) return "-";
+  return new Date(dateString).toLocaleDateString("id-ID", {
     month: "long",
     year: "numeric",
   });
@@ -60,6 +68,7 @@ export default function PengeluaranTable({
   data,
   onEdit,
   onDelete,
+  onView,
 }) {
   if (isLoading) {
     return (
@@ -68,6 +77,7 @@ export default function PengeluaranTable({
           <TableHeader>
             <TableRow>
               <TableHead>Tanggal</TableHead>
+              <TableHead>Bulan</TableHead>
               <TableHead>Kategori</TableHead>
               <TableHead>Deskripsi</TableHead>
               <TableHead className="text-right w-[180px]">Jumlah</TableHead>
@@ -79,6 +89,9 @@ export default function PengeluaranTable({
               <TableRow key={index}>
                 <TableCell>
                   <Skeleton className="h-4 w-32" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-4 w-24" />
                 </TableCell>
                 <TableCell>
                   <Skeleton className="h-4 w-24" />
@@ -117,6 +130,7 @@ export default function PengeluaranTable({
         <TableHeader>
           <TableRow>
             <TableHead>Tanggal</TableHead>
+            <TableHead>Bulan</TableHead>
             <TableHead>Kategori</TableHead>
             <TableHead>Deskripsi</TableHead>
             <TableHead className="text-right w-[180px]">Jumlah</TableHead>
@@ -127,6 +141,7 @@ export default function PengeluaranTable({
           {data.map((item) => (
             <TableRow key={item.id}>
               <TableCell>{formatDate(item.date)}</TableCell>
+              <TableCell>{formatMonth(item.paymentMonth)}</TableCell>
               <TableCell>{formatCategory(item.category)}</TableCell>
               <TableCell>{item.description}</TableCell>
               <TableCell className="text-right">
@@ -141,6 +156,9 @@ export default function PengeluaranTable({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
+                      <DropdownMenuItem onClick={() => onView(item)}>
+                        Lihat Detail
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => onEdit(item)}>
                         Edit
                       </DropdownMenuItem>
@@ -154,6 +172,13 @@ export default function PengeluaranTable({
                   </DropdownMenu>
                 </div>
                 <div className="hidden lg:flex lg:items-center lg:gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onView(item)}
+                  >
+                    <Eye className="mr-1 h-3 w-3" /> Lihat
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"

@@ -179,6 +179,24 @@ export default function CetakInvoicePage() {
                   {formatCurrency(calcs.totalPendapatan)}
                 </td>
               </tr>
+              {tx.payment_status === "DOWN_PAYMENT" && tx.dp_amount > 0 && (
+                <>
+                  <tr className="border-t">
+                    <td className="p-2 text-right text-gray-600">
+                      DP (Down Payment):
+                    </td>
+                    <td className="p-2 text-right text-gray-600">
+                      {formatCurrency(tx.dp_amount)}
+                    </td>
+                  </tr>
+                  <tr className="font-semibold text-orange-600">
+                    <td className="p-2 text-right">Sisa Tagihan:</td>
+                    <td className="p-2 text-right text-lg">
+                      {formatCurrency(calcs.totalPendapatan - tx.dp_amount)}
+                    </td>
+                  </tr>
+                </>
+              )}
               <tr>
                 <td className="p-2 text-right">Status Pembayaran:</td>
                 <td className="p-2 text-right">
@@ -192,7 +210,11 @@ export default function CetakInvoicePage() {
                     }
                     className="text-lg"
                   >
-                    {tx.payment_status}
+                    {tx.payment_status === "PAID"
+                      ? "LUNAS"
+                      : tx.payment_status === "DOWN_PAYMENT"
+                        ? "DP"
+                        : "BELUM BAYAR"}
                   </Badge>
                 </td>
               </tr>

@@ -93,16 +93,68 @@ async function handleUpdateTransaction(request, { params }) {
       packageId: body.packageId,
     };
 
-    // Update transaction
-    const updatedTransaction = await prisma.transaction.update({
-      where: { id },
-      data: updateData,
-      include: {
-        package: true,
-        armada: true,
-        driver: true,
-      },
-    });
+    // Determine new status for armada and driver
+    const isStartingTodayOrPast =
+      new Date(body.checkout_datetime) <= new Date();
+    const newArmadaStatus = isStartingTodayOrPast ? "ON_TRIP" : "BOOKED";
+    const newDriverStatus = "ON_TRIP";
+
+    // Prepare transaction operations
+    const operations = [
+      // Update transaction
+      prisma.transaction.update({
+        where: { id },
+        data: updateData,
+        include: {
+          package: true,
+          armada: true,
+          driver: true,
+        },
+      }),
+    ];
+
+    // If armada changed, reset old armada status and set new armada status
+    if (existingTransaction.armadaId !== body.armadaId) {
+      if (existingTransaction.armadaId) {
+        operations.push(
+          prisma.armada.update({
+            where: { id: existingTransaction.armadaId },
+            data: { status: "READY" },
+          })
+        );
+      }
+      if (body.armadaId) {
+        operations.push(
+          prisma.armada.update({
+            where: { id: body.armadaId },
+            data: { status: newArmadaStatus },
+          })
+        );
+      }
+    }
+
+    // If driver changed, reset old driver status and set new driver status
+    if (existingTransaction.driverId !== body.driverId) {
+      if (existingTransaction.driverId) {
+        operations.push(
+          prisma.driver.update({
+            where: { id: existingTransaction.driverId },
+            data: { status: "READY" },
+          })
+        );
+      }
+      if (body.driverId) {
+        operations.push(
+          prisma.driver.update({
+            where: { id: body.driverId },
+            data: { status: newDriverStatus },
+          })
+        );
+      }
+    }
+
+    // Execute all operations in a transaction
+    const [updatedTransaction] = await prisma.$transaction(operations);
 
     return successResponse(updatedTransaction);
   } catch (error) {
@@ -134,10 +186,33 @@ async function handleDeleteTransaction(request, { params }) {
       return errorResponse("Transaction not found", 404);
     }
 
-    // Delete transaction
-    await prisma.transaction.delete({
-      where: { id },
-    });
+    // Delete transaction and reset armada/driver status in a transaction
+    await prisma.$transaction([
+      // Delete the transaction
+      prisma.transaction.delete({
+        where: { id },
+      }),
+
+      // Reset armada status to READY if it was associated
+      ...(existingTransaction.armadaId
+        ? [
+            prisma.armada.update({
+              where: { id: existingTransaction.armadaId },
+              data: { status: "READY" },
+            }),
+          ]
+        : []),
+
+      // Reset driver status to READY if it was associated
+      ...(existingTransaction.driverId
+        ? [
+            prisma.driver.update({
+              where: { id: existingTransaction.driverId },
+              data: { status: "READY" },
+            }),
+          ]
+        : []),
+    ]);
 
     return successResponse({ message: "Transaction deleted successfully" });
   } catch (error) {

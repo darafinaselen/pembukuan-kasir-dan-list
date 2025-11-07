@@ -4,6 +4,9 @@ module.exports = {
   transform: {
     "^.+\\.jsx?$": ["babel-jest", { configFile: "./babel.config.test.js" }],
   },
+  moduleNameMapper: {
+    "^@/(.*)$": "<rootDir>/src/$1",
+  },
   collectCoverageFrom: [
     "src/lib/**/*.js",
     "!src/lib/**/*.test.js",

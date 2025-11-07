@@ -6,6 +6,7 @@ import TransaksiHeader from "@/components/transaksi/TransaksiHeader";
 import TransaksiFilters from "@/components/transaksi/TransaksiFilters";
 import TransaksiTable from "@/components/transaksi/TransaksiTable";
 import TransaksiDialog from "@/components/transaksi/TransaksiDialog";
+import TransaksiCompleteModal from "@/components/transaksi/TransaksiCompleteModal";
 import TransaksiDetailModal from "@/components/transaksi/TransaksiDetailModal";
 
 import { startOfMonth, startOfYear, endOfToday } from "date-fns";
@@ -88,6 +89,8 @@ export default function TransaksiPage() {
   });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isCompleteOpen, setIsCompleteOpen] = useState(false);
+  const [completingData, setCompletingData] = useState(null);
   const [editingData, setEditingData] = useState(null);
   const [viewingData, setViewingData] = useState(null);
 
@@ -250,6 +253,14 @@ export default function TransaksiPage() {
   };
 
   const openEditDialog = (item) => {
+    // Check if transaction is already completed
+    if (item.actual_checkin_datetime) {
+      toast.warning("Tidak Dapat Mengedit", {
+        description: "Transaksi yang sudah diselesaikan tidak dapat diedit",
+      });
+      return;
+    }
+
     setEditingData(item);
     setFormData({
       ...item,
@@ -276,7 +287,29 @@ export default function TransaksiPage() {
     setIsDetailOpen(true);
   };
 
+  const openCompleteDialog = (item) => {
+    // Check if transaction is already completed
+    if (item.actual_checkin_datetime) {
+      toast.warning("Transaksi Sudah Diselesaikan", {
+        description: `Transaksi ini telah diselesaikan pada ${new Date(item.actual_checkin_datetime).toLocaleString("id-ID")}`,
+      });
+      return;
+    }
+
+    setCompletingData(item);
+    setIsCompleteOpen(true);
+  };
+
   const handleDelete = async (id) => {
+    // Check if transaction is already completed
+    const transaction = data.find((t) => t.id === id);
+    if (transaction?.actual_checkin_datetime) {
+      toast.warning("Tidak Dapat Menghapus", {
+        description: "Transaksi yang sudah diselesaikan tidak dapat dihapus",
+      });
+      return;
+    }
+
     if (!confirm("Yakin ingin menghapus transaksi ini?")) return;
     try {
       const res = await fetch(`/api/transactions/${id}`, {
@@ -285,12 +318,26 @@ export default function TransaksiPage() {
       });
       if (!res.ok) throw new Error("delete failed");
       await fetchData();
+      toast.success("Transaksi berhasil dihapus");
     } catch (err) {
       console.error("Failed to delete", err);
+      toast.error("Gagal menghapus transaksi", {
+        description: err.message,
+      });
     }
   };
 
   const handleUpdateStatus = async (id, newStatus) => {
+    // Check if transaction is already completed
+    const transaction = data.find((t) => t.id === id);
+    if (transaction?.actual_checkin_datetime) {
+      toast.warning("Tidak Dapat Mengubah Status", {
+        description:
+          "Status pembayaran transaksi yang sudah diselesaikan tidak dapat diubah",
+      });
+      return;
+    }
+
     try {
       // Update status transaksi
       const res = await fetch(`/api/transactions/status/${id}`, {
@@ -300,10 +347,10 @@ export default function TransaksiPage() {
         body: JSON.stringify({ payment_status: newStatus }),
       });
 
-      const data = await res.json();
+      const responseData = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.message || "status update failed");
+        throw new Error(responseData.message || "status update failed");
       }
 
       // Update data di state secara manual (Optimistic UI)
@@ -412,6 +459,78 @@ export default function TransaksiPage() {
     window.open(`/transaksi/cetak/${item.id}`, "_blank");
   };
 
+  const handleCompleteTransaction = async (completionData) => {
+    console.log("handleCompleteTransaction called with:", {
+      completionData,
+      completingData,
+    });
+
+    if (!completingData || !completingData.id) {
+      console.error("No transaction data available for completion");
+      toast.error("Error", {
+        description: "Data transaksi tidak tersedia",
+      });
+      return;
+    }
+
+    if (!completionData || !completionData.actual_checkin_datetime) {
+      console.error("Missing required completion data:", completionData);
+      toast.error("Error", {
+        description: "Waktu check-in aktual harus diisi",
+      });
+      return;
+    }
+
+    try {
+      console.log(
+        "Making API call to complete transaction:",
+        completingData.id
+      );
+      console.log("Completion data being sent:", completionData);
+
+      const res = await fetch(
+        `/api/transactions/${completingData.id}/complete`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(completionData),
+        }
+      );
+
+      console.log("API response status:", res.status);
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        console.error("API error response:", errorData);
+        // Error response structure: { error: "message", details: ..., timestamp: ... }
+        const errorMessage =
+          errorData.error ||
+          errorData.message ||
+          "Failed to complete transaction";
+        throw new Error(errorMessage);
+      }
+
+      const result = await res.json();
+      console.log("API success response:", result);
+      const updatedTransaction = result.data;
+
+      toast.success("Transaksi Berhasil Diselesaikan", {
+        description: `${completingData.customer_name} - ${completingData.invoice_code}`,
+      });
+
+      setIsCompleteOpen(false);
+      setCompletingData(null);
+      await fetchData();
+    } catch (err) {
+      console.error("Failed to complete transaction:", err);
+      toast.error("Gagal Menyelesaikan Transaksi", {
+        description:
+          err.message || "Terjadi kesalahan saat menyelesaikan transaksi",
+      });
+    }
+  };
+
   // --- Render ---
   return (
     <div className="flex w-full flex-col">
@@ -435,6 +554,7 @@ export default function TransaksiPage() {
           onViewDetails={openViewDialog}
           onUpdateStatus={handleUpdateStatus}
           onPrint={handlePrintInvoice}
+          onCompleteTransaction={openCompleteDialog}
         />
       </div>
 
@@ -459,6 +579,14 @@ export default function TransaksiPage() {
         onOpenChange={setIsDetailOpen}
         data={viewingData}
         calculatedData={calculatedData}
+      />
+
+      <TransaksiCompleteModal
+        open={isCompleteOpen}
+        onOpenChange={setIsCompleteOpen}
+        transaction={completingData}
+        onComplete={handleCompleteTransaction}
+        isLoading={false}
       />
     </div>
   );

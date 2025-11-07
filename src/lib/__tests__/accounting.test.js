@@ -32,8 +32,8 @@ describe("calculateTransactionFinancials", () => {
       expect(result.lamaOvertimeJam).toBe(0);
       expect(result.totalOvertimeFee).toBe(0);
       expect(result.totalPendapatan).toBe(500000);
-      expect(result.totalBiayaOps).toBe(250000);
-      expect(result.labaKotor).toBe(250000);
+      expect(result.totalBiayaOps).toBe(0); // Operational costs now tracked as separate expenses
+      expect(result.labaKotor).toBe(500000);
     });
 
     it("should use default 12 hours when package is not provided", () => {
@@ -73,8 +73,8 @@ describe("calculateTransactionFinancials", () => {
       expect(result.lamaOvertimeJam).toBe(3);
       expect(result.totalOvertimeFee).toBe(150000); // 3 * 50000
       expect(result.totalPendapatan).toBe(650000); // 500000 + 150000
-      expect(result.totalBiayaOps).toBe(250000);
-      expect(result.labaKotor).toBe(400000); // 650000 - 250000
+      expect(result.totalBiayaOps).toBe(0); // Operational costs now tracked as separate expenses
+      expect(result.labaKotor).toBe(650000); // 650000 - 0
     });
 
     it("should calculate correctly with 1 hour overtime", () => {
@@ -94,7 +94,7 @@ describe("calculateTransactionFinancials", () => {
       expect(result.lamaOvertimeJam).toBe(1);
       expect(result.totalOvertimeFee).toBe(50000);
       expect(result.totalPendapatan).toBe(550000);
-      expect(result.labaKotor).toBe(300000);
+      expect(result.labaKotor).toBe(550000); // No operational costs deducted
     });
 
     it("should handle large overtime correctly", () => {
@@ -135,7 +135,7 @@ describe("calculateTransactionFinancials", () => {
       expect(result.lamaOvertimeJam).toBe(0);
       expect(result.totalOvertimeFee).toBe(0);
       expect(result.totalPendapatan).toBe(500000); // Only base rate
-      expect(result.labaKotor).toBe(250000);
+      expect(result.labaKotor).toBe(500000); // No operational costs deducted
     });
 
     it("should handle zero overtime rate", () => {
@@ -205,8 +205,8 @@ describe("calculateTransactionFinancials", () => {
       const result = calculateTransactionFinancials(transaction);
 
       expect(result.totalPendapatan).toBe(200000);
-      expect(result.totalBiayaOps).toBe(350000);
-      expect(result.labaKotor).toBe(-150000); // Loss!
+      expect(result.totalBiayaOps).toBe(0); // Operational costs now tracked as separate expenses
+      expect(result.labaKotor).toBe(200000); // No loss since operational costs are separate
     });
   });
 
@@ -274,12 +274,12 @@ describe("calculateAggregateFinancials", () => {
     const result = calculateAggregateFinancials(transactions);
 
     expect(result.totalRevenue).toBe(1150000); // 500k + 650k
-    expect(result.totalOperationalCosts).toBe(500000); // 250k + 250k
-    expect(result.totalGrossProfit).toBe(650000); // 250k + 400k
+    expect(result.totalOperationalCosts).toBe(0); // Operational costs now tracked as separate expenses
+    expect(result.totalGrossProfit).toBe(1150000); // Revenue with no operational costs deducted
     expect(result.totalOvertimeFees).toBe(150000); // 0 + 150k
     expect(result.transactionCount).toBe(2);
     expect(result.averageRevenue).toBe(575000); // 1150k / 2
-    expect(result.averageProfit).toBe(325000); // 650k / 2
+    expect(result.averageProfit).toBe(575000); // 1150k / 2
   });
 
   it("should handle empty array", () => {
@@ -310,7 +310,7 @@ describe("calculateAggregateFinancials", () => {
 
     expect(result.transactionCount).toBe(1);
     expect(result.averageRevenue).toBe(500000);
-    expect(result.averageProfit).toBe(250000);
+    expect(result.averageProfit).toBe(500000); // No operational costs deducted
   });
 });
 

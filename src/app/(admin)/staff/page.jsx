@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 
 import StaffCard from "@/components/staff/StaffCard";
@@ -30,7 +30,7 @@ export default function StaffPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
 
-  async function fetchStaff() {
+  const fetchStaff = useCallback(async () => {
     try {
       const params = new URLSearchParams();
       if (statusFilter) params.append("status", statusFilter);
@@ -52,11 +52,12 @@ export default function StaffPage() {
       toast.error("Gagal memuat data staff");
       setStaff([]);
     }
-  }
+  }, [statusFilter, searchTerm]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchStaff();
-  }, [statusFilter]);
+  }, [statusFilter, fetchStaff]);
 
   const handleInputChange = (e) => {
     const { id, value } = e.target;

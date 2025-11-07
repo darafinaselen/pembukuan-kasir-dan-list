@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,7 +18,7 @@ export default function LaporanRekapTab({ startDate, endDate }) {
   const [rekapData, setRekapData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const fetchRekapData = async () => {
+  const fetchRekapData = useCallback(async () => {
     if (!startDate || !endDate) return;
 
     setIsLoading(true);
@@ -41,11 +41,11 @@ export default function LaporanRekapTab({ startDate, endDate }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [startDate, endDate]);
 
   useEffect(() => {
     fetchRekapData();
-  }, [startDate, endDate]);
+  }, [startDate, endDate, fetchRekapData]);
 
   const handleDownloadCategory = (categoryData) => {
     if (

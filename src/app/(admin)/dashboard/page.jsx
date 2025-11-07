@@ -8,6 +8,7 @@ import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { TransactionChart } from "@/components/dashboard/TransactionChart";
 import { FleetStatusChart } from "@/components/dashboard/FleetStatusChart";
 import { FleetRevenueChart } from "@/components/dashboard/FleetRevenueChart";
+import { TopPackagesWidget } from "@/components/dashboard/TopPackagesWidget";
 import { Calendar, Clock, TrendingUp } from "lucide-react";
 import { useAuthFetch } from "@/lib/useAuthFetch";
 
@@ -148,6 +149,15 @@ function DashboardPage() {
 
         {/* Fleet Revenue Chart */}
         <FleetRevenueChart data={stats?.fleetRevenue} loading={loading} />
+
+        {/* Top Packages Widget */}
+        <TopPackagesWidget
+          incomeData={{
+            incomeByPackage: stats?.topPackages || [],
+            summary: stats?.packageSummary,
+          }}
+          loading={loading}
+        />
       </div>
     </>
   );

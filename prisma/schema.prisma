@@ -52,6 +52,7 @@ enum AuditAction {
   LOGOUT
   VIEW
   EXPORT
+  COMPLETE
 }
 
 enum StaffStatus {
@@ -243,13 +244,17 @@ model Transaction {
   customer_phone    String
   booking_date      DateTime @db.Date
   checkout_datetime DateTime // Waktu mobil keluar
-  checkin_datetime  DateTime // Waktu mobil kembali
+  checkin_datetime  DateTime // Waktu mobil kembali (estimasi)
 
   // Data Keuangan
   all_in_rate            Int // Tarif sewa
   overtime_rate_per_hour Int
   dp_amount              Int? // Jumlah Down Payment yang diterima (opsional)
   payment_status         PaymentStatus @default(UNPAID)
+
+  // Data Aktual (diisi saat transaksi selesai)
+  actual_checkin_datetime DateTime? // Waktu mobil kembali yang sebenarnya
+  actual_overtime_cost    Int? // Biaya overtime yang dikenakan
 
   // Data Tambahan untuk Paket Wisata
   hotel_name String? // Nama hotel yang dipilih (opsional, untuk TOUR_PACKAGE)

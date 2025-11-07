@@ -87,7 +87,7 @@ function formatFileSize(bytes) {
 
 function getFileIcon(mimeType) {
   if (mimeType.startsWith("image/")) {
-    return <Image className="h-5 w-5 text-blue-500" />;
+    return <Image className="h-5 w-5 text-blue-500" alt="" />;
   } else if (
     mimeType.includes("spreadsheet") ||
     mimeType.includes("excel") ||

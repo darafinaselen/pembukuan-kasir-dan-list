@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Upload, X, FileText, Image as ImageIcon } from "lucide-react";
 
 const kategoriOptions = [
   { value: "LISTRIK", label: "Listrik" },
@@ -28,6 +29,7 @@ const kategoriOptions = [
   { value: "KONSUMSI", label: "Konsumsi" },
   { value: "GAJI_STAF_OPERASIONAL", label: "Gaji Staf Operasional" },
   { value: "GAJI_STAF_ADMIN", label: "Gaji Staf Admin" },
+  { value: "INSENTIF_BONUS", label: "Insentif/Bonus" },
   { value: "PAJAK", label: "Pajak" },
   { value: "ALAT_TULIS_KANTOR", label: "Alat Tulis Kantor (ATK)" },
   { value: "KOMPUTER_SUPPLIES", label: "Komputer Supplies" },
@@ -38,6 +40,38 @@ const kategoriOptions = [
   { value: "LAINNYA", label: "Lainnya..." },
 ];
 
+const bulanOptions = [
+  { value: "01", label: "Januari" },
+  { value: "02", label: "Februari" },
+  { value: "03", label: "Maret" },
+  { value: "04", label: "April" },
+  { value: "05", label: "Mei" },
+  { value: "06", label: "Juni" },
+  { value: "07", label: "Juli" },
+  { value: "08", label: "Agustus" },
+  { value: "09", label: "September" },
+  { value: "10", label: "Oktober" },
+  { value: "11", label: "November" },
+  { value: "12", label: "Desember" },
+];
+
+const formatFileSize = (bytes) => {
+  if (bytes === 0) return "0 Bytes";
+  const k = 1024;
+  const sizes = ["Bytes", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
+};
+
+const getFileIcon = (file) => {
+  if (file.type.startsWith("image/")) {
+    return <ImageIcon className="h-8 w-8 text-blue-500" />;
+  } else if (file.type === "application/pdf") {
+    return <FileText className="h-8 w-8 text-red-500" />;
+  }
+  return <FileText className="h-8 w-8 text-gray-500" />;
+};
+
 export default function PengeluaranDialog({
   open,
   onOpenChange,
@@ -46,6 +80,8 @@ export default function PengeluaranDialog({
   handleInputChange,
   handleSelectChange,
   handleSubmit,
+  handleFileChange,
+  handleRemoveFile,
   armadaList,
   driverList,
   stafList,
@@ -53,6 +89,7 @@ export default function PengeluaranDialog({
 }) {
   const armadaCategories = ["BBM", "PERAWATAN_ARMADA", "PAJAK"];
   const stafCategories = ["GAJI_STAF_OPERASIONAL", "GAJI_STAF_ADMIN"];
+  const insentifCategories = ["INSENTIF_BONUS"];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -80,6 +117,30 @@ export default function PengeluaranDialog({
               className="col-span-3"
               required
             />
+          </div>
+
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="paymentMonth" className="text-right">
+              Alokasi Bulan
+            </Label>
+            <Select
+              value={formData.paymentMonth || ""}
+              onValueChange={(value) =>
+                handleSelectChange("paymentMonth", value)
+              }
+              required
+            >
+              <SelectTrigger className="col-span-3">
+                <SelectValue placeholder="Pilih bulan alokasi..." />
+              </SelectTrigger>
+              <SelectContent>
+                {bulanOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid grid-cols-4 items-center gap-4">
@@ -146,6 +207,76 @@ export default function PengeluaranDialog({
                 className="w-full"
                 required
               />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-4 items-start gap-4">
+            <Label className="text-right pt-2">Bukti Transaksi</Label>
+            <div className="col-span-3 space-y-3">
+              {/* File Upload Area */}
+              {!formData.file && (
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors">
+                  <input
+                    type="file"
+                    id="file"
+                    accept=".jpg,.jpeg,.png,.pdf"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                  <label
+                    htmlFor="file"
+                    className="cursor-pointer flex flex-col items-center gap-2"
+                  >
+                    <Upload className="h-8 w-8 text-gray-400" />
+                    <div className="text-sm text-gray-600">
+                      <span className="font-medium text-blue-600">
+                        Klik untuk upload
+                      </span>{" "}
+                      atau drag & drop
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      JPG, PNG, PDF (max. 5MB)
+                    </div>
+                  </label>
+                </div>
+              )}
+
+              {/* File Preview */}
+              {formData.file && (
+                <div className="border rounded-lg p-3 bg-gray-50">
+                  <div className="flex items-center gap-3">
+                    {getFileIcon(formData.file)}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">
+                        {formData.file.name}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {formatFileSize(formData.file.size)}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleRemoveFile}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  {/* Image Preview */}
+                  {formData.file.type.startsWith("image/") && (
+                    <div className="mt-3">
+                      <img
+                        src={URL.createObjectURL(formData.file)}
+                        alt="Preview"
+                        className="max-w-full max-h-32 object-contain rounded border"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -245,6 +376,22 @@ export default function PengeluaranDialog({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          )}
+
+          {insentifCategories.includes(formData.category) && (
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="namaPenerima" className="text-right">
+                Nama Penerima
+              </Label>
+              <Input
+                id="namaPenerima"
+                value={formData.namaPenerima || ""}
+                onChange={handleInputChange}
+                className="col-span-3"
+                placeholder="Masukkan nama penerima insentif..."
+                required
+              />
             </div>
           )}
         </form>

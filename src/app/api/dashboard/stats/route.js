@@ -164,6 +164,50 @@ async function handleGetDashboardStats(request) {
       (a, b) => b.revenue - a.revenue
     );
 
+    // Calculate top packages income data
+    const packageIncomeMap = new Map();
+
+    // Get transactions with packages only
+    const transactionsWithPackages = transactions.filter((t) => t.packageId);
+
+    for (const t of transactionsWithPackages) {
+      if (!t.package) continue;
+
+      const packageId = t.package.id;
+      const packageName = t.package.name;
+      const packageType = t.package.type;
+
+      if (!packageIncomeMap.has(packageId)) {
+        packageIncomeMap.set(packageId, {
+          packageId,
+          packageName,
+          packageType,
+          transactionCount: 0,
+          totalRevenue: 0,
+        });
+      }
+
+      const group = packageIncomeMap.get(packageId);
+      const financials = calculateTransactionFinancials(t);
+
+      group.transactionCount += 1;
+      group.totalRevenue += financials.totalPendapatan;
+    }
+
+    // Convert to array and sort by revenue
+    const topPackages = Array.from(packageIncomeMap.values())
+      .sort((a, b) => b.totalRevenue - a.totalRevenue)
+      .slice(0, 5); // Top 5 packages
+
+    // Calculate package summary
+    const packageSummary = {
+      totalPackages: packageIncomeMap.size,
+      totalPackageRevenue: Array.from(packageIncomeMap.values()).reduce(
+        (sum, pkg) => sum + pkg.totalRevenue,
+        0
+      ),
+    };
+
     return successResponse(
       {
         totalRevenue,
@@ -173,6 +217,8 @@ async function handleGetDashboardStats(request) {
         transactionTrend,
         fleetStatus,
         fleetRevenue,
+        topPackages,
+        packageSummary,
         period,
       },
       "Dashboard stats retrieved successfully"

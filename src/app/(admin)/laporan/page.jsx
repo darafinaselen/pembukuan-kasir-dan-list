@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import LaporanFilter from "@/components/laporan/LaporanFilter";
 import LaporanTransaksiTab from "@/components/laporan/LaporanTransaksiTab";
 import LaporanLabaRugiTab from "@/components/laporan/LaporanLabaRugiTab";
+import LaporanPemasukanTab from "@/components/laporan/LaporanPemasukanTab";
 import LaporanRekapTab from "@/components/laporan/LaporanRekapTab";
 
 const getThisMonthRange = () => {
@@ -18,7 +19,7 @@ export default function LaporanPage() {
   const [reportData, setReportData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchReportData = async () => {
+  const fetchReportData = useCallback(async () => {
     if (!dateRange.from || !dateRange.to) return;
 
     setIsLoading(true);
@@ -44,25 +45,43 @@ export default function LaporanPage() {
       const res = await fetch(`/api/reports/summary?${params.toString()}`, {
         credentials: "include",
       });
-      if (!res.ok) throw new Error("Gagal mengambil data laporan");
+      if (!res.ok) throw new Error("Gagal mengambil data laporan ringkasan");
 
-      const result = await res.json();
-      // API returns { success, data, message }
-      const data = result.data || result;
+      const summaryResult = await res.json();
+      const summaryData = summaryResult.data || summaryResult;
 
-      console.log("📊 Report data received:", data);
-      setReportData(data);
+      // Fetch income report
+      const incomeRes = await fetch(
+        `/api/reports/income?${params.toString()}`,
+        {
+          credentials: "include",
+        }
+      );
+      if (!incomeRes.ok)
+        throw new Error("Gagal mengambil data laporan pemasukan");
+
+      const incomeResult = await incomeRes.json();
+      const incomeData = incomeResult.data || incomeResult;
+
+      // Combine data
+      const combinedData = {
+        ...summaryData,
+        laporanPemasukan: incomeData,
+      };
+
+      console.log("📊 Combined report data received:", combinedData);
+      setReportData(combinedData);
     } catch (err) {
       console.error("❌ Error fetching report:", err);
       setReportData(null);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [dateRange]);
 
   useEffect(() => {
     fetchReportData();
-  }, [dateRange]);
+  }, [dateRange, fetchReportData]);
 
   return (
     <div className="flex w-full flex-col gap-4">
@@ -74,9 +93,10 @@ export default function LaporanPage() {
       />
 
       <Tabs defaultValue="laporan-transaksi" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 md:w-[600px]">
+        <TabsList className="grid w-full grid-cols-4 md:w-[600px]">
           <TabsTrigger value="laporan-transaksi">Laporan Transaksi</TabsTrigger>
           <TabsTrigger value="laporan-laba-rugi">Laporan Laba Rugi</TabsTrigger>
+          <TabsTrigger value="laporan-pemasukan">Laporan Pemasukan</TabsTrigger>
           <TabsTrigger value="rekapitulasi">Rekapitulasi</TabsTrigger>
         </TabsList>
 
@@ -91,6 +111,14 @@ export default function LaporanPage() {
           <LaporanLabaRugiTab
             data={reportData?.laporanLabaRugi}
             isLoading={isLoading}
+          />
+        </TabsContent>
+
+        <TabsContent value="laporan-pemasukan" className="mt-4">
+          <LaporanPemasukanTab
+            data={reportData?.laporanPemasukan}
+            isLoading={isLoading}
+            dateRange={dateRange}
           />
         </TabsContent>
 

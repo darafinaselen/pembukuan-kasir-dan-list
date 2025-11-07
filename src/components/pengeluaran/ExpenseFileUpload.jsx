@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,14 +12,21 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Upload,
-  File,
-  Download,
-  Trash2,
-  FileText,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Eye,
   Image,
   FileSpreadsheet,
+  FileText,
+  File,
   Loader2,
+  Download,
+  Trash2,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -33,7 +40,7 @@ function formatFileSize(bytes) {
 
 function getFileIcon(mimeType) {
   if (mimeType.startsWith("image/")) {
-    return <Image className="h-5 w-5" />;
+    return <Image className="h-5 w-5" alt="" />;
   } else if (
     mimeType.includes("spreadsheet") ||
     mimeType.includes("excel") ||
@@ -52,14 +59,17 @@ export default function ExpenseFileUpload({ expenseId }) {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [previewFile, setPreviewFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
 
   useEffect(() => {
     if (expenseId) {
       fetchFiles();
     }
-  }, [expenseId]);
+  }, [expenseId, fetchFiles]);
 
-  async function fetchFiles() {
+  const fetchFiles = useCallback(async () => {
     if (!expenseId) return;
 
     setIsLoading(true);
@@ -80,11 +90,31 @@ export default function ExpenseFileUpload({ expenseId }) {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [expenseId]);
 
   async function handleFileUpload(e) {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Validate file type
+    const allowedTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "application/pdf",
+    ];
+    const allowedExtensions = [".jpg", ".jpeg", ".png", ".pdf"];
+    const fileExtension = file.name
+      .toLowerCase()
+      .substring(file.name.lastIndexOf("."));
+
+    if (
+      !allowedTypes.includes(file.type) &&
+      !allowedExtensions.includes(fileExtension)
+    ) {
+      setError("Hanya file JPG, PNG, dan PDF yang diperbolehkan");
+      return;
+    }
 
     // Validate file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
@@ -148,27 +178,45 @@ export default function ExpenseFileUpload({ expenseId }) {
     }
   }
 
-  async function handleDelete(fileId) {
-    if (!confirm("Yakin ingin menghapus file ini?")) {
-      return;
-    }
+  async function handlePreview(file) {
+    setPreviewFile(file);
+    setIsPreviewLoading(true);
+    setPreviewUrl(null);
 
     try {
-      const res = await fetch(`/api/expenses/${expenseId}/files/${fileId}`, {
-        method: "DELETE",
+      const res = await fetch(`/api/expenses/${expenseId}/files/${file.id}`, {
         credentials: "include",
       });
 
       if (!res.ok) {
-        throw new Error("Gagal menghapus file");
+        throw new Error("Gagal memuat preview file");
       }
 
-      // Refresh file list
-      await fetchFiles();
+      const blob = await res.blob();
+
+      // For images, create object URL
+      if (file.mimeType.startsWith("image/")) {
+        const url = window.URL.createObjectURL(blob);
+        setPreviewUrl(url);
+      } else if (file.mimeType === "application/pdf") {
+        // For PDFs, we'll use an embed or iframe
+        const url = window.URL.createObjectURL(blob);
+        setPreviewUrl(url);
+      }
     } catch (err) {
-      console.error("Error deleting file:", err);
-      setError(err.message);
+      console.error("Error loading preview:", err);
+      setError("Gagal memuat preview file");
+    } finally {
+      setIsPreviewLoading(false);
     }
+  }
+
+  function closePreview() {
+    if (previewUrl) {
+      window.URL.revokeObjectURL(previewUrl);
+    }
+    setPreviewFile(null);
+    setPreviewUrl(null);
   }
 
   if (!expenseId) {
@@ -186,7 +234,7 @@ export default function ExpenseFileUpload({ expenseId }) {
       <CardHeader>
         <CardTitle className="text-lg">Lampiran File</CardTitle>
         <CardDescription>
-          Upload bukti transaksi, nota, atau dokumen pendukung lainnya (Max
+          Upload bukti transaksi berupa gambar (JPG, PNG) atau dokumen PDF (Max
           10MB)
         </CardDescription>
       </CardHeader>
@@ -201,7 +249,7 @@ export default function ExpenseFileUpload({ expenseId }) {
               onChange={handleFileUpload}
               disabled={isUploading}
               className="flex-1"
-              accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv"
+              accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/jpg,image/png,application/pdf"
             />
             {isUploading && <Loader2 className="h-4 w-4 animate-spin" />}
           </div>
@@ -243,6 +291,51 @@ export default function ExpenseFileUpload({ expenseId }) {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    {(file.mimeType.startsWith("image/") ||
+                      file.mimeType === "application/pdf") && (
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handlePreview(file)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-4xl max-h-[80vh]">
+                          <DialogHeader>
+                            <DialogTitle>{file.fileName}</DialogTitle>
+                          </DialogHeader>
+                          <div className="flex justify-center items-center min-h-[400px]">
+                            {isPreviewLoading ? (
+                              <div className="flex items-center gap-2">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Memuat preview...
+                              </div>
+                            ) : previewUrl ? (
+                              file.mimeType.startsWith("image/") ? (
+                                <img
+                                  src={previewUrl}
+                                  alt={file.fileName}
+                                  className="max-w-full max-h-full object-contain"
+                                />
+                              ) : file.mimeType === "application/pdf" ? (
+                                <iframe
+                                  src={previewUrl}
+                                  className="w-full h-[600px] border rounded"
+                                  title={file.fileName}
+                                />
+                              ) : null
+                            ) : (
+                              <div className="text-muted-foreground">
+                                Tidak dapat memuat preview
+                              </div>
+                            )}
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    )}
                     <Button
                       variant="ghost"
                       size="sm"

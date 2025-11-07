@@ -118,7 +118,7 @@ export default function PengeluaranTable({
       <div className="rounded-lg border-2 border-dashed border-slate-200 p-6 text-center">
         <p className="text-lg font-medium">Belum ada data pengeluaran</p>
         <p className="text-sm text-muted-foreground">
-          Klik "Tambah Pengeluaran" untuk mulai mencatat.
+          Klik &quot;Tambah Pengeluaran&quot; untuk mulai mencatat.
         </p>
       </div>
     );

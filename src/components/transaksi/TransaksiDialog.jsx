@@ -150,7 +150,7 @@ export default function TransaksiDialog({
                       <SelectContent>
                         {armadaList.length === 0 && !isLoadingDependencies && (
                           <SelectItem value="-" disabled>
-                            Tidak ada armada 'Ready'
+                            Tidak ada armada &apos;Ready&apos;
                           </SelectItem>
                         )}
                         {armadaList.map((armada) => (
@@ -183,7 +183,7 @@ export default function TransaksiDialog({
                       <SelectContent>
                         {sopirList.length === 0 && !isLoadingDependencies && (
                           <SelectItem value="-" disabled>
-                            Tidak ada sopir 'Ready'
+                            Tidak ada sopir &apos;Ready&apos;
                           </SelectItem>
                         )}
                         {sopirList.map((driver) => (

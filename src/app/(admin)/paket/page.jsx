@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import PackageHeader from "@/components/packages/PackageHeader";
@@ -16,7 +16,7 @@ export default function PackagesPage() {
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState(null);
 
-  const fetchPackages = async () => {
+  const fetchPackages = useCallback(async () => {
     try {
       const res = await fetch("/api/packages", {
         credentials: "include",
@@ -51,11 +51,12 @@ export default function PackagesPage() {
       console.error("Error fetching packages:", err);
       setPackages([]);
     }
-  };
+  }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchPackages();
-  }, []);
+  }, [fetchPackages]);
 
   const handleFormSubmit = async (data) => {
     const method = selectedPackage && selectedPackage.id ? "PUT" : "POST";

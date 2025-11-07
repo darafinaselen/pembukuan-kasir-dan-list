@@ -16,7 +16,7 @@ function getTodayDateString() {
 
 const INITIAL_FORM_STATE = {
   date: getTodayDateString(),
-  paymentMonth: getTodayDateString().substring(0, 7), // Format: YYYY-MM
+  paymentMonth: new Date().getMonth() + 1, // Current month as number (1-12)
   category: "",
   kategoriLainnya: "",
   description: "",
@@ -24,6 +24,8 @@ const INITIAL_FORM_STATE = {
   armadaId: null,
   driverId: null,
   staffId: null,
+  namaPenerima: "",
+  file: null,
 };
 
 const kategoriOptions = [
@@ -33,6 +35,7 @@ const kategoriOptions = [
   "KONSUMSI",
   "GAJI_STAF_OPERASIONAL",
   "GAJI_STAF_ADMIN",
+  "INSENTIF_BONUS",
   "PAJAK",
   "ALAT_TULIS_KANTOR",
   "KOMPUTER_SUPPLIES",
@@ -250,6 +253,31 @@ export default function PengeluaranPage() {
     }));
   };
 
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      const allowedTypes = ["image/jpeg", "image/png", "application/pdf"];
+      if (!allowedTypes.includes(file.type)) {
+        alert("File harus berupa gambar (JPG/PNG) atau PDF");
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+      if (file.size > maxSize) {
+        alert("Ukuran file maksimal 5MB");
+        return;
+      }
+
+      setFormData((prev) => ({ ...prev, file }));
+    }
+  };
+
+  const handleRemoveFile = () => {
+    setFormData((prev) => ({ ...prev, file: null }));
+  };
+
   const openNewDialog = () => {
     setEditingData(null);
     setFormData(INITIAL_FORM_STATE);
@@ -271,8 +299,10 @@ export default function PengeluaranPage() {
       armadaId: item.armadaId,
       driverId: item.driverId,
       staffId: item.staffId,
+      namaPenerima: item.namaPenerima || "",
       category: isLainnya ? "LAINNYA" : item.category,
       kategoriLainnya: isLainnya ? item.category : "",
+      file: null, // Reset file on edit (existing files handled separately)
     });
     fetchDependencies();
     setIsDialogOpen(true);
@@ -319,25 +349,41 @@ export default function PengeluaranPage() {
         return;
       }
 
-      const body = JSON.stringify({
-        date: new Date(formData.date).toISOString(),
-        paymentMonth: formData.paymentMonth
-          ? new Date(formData.paymentMonth + "-01").toISOString()
-          : null,
-        category: formData.category,
-        kategoriLainnya: formData.kategoriLainnya || null,
-        description: formData.description,
-        amount: cleanAmount,
-        armadaId: formData.armadaId || null,
-        driverId: formData.driverId || null,
-        staffId: formData.staffId || null,
-      });
+      // Use FormData for file uploads
+      const formDataToSend = new FormData();
+      formDataToSend.append("date", new Date(formData.date).toISOString());
+      if (formData.paymentMonth) {
+        formDataToSend.append(
+          "paymentMonth",
+          new Date(formData.paymentMonth + "-01").toISOString()
+        );
+      }
+      formDataToSend.append("category", formData.category);
+      if (formData.kategoriLainnya) {
+        formDataToSend.append("kategoriLainnya", formData.kategoriLainnya);
+      }
+      formDataToSend.append("description", formData.description);
+      formDataToSend.append("amount", cleanAmount.toString());
+      if (formData.armadaId) {
+        formDataToSend.append("armadaId", formData.armadaId);
+      }
+      if (formData.driverId) {
+        formDataToSend.append("driverId", formData.driverId);
+      }
+      if (formData.staffId) {
+        formDataToSend.append("staffId", formData.staffId);
+      }
+      if (formData.namaPenerima) {
+        formDataToSend.append("namaPenerima", formData.namaPenerima);
+      }
+      if (formData.file) {
+        formDataToSend.append("file", formData.file);
+      }
 
       const res = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: body,
+        body: formDataToSend,
       });
 
       if (!res.ok) {
@@ -390,6 +436,8 @@ export default function PengeluaranPage() {
         handleInputChange={handleInputChange}
         handleSelectChange={handleSelectChange}
         handleAmountChange={handleAmountChange}
+        handleFileChange={handleFileChange}
+        handleRemoveFile={handleRemoveFile}
         handleSubmit={handleSubmit}
         armadaList={armadaList}
         driverList={driverList}

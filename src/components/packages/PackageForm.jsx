@@ -474,25 +474,46 @@ export function PackageForm({
                         const tarifHotel = getValues("tarifHotel") || [];
                         const itinerary = getValues("itinerary") || [];
                         const price = Number(getValues("hargaDefault") || 0);
-                        const overtime = Number(getValues("tarifOvertime") || 0);
-                        const durasiMalam = Number(getValues("durasiMalam") || 0);
+                        const overtime = Number(
+                          getValues("tarifOvertime") || 0
+                        );
+                        const durasiMalam = Number(
+                          getValues("durasiMalam") || 0
+                        );
 
                         // Tour -> switching away will remove hotel tiers + itineraries + nights
-                        if (oldType === "Paket Tour" && newType !== "Paket Tour") {
-                          return (Array.isArray(tarifHotel) && tarifHotel.length > 0) ||
-                                 (Array.isArray(itinerary) && itinerary.length > 0) ||
-                                 durasiMalam > 0;
+                        if (
+                          oldType === "Paket Tour" &&
+                          newType !== "Paket Tour"
+                        ) {
+                          return (
+                            (Array.isArray(tarifHotel) &&
+                              tarifHotel.length > 0) ||
+                            (Array.isArray(itinerary) &&
+                              itinerary.length > 0) ||
+                            durasiMalam > 0
+                          );
                         }
 
                         // Sewa Mobil -> switching away may remove price/overtime
-                        if (oldType === "Sewa Mobil" && newType !== "Sewa Mobil") {
+                        if (
+                          oldType === "Sewa Mobil" &&
+                          newType !== "Sewa Mobil"
+                        ) {
                           return price > 0 || overtime > 0;
                         }
 
                         // Full Day Trip -> switching away may remove itinerary or price
-                        if (oldType === "Full Day Trip" && newType !== "Full Day Trip") {
-                          return (Array.isArray(itinerary) && itinerary.length > 0) ||
-                                 price > 0 || overtime > 0;
+                        if (
+                          oldType === "Full Day Trip" &&
+                          newType !== "Full Day Trip"
+                        ) {
+                          return (
+                            (Array.isArray(itinerary) &&
+                              itinerary.length > 0) ||
+                            price > 0 ||
+                            overtime > 0
+                          );
                         }
 
                         return false;
@@ -933,7 +954,9 @@ export function PackageForm({
                   <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
                     <div className="flex items-center gap-2 mb-4">
                       <Hotel className="h-4 w-4 text-purple-600" />
-                      <h3 className="font-medium text-purple-900">Konfigurasi Paket Tour</h3>
+                      <h3 className="font-medium text-purple-900">
+                        Konfigurasi Paket Tour
+                      </h3>
                     </div>
 
                     <Tabs defaultValue="hotel" className="w-full">
@@ -970,7 +993,8 @@ export function PackageForm({
                                         name={`tarifHotel.${index}.tingkat`}
                                         control={control}
                                         rules={{
-                                          required: "Tingkat hotel harus dipilih",
+                                          required:
+                                            "Tingkat hotel harus dipilih",
                                         }}
                                         render={({ field }) => (
                                           <Select
@@ -1014,7 +1038,8 @@ export function PackageForm({
                                         {...register(
                                           `tarifHotel.${index}.tarifPerPax`,
                                           {
-                                            required: "Tarif per PAX harus diisi",
+                                            required:
+                                              "Tarif per PAX harus diisi",
                                             min: {
                                               value: 0,
                                               message: "Tarif minimal 0",
@@ -1063,16 +1088,19 @@ export function PackageForm({
                                 <FormControl>
                                   <div className="space-y-2">
                                     {(
-                                      getValues(`tarifHotel.${index}.priceRanges`) ||
-                                      []
+                                      getValues(
+                                        `tarifHotel.${index}.priceRanges`
+                                      ) || []
                                     ).map((r, ri) => {
                                       const fieldError =
-                                        errors?.tarifHotel?.[index]?.priceRanges?.[ri]
-                                          ?.minPax?.message ||
-                                        errors?.tarifHotel?.[index]?.priceRanges?.[ri]
-                                          ?.maxPax?.message ||
-                                        errors?.tarifHotel?.[index]?.priceRanges?.[ri]
-                                          ?.price?.message;
+                                        errors?.tarifHotel?.[index]
+                                          ?.priceRanges?.[ri]?.minPax
+                                          ?.message ||
+                                        errors?.tarifHotel?.[index]
+                                          ?.priceRanges?.[ri]?.maxPax
+                                          ?.message ||
+                                        errors?.tarifHotel?.[index]
+                                          ?.priceRanges?.[ri]?.price?.message;
                                       return (
                                         <div
                                           key={ri}
@@ -1154,7 +1182,11 @@ export function PackageForm({
                                             `tarifHotel.${index}.priceRanges`,
                                             [
                                               ...arr,
-                                              { minPax: 1, maxPax: 1, price: 0 },
+                                              {
+                                                minPax: 1,
+                                                maxPax: 1,
+                                                price: 0,
+                                              },
                                             ]
                                           );
                                         }}
@@ -1163,9 +1195,13 @@ export function PackageForm({
                                         Tambah Rentang
                                       </Button>
                                     </div>
-                                    {errors?.tarifHotel?.[index]?.priceRanges && (
+                                    {errors?.tarifHotel?.[index]
+                                      ?.priceRanges && (
                                       <p className="text-red-600 text-sm mt-1">
-                                        {errors.tarifHotel[index].priceRanges.message}
+                                        {
+                                          errors.tarifHotel[index].priceRanges
+                                            .message
+                                        }
                                       </p>
                                     )}
                                   </div>
@@ -1207,14 +1243,20 @@ export function PackageForm({
                                     <Textarea
                                       placeholder="Aktivitas hari ini..."
                                       rows={2}
-                                      {...register(`itinerary.${index}.aktivitas`, {
-                                        required: "Aktivitas harus diisi",
-                                      })}
+                                      {...register(
+                                        `itinerary.${index}.aktivitas`,
+                                        {
+                                          required: "Aktivitas harus diisi",
+                                        }
+                                      )}
                                     />
                                   </FormControl>
                                   {errors?.itinerary?.[index]?.aktivitas && (
                                     <FormMessage className="text-red-500">
-                                      {errors.itinerary[index].aktivitas.message}
+                                      {
+                                        errors.itinerary[index].aktivitas
+                                          .message
+                                      }
                                     </FormMessage>
                                   )}
                                   <input
@@ -1259,13 +1301,16 @@ export function PackageForm({
                 </div>
               )}
 
-              {(tipePaket === "Sewa Mobil" || tipePaket === "Full Day Trip") && (
+              {(tipePaket === "Sewa Mobil" ||
+                tipePaket === "Full Day Trip") && (
                 <>
                   <div className="space-y-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                       <h3 className="font-medium text-blue-900">
-                        {tipePaket === "Sewa Mobil" ? "Konfigurasi Sewa Mobil" : "Konfigurasi Full Day Trip"}
+                        {tipePaket === "Sewa Mobil"
+                          ? "Konfigurasi Sewa Mobil"
+                          : "Konfigurasi Full Day Trip"}
                       </h3>
                     </div>
 
@@ -1334,7 +1379,9 @@ export function PackageForm({
                     <div className="space-y-3 p-4 bg-green-50 rounded-lg border border-green-200">
                       <div className="flex items-center gap-2">
                         <Map className="h-4 w-4 text-green-600" />
-                        <h3 className="font-medium text-green-900">Itinerary Full Day Trip</h3>
+                        <h3 className="font-medium text-green-900">
+                          Itinerary Full Day Trip
+                        </h3>
                       </div>
                       {itineraryFields.map((field, index) => (
                         <div

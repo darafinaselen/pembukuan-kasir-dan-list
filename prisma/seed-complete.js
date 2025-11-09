@@ -198,6 +198,393 @@ async function main() {
     },
   });
 
+  // Paket Tour Bali 3 Hari 2 Malam - Lengkap dengan hotel tiers dan itinerary
+  const paketBaliTour = await prisma.servicePackage.create({
+    data: {
+      name: "Wisata Bali 3 Hari 2 Malam",
+      type: "TOUR_PACKAGE",
+      description:
+        "Paket wisata Bali lengkap dengan penginapan, transportasi, dan guide profesional",
+      includes: [
+        "Transportasi PP Jakarta-Bali-Jakarta",
+        "Penginapan hotel sesuai pilihan",
+        "Sarapan pagi di hotel",
+        "Guide wisata profesional",
+        "Tiket masuk objek wisata",
+        "Makan siang selama tour",
+        "Air mineral selama perjalanan",
+        "Asuransi perjalanan",
+      ],
+      excludes: [
+        "Tiket pesawat domestik",
+        "Makan malam",
+        "Biaya pribadi",
+        "Tips guide & sopir",
+        "Kamera entrance fee",
+        "Pembelian oleh-oleh",
+      ],
+      isCustomizable: true,
+      customizableItems: [
+        "Pilihan hotel",
+        "Jumlah hari tambahan",
+        "Destinasi khusus",
+      ],
+      durationDays: 3,
+      durationNights: 2,
+      hotelTiers: {
+        create: [
+          // Hotel Tier 3 Bintang
+          {
+            starRating: 3,
+            pricePerPax: 2500000, // Base price per pax
+            hotels: {
+              create: [
+                { name: "Hotel Puri Bali" },
+                { name: "Hotel Sanur Beach" },
+                { name: "Hotel Legian Beach" },
+                { name: "Hotel Kuta Paradiso" },
+              ],
+            },
+            priceRanges: {
+              create: [
+                { minPax: 1, maxPax: 2, price: 2500000 },
+                { minPax: 3, maxPax: 5, price: 2200000 },
+                { minPax: 6, maxPax: 10, price: 2000000 },
+                { minPax: 11, maxPax: 15, price: 1800000 },
+                { minPax: 16, maxPax: 20, price: 1700000 },
+              ],
+            },
+          },
+          // Hotel Tier 4 Bintang
+          {
+            starRating: 4,
+            pricePerPax: 3200000, // Base price per pax
+            hotels: {
+              create: [
+                { name: "Ayodya Resort Bali" },
+                { name: "The Griya Villas & Spa" },
+                { name: "Grand Inna Kuta" },
+                { name: "Swiss-Belinn Patih Jelantik" },
+                { name: "Mercure Kuta Bali" },
+              ],
+            },
+            priceRanges: {
+              create: [
+                { minPax: 1, maxPax: 2, price: 3200000 },
+                { minPax: 3, maxPax: 5, price: 2900000 },
+                { minPax: 6, maxPax: 10, price: 2700000 },
+                { minPax: 11, maxPax: 15, price: 2500000 },
+                { minPax: 16, maxPax: 20, price: 2400000 },
+              ],
+            },
+          },
+          // Hotel Tier 5 Bintang
+          {
+            starRating: 5,
+            pricePerPax: 4500000, // Base price per pax
+            hotels: {
+              create: [
+                { name: "St. Regis Bali Resort" },
+                { name: "The Laguna, a Luxury Collection Hotel & Spa" },
+                { name: "Mulia Resort" },
+                { name: "Four Seasons Resort Bali" },
+                { name: "Ayodya Resort Jimbaran" },
+              ],
+            },
+            priceRanges: {
+              create: [
+                { minPax: 1, maxPax: 2, price: 4500000 },
+                { minPax: 3, maxPax: 5, price: 4200000 },
+                { minPax: 6, maxPax: 10, price: 4000000 },
+                { minPax: 11, maxPax: 15, price: 3800000 },
+                { minPax: 16, maxPax: 20, price: 3700000 },
+              ],
+            },
+          },
+        ],
+      },
+      itineraries: {
+        create: [
+          {
+            day: 1,
+            title: "Jakarta - Denpasar - Transfer ke Hotel",
+            description:
+              "Pagi hari keberangkatan dari Jakarta menuju Bandara Ngurah Rai Bali. Setibanya di Bali, langsung transfer ke hotel untuk check-in dan istirahat. Sore hari free time untuk berjalan-jalan di sekitar hotel atau beristirahat.",
+          },
+          {
+            day: 2,
+            title: "Tour Ubud - Tegallalang Rice Terrace - Ubud Art Market",
+            description:
+              "Sarapan pagi di hotel. Pagi hari menuju Ubud untuk mengunjungi Tegallalang Rice Terrace (Sawah Terasering). Lanjut ke Ubud Art Market untuk berbelanja souvenir. Sore hari kembali ke hotel untuk istirahat.",
+          },
+          {
+            day: 3,
+            title: "Tour Pantai Kuta - Transfer ke Bandara - Jakarta",
+            description:
+              "Sarapan pagi di hotel. Pagi hari menuju Pantai Kuta untuk bersantai dan menikmati pemandangan laut. Siang hari check-out hotel dan transfer ke bandara untuk penerbangan kembali ke Jakarta.",
+          },
+        ],
+      },
+    },
+  });
+
+  // Paket Tour Yogyakarta 4 Hari 3 Malam - Lengkap
+  const paketJogjaTour = await prisma.servicePackage.create({
+    data: {
+      name: "Wisata Yogyakarta 4 Hari 3 Malam",
+      type: "TOUR_PACKAGE",
+      description:
+        "Paket wisata Yogyakarta comprehensive dengan fokus budaya Jawa, candi-candi bersejarah, dan kuliner khas",
+      includes: [
+        "Transportasi PP Jakarta-Yogyakarta-Jakarta",
+        "Penginapan hotel sesuai pilihan",
+        "Sarapan pagi di hotel",
+        "Guide wisata profesional",
+        "Tiket masuk semua objek wisata",
+        "Makan siang selama tour",
+        "Air mineral selama perjalanan",
+        "Asuransi perjalanan",
+        "Transportasi lokal selama tour",
+      ],
+      excludes: [
+        "Tiket pesawat domestik",
+        "Makan malam",
+        "Biaya pribadi",
+        "Tips guide & sopir",
+        "Kamera entrance fee",
+        "Pembelian oleh-oleh",
+        "Kuliner khas tambahan",
+      ],
+      isCustomizable: true,
+      customizableItems: [
+        "Pilihan hotel",
+        "Jumlah hari tambahan",
+        "Fokus wisata (budaya/sejarah/kuliner)",
+      ],
+      durationDays: 4,
+      durationNights: 3,
+      hotelTiers: {
+        create: [
+          // Hotel Tier 3 Bintang
+          {
+            starRating: 3,
+            pricePerPax: 2800000,
+            hotels: {
+              create: [
+                { name: "Hotel Ibis Styles Yogyakarta" },
+                { name: "Hotel Tentrem Yogyakarta" },
+                { name: "Hotel Melia Purosani" },
+                { name: "Hotel Royal Ambarrukmo" },
+              ],
+            },
+            priceRanges: {
+              create: [
+                { minPax: 1, maxPax: 2, price: 2800000 },
+                { minPax: 3, maxPax: 5, price: 2500000 },
+                { minPax: 6, maxPax: 10, price: 2300000 },
+                { minPax: 11, maxPax: 15, price: 2100000 },
+                { minPax: 16, maxPax: 20, price: 2000000 },
+              ],
+            },
+          },
+          // Hotel Tier 4 Bintang
+          {
+            starRating: 4,
+            pricePerPax: 3500000,
+            hotels: {
+              create: [
+                { name: "The Phoenix Hotel Yogyakarta" },
+                { name: "Hotel Hyatt Regency Yogyakarta" },
+                { name: "Sheraton Mustika Yogyakarta Resort & Spa" },
+                { name: "Novotel Yogyakarta" },
+              ],
+            },
+            priceRanges: {
+              create: [
+                { minPax: 1, maxPax: 2, price: 3500000 },
+                { minPax: 3, maxPax: 5, price: 3200000 },
+                { minPax: 6, maxPax: 10, price: 3000000 },
+                { minPax: 11, maxPax: 15, price: 2800000 },
+                { minPax: 16, maxPax: 20, price: 2700000 },
+              ],
+            },
+          },
+          // Hotel Tier 5 Bintang
+          {
+            starRating: 5,
+            pricePerPax: 4800000,
+            hotels: {
+              create: [
+                { name: "Platinum Yogyakarta" },
+                { name: "The Ritz-Carlton Yogyakarta" },
+                { name: "JW Marriott Yogyakarta" },
+              ],
+            },
+            priceRanges: {
+              create: [
+                { minPax: 1, maxPax: 2, price: 4800000 },
+                { minPax: 3, maxPax: 5, price: 4500000 },
+                { minPax: 6, maxPax: 10, price: 4300000 },
+                { minPax: 11, maxPax: 15, price: 4100000 },
+                { minPax: 16, maxPax: 20, price: 4000000 },
+              ],
+            },
+          },
+        ],
+      },
+      itineraries: {
+        create: [
+          {
+            day: 1,
+            title: "Jakarta - Yogyakarta - Malioboro & Check-in Hotel",
+            description:
+              "Pagi hari keberangkatan dari Jakarta menuju Yogyakarta. Setibanya di Yogyakarta, langsung menuju Malioboro untuk berbelanja dan menikmati suasana kota. Check-in hotel dan istirahat sore hari.",
+          },
+          {
+            day: 2,
+            title: "Candi Borobudur - Candi Pawon - Candi Mendut",
+            description:
+              "Sarapan pagi di hotel. Full day tour mengunjungi kompleks Candi Borobudur, Candi Pawon, dan Candi Mendut. Makan siang di restoran lokal. Sore hari kembali ke hotel untuk istirahat.",
+          },
+          {
+            day: 3,
+            title: "Keraton Yogyakarta - Taman Sari - Prambanan",
+            description:
+              "Sarapan pagi di hotel. Mengunjungi Keraton Yogyakarta (Istana Sultan), Taman Sari (Water Castle), dan komplek Candi Prambanan. Pengalaman budaya Jawa yang autentik dengan pertunjukan wayang kulit (optional).",
+          },
+          {
+            day: 4,
+            title: "Pantai Parangtritis - Transfer ke Bandara - Jakarta",
+            description:
+              "Sarapan pagi di hotel. Mengunjungi Pantai Parangtritis untuk menikmati pemandangan laut dan pasir hitam. Check-out hotel dan transfer ke bandara untuk penerbangan kembali ke Jakarta.",
+          },
+        ],
+      },
+    },
+  });
+
+  // Paket Tour Bandung 2 Hari 1 Malam - Lengkap
+  const paketBandungTour = await prisma.servicePackage.create({
+    data: {
+      name: "Wisata Bandung 2 Hari 1 Malam",
+      type: "TOUR_PACKAGE",
+      description:
+        "Paket wisata Bandung dengan fokus kuliner, factory outlet, dan wisata alam",
+      includes: [
+        "Transportasi PP Jakarta-Bandung-Jakarta",
+        "Penginapan hotel sesuai pilihan",
+        "Sarapan pagi di hotel",
+        "Guide wisata lokal",
+        "Tiket masuk objek wisata",
+        "Makan siang selama tour",
+        "Air mineral selama perjalanan",
+        "Transportasi lokal selama tour",
+      ],
+      excludes: [
+        "Tiket pesawat domestik",
+        "Makan malam",
+        "Biaya pribadi",
+        "Tips guide & sopir",
+        "Kamera entrance fee",
+        "Pembelian oleh-oleh",
+        "Kuliner tambahan",
+      ],
+      isCustomizable: true,
+      customizableItems: [
+        "Pilihan hotel",
+        "Fokus wisata (kuliner/alam/shopping)",
+        "Durasi perpanjangan",
+      ],
+      durationDays: 2,
+      durationNights: 1,
+      hotelTiers: {
+        create: [
+          // Hotel Tier 3 Bintang
+          {
+            starRating: 3,
+            pricePerPax: 1800000,
+            hotels: {
+              create: [
+                { name: "Hotel Ibis Bandung" },
+                { name: "Hotel Grand Setiabudi" },
+                { name: "Hotel Horison Bandung" },
+                { name: "Hotel Aston Tropicana" },
+              ],
+            },
+            priceRanges: {
+              create: [
+                { minPax: 1, maxPax: 2, price: 1800000 },
+                { minPax: 3, maxPax: 5, price: 1600000 },
+                { minPax: 6, maxPax: 10, price: 1500000 },
+                { minPax: 11, maxPax: 15, price: 1400000 },
+                { minPax: 16, maxPax: 20, price: 1350000 },
+              ],
+            },
+          },
+          // Hotel Tier 4 Bintang
+          {
+            starRating: 4,
+            pricePerPax: 2400000,
+            hotels: {
+              create: [
+                { name: "Hotel Padma Bandung" },
+                { name: "Hotel Sheraton Bandung" },
+                { name: "Hotel Hilton Bandung" },
+                { name: "Hotel Novotel Bandung" },
+              ],
+            },
+            priceRanges: {
+              create: [
+                { minPax: 1, maxPax: 2, price: 2400000 },
+                { minPax: 3, maxPax: 5, price: 2200000 },
+                { minPax: 6, maxPax: 10, price: 2000000 },
+                { minPax: 11, maxPax: 15, price: 1900000 },
+                { minPax: 16, maxPax: 20, price: 1850000 },
+              ],
+            },
+          },
+          // Hotel Tier 5 Bintang
+          {
+            starRating: 5,
+            pricePerPax: 3500000,
+            hotels: {
+              create: [
+                { name: "The Trans Luxury Hotel" },
+                { name: "InterContinental Bandung" },
+                { name: "Hotel Pullman Bandung Grand Central" },
+              ],
+            },
+            priceRanges: {
+              create: [
+                { minPax: 1, maxPax: 2, price: 3500000 },
+                { minPax: 3, maxPax: 5, price: 3300000 },
+                { minPax: 6, maxPax: 10, price: 3100000 },
+                { minPax: 11, maxPax: 15, price: 3000000 },
+                { minPax: 16, maxPax: 20, price: 2950000 },
+              ],
+            },
+          },
+        ],
+      },
+      itineraries: {
+        create: [
+          {
+            day: 1,
+            title: "Jakarta - Bandung - Factory Outlet & Kuliner",
+            description:
+              "Pagi hari keberangkatan dari Jakarta menuju Bandung. Setibanya di Bandung, mengunjungi factory outlet untuk shopping. Lanjut kuliner Bandung dengan mencoba berbagai makanan khas seperti batagor, siomay, dan mie kocok. Check-in hotel sore hari.",
+          },
+          {
+            day: 2,
+            title: "Tangkuban Perahu - Lembang - Transfer ke Jakarta",
+            description:
+              "Sarapan pagi di hotel. Mengunjungi Gunung Tangkuban Perahu untuk menikmati pemandangan kawah aktif. Lanjut ke Lembang untuk wisata strawberry picking dan kuliner. Check-out hotel dan transfer kembali ke Jakarta.",
+          },
+        ],
+      },
+    },
+  });
+
   const paketMonthly = await prisma.servicePackage.create({
     data: {
       name: "Sewa Bulanan Karyawan",
@@ -703,6 +1090,104 @@ async function main() {
   );
 
   // ========================================
+  // TOUR PACKAGE TRANSACTIONS
+  // ========================================
+  console.log("🎯 Creating TOUR_PACKAGE transactions...");
+
+  // Transaksi TOUR_PACKAGE 1: Bali Tour 3 hari - 5 pax
+  const txTour1 = await prisma.transaction.create({
+    data: {
+      invoice_code: "INV-2025-11-004",
+      customer_name: "Rombongan Wisata Bali Indah",
+      customer_phone: "08123456789",
+      booking_date: new Date("2025-11-05"),
+      checkout_datetime: new Date("2025-11-05T06:00:00"),
+      checkin_datetime: new Date("2025-11-08T18:00:00"), // 3 hari tour
+      all_in_rate: 11000000, // 5 pax × 2.2M (tier 3 bintang, 3-5 pax range)
+      overtime_rate_per_hour: 0, // TOUR_PACKAGE tidak ada overtime
+      dp_amount: 5500000, // DP 50%
+      payment_status: "DOWN_PAYMENT",
+      packageId: paketBaliTour.id,
+      armadaId: hiace.id, // Hiace untuk rombongan
+      driverId: driver1.id,
+      pax_count: 5,
+    },
+  });
+
+  // Transaksi TOUR_PACKAGE 2: Yogyakarta Tour 4 hari - 8 pax
+  const txTour2 = await prisma.transaction.create({
+    data: {
+      invoice_code: "INV-2025-11-005",
+      customer_name: "Keluarga Besar Pak Budi",
+      customer_phone: "08234567890",
+      booking_date: new Date("2025-11-10"),
+      checkout_datetime: new Date("2025-11-10T05:00:00"),
+      checkin_datetime: new Date("2025-11-14T20:00:00"), // 4 hari tour
+      all_in_rate: 18400000, // 8 pax × 2.3M (tier 3 bintang, 6-10 pax range)
+      overtime_rate_per_hour: 0,
+      dp_amount: null,
+      payment_status: "PAID",
+      packageId: paketJogjaTour.id,
+      armadaId: hiace.id,
+      driverId: driver2.id,
+      pax_count: 8,
+    },
+  });
+
+  // Transaksi TOUR_PACKAGE 3: Bandung Tour 2 hari - 12 pax
+  const txTour3 = await prisma.transaction.create({
+    data: {
+      invoice_code: "INV-2025-11-006",
+      customer_name: "Komunitas Photography Jakarta",
+      customer_phone: "08345678901",
+      booking_date: new Date("2025-11-15"),
+      checkout_datetime: new Date("2025-11-15T07:00:00"),
+      checkin_datetime: new Date("2025-11-17T19:00:00"), // 2 hari tour
+      all_in_rate: 16800000, // 12 pax × 1.4M (tier 3 bintang, 11-15 pax range)
+      overtime_rate_per_hour: 0,
+      dp_amount: 8400000, // DP 50%
+      payment_status: "DOWN_PAYMENT",
+      packageId: paketBandungTour.id,
+      armadaId: hiace.id,
+      driverId: driver3.id,
+      pax_count: 12,
+    },
+  });
+
+  // Transaksi TOUR_PACKAGE 4: Bali Tour 3 hari - 2 pax (VIP)
+  const txTour4 = await prisma.transaction.create({
+    data: {
+      invoice_code: "INV-2025-11-007",
+      customer_name: "Pak Ahmad & Ibu Siti",
+      customer_phone: "08456789012",
+      booking_date: new Date("2025-11-20"),
+      checkout_datetime: new Date("2025-11-20T06:00:00"),
+      checkin_datetime: new Date("2025-11-23T18:00:00"), // 3 hari tour
+      all_in_rate: 9000000, // 2 pax × 4.5M (tier 5 bintang, 1-2 pax range)
+      overtime_rate_per_hour: 0,
+      dp_amount: null,
+      payment_status: "PAID",
+      packageId: paketBaliTour.id,
+      armadaId: innova1.id, // Innova untuk couple
+      driverId: driver1.id,
+      pax_count: 2,
+    },
+  });
+
+  console.log(
+    `✅ Created TOUR_PACKAGE transaction: ${txTour1.customer_name} (Bali 3H, 5 pax, Rp ${txTour1.all_in_rate.toLocaleString()})`
+  );
+  console.log(
+    `✅ Created TOUR_PACKAGE transaction: ${txTour2.customer_name} (Yogyakarta 4H, 8 pax, Rp ${txTour2.all_in_rate.toLocaleString()})`
+  );
+  console.log(
+    `✅ Created TOUR_PACKAGE transaction: ${txTour3.customer_name} (Bandung 2H, 12 pax, Rp ${txTour3.all_in_rate.toLocaleString()})`
+  );
+  console.log(
+    `✅ Created TOUR_PACKAGE transaction: ${txTour4.customer_name} (Bali 3H VIP, 2 pax, Rp ${txTour4.all_in_rate.toLocaleString()})\n`
+  );
+
+  // ========================================
   // 9. CREATE EXPENSES (Oktober 2025)
   // ========================================
   console.log("📝 Creating expenses for Oktober 2025...");
@@ -947,16 +1432,25 @@ async function main() {
   console.log("📊 SUMMARY:");
   console.log("─────────────────────────────────────────");
   console.log(`✅ Users created: 2 (1 Admin, 1 Manager)`);
-  console.log(`✅ Service packages: 8`);
+  console.log(`✅ Service packages: 11 (8 CAR_RENTAL + 3 TOUR_PACKAGE)`);
   console.log(`✅ Vehicles (Armada): 4`);
   console.log(`✅ Drivers: 4`);
   console.log(`✅ Staff: 8`);
   console.log(`✅ Transactions Oktober: 6 (all PAID)`);
-  console.log(`✅ Transactions November: 3 (1 UNPAID, 2 DOWN_PAYMENT)`);
-  console.log(`✅ Total Transactions: 9`);
+  console.log(
+    `✅ Transactions November: 7 (1 UNPAID, 2 DOWN_PAYMENT, 4 TOUR_PACKAGE)`
+  );
+  console.log(`✅ Total Transactions: 13`);
   console.log(`✅ Expenses Oktober: 16`);
   console.log(`✅ Expenses November: 6`);
   console.log(`✅ Total Expenses: 22`);
+  console.log(`✅ TOUR_PACKAGE Features:`);
+  console.log(`   - Bali Tour (3H/2N): 3 hotel tiers, 5+ price ranges each`);
+  console.log(
+    `   - Yogyakarta Tour (4H/3N): 3 hotel tiers, 5+ price ranges each`
+  );
+  console.log(`   - Bandung Tour (2H/1N): 3 hotel tiers, 5+ price ranges each`);
+  console.log(`   - Complete itineraries with day-by-day activities`);
   console.log("─────────────────────────────────────────\n");
 }
 

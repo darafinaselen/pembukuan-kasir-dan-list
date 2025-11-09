@@ -9,6 +9,7 @@ import TransaksiTable from "@/components/transaksi/TransaksiTable";
 import TransaksiDialog from "@/components/transaksi/TransaksiDialog";
 import TransaksiCompleteModal from "@/components/transaksi/TransaksiCompleteModal";
 import TransaksiDetailModal from "@/components/transaksi/TransaksiDetailModal";
+import { Pagination } from "@/components/ui/pagination";
 
 import { startOfMonth, startOfYear, endOfToday } from "date-fns";
 import { calculateTransactionFinancials } from "@/lib/accounting";
@@ -42,6 +43,7 @@ const INITIAL_FORM_STATE = {
   dp_amount: 0,
   hotel_name: "",
   pax_count: "",
+  hotel_tier_id: "",
 };
 
 // function calculateFinancials(formData) {
@@ -103,22 +105,41 @@ export default function TransaksiPage() {
   const [sopirList, setSopirList] = useState([]);
   const [isLoadingDependencies, setIsLoadingDependencies] = useState(false);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const itemsPerPage = 10;
+
   // --- Data Fetching ---
-  async function fetchData() {
+  async function fetchData(page = 1) {
     try {
       setIsLoading(true);
-      const res = await fetch("/api/transactions", {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: itemsPerPage.toString(),
+      });
+
+      const res = await fetch(`/api/transactions?${params}`, {
         credentials: "include",
       });
       if (!res.ok) throw new Error("fetch failed");
       const result = await res.json();
 
-      // API returns { success, data, message }
-      const fetchedData = result.data || result;
-      setData(Array.isArray(fetchedData) ? fetchedData : []);
+      // API returns { success, data: { data, pagination }, message }
+      const responseData = result.data || result;
+      const transactions = responseData.data || responseData;
+      const pagination = responseData.pagination || {};
+
+      setData(Array.isArray(transactions) ? transactions : []);
+      setCurrentPage(pagination.currentPage || 1);
+      setTotalPages(pagination.totalPages || 1);
+      setTotalItems(pagination.totalItems || 0);
     } catch (err) {
       console.error("Failed to load data", err);
       setData([]);
+      setTotalPages(1);
+      setTotalItems(0);
     } finally {
       setIsLoading(false);
     }
@@ -158,12 +179,17 @@ export default function TransaksiPage() {
   }
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    fetchData(currentPage);
+  }, [currentPage]);
 
   useEffect(() => {
     setCalculatedData(calculateTransactionFinancials(formData));
   }, [formData]);
+
+  // --- Pagination Handler ---
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
 
   // --- Filtering Logic ---
   const filteredData = useMemo(() => {
@@ -190,13 +216,18 @@ export default function TransaksiPage() {
   }, [data, searchTerm, dateRange]);
 
   // --- Event Handlers ---
-  const handleSearchChange = (e) => setSearchTerm(e.target.value);
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(1); // Reset to first page when searching
+  };
   const handleDateChange = (name, value) => {
     setDateRange((prev) => ({ ...prev, [name]: value }));
+    setCurrentPage(1); // Reset to first page when date filter changes
     setQuickFilter("all");
   };
   const handleQuickFilterChange = (value) => {
     setQuickFilter(value);
+    setCurrentPage(1); // Reset to first page when quick filter changes
     const today = new Date();
     if (value === "month")
       setDateRange({ from: startOfMonth(today), to: endOfToday() });
@@ -224,7 +255,33 @@ export default function TransaksiPage() {
       newValue = parseFloat(value) || 0;
     }
 
-    setFormData((prev) => ({ ...prev, [id]: newValue }));
+    setFormData((prev) => {
+      const updatedData = { ...prev, [id]: newValue };
+
+      // For TOUR_PACKAGE, recalculate pricing when pax_count changes
+      if (id === "pax_count") {
+        const currentPackage = paketList.find((p) => p.id === prev.packageId);
+        if (currentPackage?.type === "TOUR_PACKAGE" && prev.hotel_tier_id) {
+          const selectedTier = currentPackage.hotelTiers?.find(
+            (tier) => tier.id === prev.hotel_tier_id
+          );
+          const paxCount = parseInt(newValue) || 0;
+
+          if (selectedTier && paxCount > 0) {
+            const applicableRange = selectedTier.priceRanges?.find(
+              (range) => paxCount >= range.minPax && paxCount <= range.maxPax
+            );
+
+            if (applicableRange) {
+              const calculatedPrice = applicableRange.price * paxCount;
+              updatedData.all_in_rate = calculatedPrice;
+            }
+          }
+        }
+      }
+
+      return updatedData;
+    });
   };
 
   const handleFormDateChange = (id, value) => {
@@ -238,12 +295,54 @@ export default function TransaksiPage() {
     if (id === "packageId" && value) {
       const selectedPackage = paketList.find((p) => p.id === value);
       if (selectedPackage) {
-        setFormData((prev) => ({
-          ...prev,
-          all_in_rate: selectedPackage.price || 0,
-          overtime_rate_per_hour: selectedPackage.overtimeRate || 0,
-        }));
+        // For TOUR_PACKAGE, don't auto-set pricing - it will be calculated from tier selection
+        if (selectedPackage.type !== "TOUR_PACKAGE") {
+          setFormData((prev) => ({
+            ...prev,
+            all_in_rate: selectedPackage.price || 0,
+            overtime_rate_per_hour: selectedPackage.overtimeRate || 0,
+          }));
+        } else {
+          // For TOUR_PACKAGE, reset pricing fields to be calculated from tier/pax
+          setFormData((prev) => ({
+            ...prev,
+            all_in_rate: 0,
+            overtime_rate_per_hour: 0,
+          }));
+        }
       }
+    }
+
+    // For TOUR_PACKAGE, recalculate pricing when hotel tier or pax count changes
+    if ((id === "hotel_tier_id" || id === "pax_count") && value) {
+      setFormData((prev) => {
+        const currentPackage = paketList.find((p) => p.id === prev.packageId);
+        if (currentPackage?.type === "TOUR_PACKAGE") {
+          // Calculate TOUR_PACKAGE price based on selected tier and pax
+          const selectedTier = currentPackage.hotelTiers?.find(
+            (tier) =>
+              tier.id === (id === "hotel_tier_id" ? value : prev.hotel_tier_id)
+          );
+          const paxCount =
+            parseInt(id === "pax_count" ? value : prev.pax_count) || 0;
+
+          if (selectedTier && paxCount > 0) {
+            // Find applicable price range
+            const applicableRange = selectedTier.priceRanges?.find(
+              (range) => paxCount >= range.minPax && paxCount <= range.maxPax
+            );
+
+            if (applicableRange) {
+              const calculatedPrice = applicableRange.price * paxCount;
+              return {
+                ...prev,
+                all_in_rate: calculatedPrice,
+              };
+            }
+          }
+        }
+        return prev;
+      });
     }
   };
 
@@ -277,6 +376,7 @@ export default function TransaksiPage() {
       dp_amount: item.dp_amount != null ? item.dp_amount : 0,
       hotel_name: item.hotel_name || "",
       pax_count: item.pax_count || "",
+      hotel_tier_id: item.hotel_tier_id || "",
     });
 
     fetchDependencies();
@@ -326,7 +426,7 @@ export default function TransaksiPage() {
         credentials: "include",
       });
       if (!res.ok) throw new Error("delete failed");
-      await fetchData();
+      await fetchData(1); // Reset to first page after successful operation
       toast.success("Transaksi berhasil dihapus");
     } catch (err) {
       console.error("Failed to delete", err);
@@ -455,7 +555,7 @@ export default function TransaksiPage() {
       );
 
       setIsDialogOpen(false);
-      await fetchData();
+      await fetchData(1); // Reset to first page after successful operation
     } catch (err) {
       console.error("Failed to save", err);
       toast.error("Gagal menyimpan transaksi", {
@@ -530,7 +630,7 @@ export default function TransaksiPage() {
 
       setIsCompleteOpen(false);
       setCompletingData(null);
-      await fetchData();
+      await fetchData(1); // Reset to first page after successful operation
     } catch (err) {
       console.error("Failed to complete transaction:", err);
       toast.error("Gagal Menyelesaikan Transaksi", {
@@ -565,6 +665,15 @@ export default function TransaksiPage() {
           onPrint={handlePrintInvoice}
           onCompleteTransaction={openCompleteDialog}
         />
+
+        <div className="mt-4">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+            showInfo={true}
+          />
+        </div>
       </div>
 
       <TransaksiDialog

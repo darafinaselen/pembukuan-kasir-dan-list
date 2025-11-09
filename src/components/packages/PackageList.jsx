@@ -192,7 +192,19 @@ export function PackageList({ packages, onEdit, onDelete, onView }) {
                     <div className="px-3 py-2.5 bg-blue-50 rounded-lg border border-blue-100">
                       <div className="flex items-center justify-between">
                         <p className="text-blue-600">Harga</p>
-                        <p className="text-blue-900">{fmt(price)}</p>
+                        <p className="text-blue-900">
+                          {(() => {
+                            // Get minimum pricePerPax from all hotel tiers for TOUR_PACKAGE
+                            const minPrice = pkg.hotelTiers?.reduce(
+                              (min, tier) =>
+                                tier.pricePerPax < min ? tier.pricePerPax : min,
+                              pkg.hotelTiers[0]?.pricePerPax ?? 0
+                            );
+                            return minPrice
+                              ? `Mulai dari ${fmt(minPrice)}/PAX`
+                              : fmt(price);
+                          })()}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 rounded-lg border border-amber-100">

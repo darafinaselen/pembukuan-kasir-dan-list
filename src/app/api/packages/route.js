@@ -10,14 +10,67 @@ async function handleGetPackages(request) {
   try {
     // All roles can view packages
     const packages = await prisma.servicePackage.findMany({
-      include: {
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        description: true,
+        includes: true,
+        excludes: true,
+        isCustomizable: true,
+        customizableItems: true,
+        // CAR_RENTAL fields
+        price: true,
+        durationHours: true,
+        overtimeRate: true,
+        // TOUR_PACKAGE fields
+        durationDays: true,
+        durationNights: true,
+        createdAt: true,
+        updatedAt: true,
+        // Relations
         hotelTiers: {
-          include: {
-            hotels: true,
-            priceRanges: true,
+          select: {
+            id: true,
+            starRating: true,
+            pricePerPax: true,
+            createdAt: true,
+            updatedAt: true,
+            hotels: {
+              select: {
+                id: true,
+                name: true,
+                createdAt: true,
+                updatedAt: true,
+              },
+            },
+            priceRanges: {
+              select: {
+                id: true,
+                minPax: true,
+                maxPax: true,
+                price: true,
+                createdAt: true,
+                updatedAt: true,
+              },
+            },
           },
         },
-        itineraries: true,
+        itineraries: {
+          select: {
+            id: true,
+            day: true,
+            title: true,
+            description: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
+        transactions: {
+          select: {
+            id: true,
+          },
+        },
       },
     });
     return successResponse(packages);

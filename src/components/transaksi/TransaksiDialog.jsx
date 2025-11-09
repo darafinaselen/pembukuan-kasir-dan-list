@@ -195,22 +195,41 @@ export default function TransaksiDialog({
                     </Select>
                   </div>
 
-                  {/* Field Hotel dan Pax - Hanya muncul untuk TOUR_PACKAGE */}
+                  {/* Field Hotel Tier dan Pax - Hanya muncul untuk TOUR_PACKAGE */}
                   {isTourPackage && (
                     <>
                       <div className="grid gap-1.5">
-                        <Label htmlFor="hotel_name">
-                          Hotel{" "}
+                        <Label htmlFor="hotel_tier_id">
+                          Tingkat Hotel{" "}
                           <span className="text-xs text-muted-foreground">
-                            (Opsional)
+                            (Wajib)
                           </span>
                         </Label>
-                        <Input
-                          id="hotel_name"
-                          value={formData.hotel_name || ""}
-                          onChange={handleInputChange}
-                          placeholder="Nama hotel yang dipilih"
-                        />
+                        <Select
+                          value={formData.hotel_tier_id || ""}
+                          onValueChange={(value) =>
+                            handleSelectChange("hotel_tier_id", value)
+                          }
+                          disabled={isLoadingDependencies}
+                          required
+                        >
+                          <SelectTrigger id="hotel_tier_id">
+                            <SelectValue placeholder="Pilih tingkat hotel..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {selectedPackage?.hotelTiers?.length === 0 && (
+                              <SelectItem value="-" disabled>
+                                Tidak ada tingkat hotel tersedia
+                              </SelectItem>
+                            )}
+                            {selectedPackage?.hotelTiers?.map((tier) => (
+                              <SelectItem key={tier.id} value={tier.id}>
+                                {tier.starRating} Bintang -{" "}
+                                {tier.hotels?.length || 0} Hotel
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="grid gap-1.5">
                         <Label htmlFor="pax_count">
@@ -226,8 +245,57 @@ export default function TransaksiDialog({
                           value={formData.pax_count || ""}
                           onChange={handleInputChange}
                           placeholder="Contoh: 5"
+                          required
                         />
                       </div>
+
+                      {/* Display package duration for TOUR_PACKAGE */}
+                      {selectedPackage?.durationDays && (
+                        <div className="grid gap-1.5">
+                          <Label>Durasi Paket</Label>
+                          <div className="text-sm text-muted-foreground bg-muted p-2 rounded">
+                            {selectedPackage.durationDays} Hari{" "}
+                            {selectedPackage.durationNights ??
+                              selectedPackage.durationDays - 1}{" "}
+                            Malam
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Display pricing info for selected hotel tier */}
+                      {formData.hotel_tier_id && (
+                        <div className="grid gap-1.5">
+                          <Label>Tarif Hotel</Label>
+                          <div className="text-sm bg-muted p-2 rounded space-y-1">
+                            {(() => {
+                              const selectedTier =
+                                selectedPackage?.hotelTiers?.find(
+                                  (tier) => tier.id === formData.hotel_tier_id
+                                );
+                              if (!selectedTier) return null;
+
+                              return (
+                                <div>
+                                  <div className="font-medium">
+                                    {selectedTier.starRating} Bintang
+                                  </div>
+                                  {selectedTier.priceRanges?.map(
+                                    (range, idx) => (
+                                      <div
+                                        key={idx}
+                                        className="text-xs text-muted-foreground"
+                                      >
+                                        {range.minPax}-{range.maxPax} pax:{" "}
+                                        {formatCurrency(range.price)}/pax
+                                      </div>
+                                    )
+                                  )}
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
@@ -293,15 +361,19 @@ export default function TransaksiDialog({
                       required
                     />
                   </div>
-                  <div className="grid gap-1.5">
-                    <Label htmlFor="overtime_rate_per_hour">Overtime/Jam</Label>
-                    <CurrencyInput
-                      id="overtime_rate_per_hour"
-                      value={formData.overtime_rate_per_hour}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
+                  {!isTourPackage && (
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="overtime_rate_per_hour">
+                        Overtime/Jam
+                      </Label>
+                      <CurrencyInput
+                        id="overtime_rate_per_hour"
+                        value={formData.overtime_rate_per_hour}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+                  )}
                   <div className="grid gap-1.5 col-span-2">
                     <Label htmlFor="dp_amount">
                       Jumlah DP (Down Payment){" "}

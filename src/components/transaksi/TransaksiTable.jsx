@@ -237,10 +237,28 @@ export default function TransaksiTable({
                     </div>
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
-                    {item.invoice_code}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="cursor-help">{item.invoice_code}</div>
+                      </TooltipTrigger>
+                      <TooltipContent side="right">
+                        <p className="font-medium">
+                          Invoice: {item.invoice_code}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
                   </TableCell>
-                  <TableCell className="max-w-[150px] truncate">
-                    {item.customer_name}
+                  <TableCell className="max-w-[150px]">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="truncate cursor-help">
+                          {item.customer_name}
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="right">
+                        <p className="font-medium">{item.customer_name}</p>
+                      </TooltipContent>
+                    </Tooltip>
                   </TableCell>
                   <TableCell className="max-w-[120px]">
                     <Tooltip>

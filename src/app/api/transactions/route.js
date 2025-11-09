@@ -14,7 +14,17 @@ async function handleGetTransactions(request) {
       return errorResponse("Insufficient permissions", 403);
     }
 
+    const url = new URL(request.url);
+    const page = parseInt(url.searchParams.get("page")) || 1;
+    const limit = parseInt(url.searchParams.get("limit")) || 10;
+    const offset = (page - 1) * limit;
+
+    // Get total count for pagination
+    const totalCount = await prisma.transaction.count();
+
     const transactions = await prisma.transaction.findMany({
+      skip: offset,
+      take: limit,
       orderBy: {
         booking_date: "desc",
       },
@@ -25,7 +35,19 @@ async function handleGetTransactions(request) {
       },
     });
 
-    return successResponse(transactions);
+    const totalPages = Math.ceil(totalCount / limit);
+
+    return successResponse({
+      data: transactions,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalItems: totalCount,
+        itemsPerPage: limit,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+    });
   } catch (error) {
     console.error("Error fetching transactions:", error);
     return errorResponse("Gagal mengambil data transaksi", 500);

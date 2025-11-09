@@ -4,6 +4,47 @@
  */
 
 /**
+ * Calculate TOUR_PACKAGE pricing based on hotel tier and pax count
+ * @param {Object} transaction - Transaction object with package and hotel_tier_id
+ * @returns {number} Calculated price for the TOUR_PACKAGE
+ */
+function calculateTourPackagePrice(transaction) {
+  if (!transaction.package || transaction.package.type !== "TOUR_PACKAGE") {
+    return transaction.all_in_rate || 0;
+  }
+
+  if (!transaction.hotel_tier_id || !transaction.pax_count) {
+    return 0;
+  }
+
+  // Find the selected hotel tier
+  const selectedTier = transaction.package.hotelTiers?.find(
+    (tier) => tier.id === transaction.hotel_tier_id
+  );
+
+  if (!selectedTier || !selectedTier.priceRanges) {
+    return 0;
+  }
+
+  const paxCount = parseInt(transaction.pax_count) || 0;
+  if (paxCount <= 0) {
+    return 0;
+  }
+
+  // Find the appropriate price range for the pax count
+  const applicableRange = selectedTier.priceRanges.find(
+    (range) => paxCount >= range.minPax && paxCount <= range.maxPax
+  );
+
+  if (!applicableRange) {
+    return 0;
+  }
+
+  // Calculate total price: price per pax * number of pax
+  return applicableRange.pricePerPax * paxCount;
+}
+
+/**
  * Calculate financial details for a single transaction
  * @param {Object} transaction - Transaction object with all financial fields
  * @returns {Object} Calculated financial metrics
@@ -44,15 +85,24 @@ export function calculateTransactionFinancials(transaction) {
   const diffMs = end.getTime() - start.getTime();
   const lamaSewaJam = Math.round(diffMs / (1000 * 60 * 60));
 
-  // Calculate overtime hours (cannot be negative)
-  const lamaOvertimeJam = Math.max(0, lamaSewaJam - durasiPaketJam);
+  // For TOUR_PACKAGE, no overtime calculation
+  const isTourPackage = transaction.package?.type === "TOUR_PACKAGE";
+  const lamaOvertimeJam = isTourPackage
+    ? 0
+    : Math.max(0, lamaSewaJam - durasiPaketJam);
 
-  // Calculate overtime fee
-  const totalOvertimeFee =
-    lamaOvertimeJam * (transaction.overtime_rate_per_hour || 0);
+  // Calculate overtime fee (0 for TOUR_PACKAGE)
+  const totalOvertimeFee = isTourPackage
+    ? 0
+    : lamaOvertimeJam * (transaction.overtime_rate_per_hour || 0);
+
+  // Calculate base revenue (use TOUR_PACKAGE pricing if applicable)
+  const baseRevenue = isTourPackage
+    ? calculateTourPackagePrice(transaction)
+    : transaction.all_in_rate || 0;
 
   // Calculate total revenue (base rate + overtime)
-  const totalPendapatan = (transaction.all_in_rate || 0) + totalOvertimeFee;
+  const totalPendapatan = baseRevenue + totalOvertimeFee;
 
   // Operational costs from transaction-level fuel/driver are removed
   const totalBiayaOps = 0;

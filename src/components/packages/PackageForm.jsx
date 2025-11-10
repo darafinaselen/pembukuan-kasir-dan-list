@@ -71,6 +71,41 @@ export function PackageForm({
     },
   });
 
+  // Deep compare helper
+  function deepEqual(a, b) {
+    if (a === b) return true;
+    if (typeof a !== typeof b) return false;
+    if (typeof a !== "object" || a === null || b === null) return false;
+    if (Array.isArray(a) && Array.isArray(b)) {
+      if (a.length !== b.length) return false;
+      for (let i = 0; i < a.length; i++) {
+        if (!deepEqual(a[i], b[i])) return false;
+      }
+      return true;
+    }
+    const aKeys = Object.keys(a);
+    const bKeys = Object.keys(b);
+    if (aKeys.length !== bKeys.length) return false;
+    for (const k of aKeys) {
+      if (!deepEqual(a[k], b[k])) return false;
+    }
+    return true;
+  }
+
+  // Watch all form values
+  const watchedValues = watch();
+  // Build initial values for comparison
+  const [initialValues, setInitialValues] = useState(null);
+  useEffect(() => {
+    setInitialValues(getValues());
+    // eslint-disable-next-line
+  }, [open]);
+
+  // Determine if form is dirty (changed)
+  const isDirty = initialValues
+    ? !deepEqual(watchedValues, initialValues)
+    : true;
+
   const {
     fields: hotelFields,
     append: appendHotel,
@@ -1429,7 +1464,7 @@ export function PackageForm({
             <Button
               type="submit"
               className="bg-teal-600 hover:bg-teal-700"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !isDirty}
             >
               Simpan
             </Button>

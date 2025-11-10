@@ -1,29 +1,34 @@
-# Dependencies
+# Nestjs specific
+/dist
 /node_modules
+/build
+/tmp
 
-# Prisma
-/prisma/dev.db
-/prisma/dev.db-journal
+# Logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
 
-# Next.js
-/.next/
-/out/
-
-# Local Environment
+# dotenv environment variable files
 .env
-.env.local
+.env.development
+.env.test
+.env.production
 
-.gemini/
-.vscode/
+# temp directory
+.temp
+.tmp
 
-RESET_PASSWORD_DOCS.md
-RESET_PASSWORD_QUICKSTART.md
-ROUTE_PROTECTION_SUMMARY.md
-SECURITY_IMPLEMENTATION.md
-SECURITY_VULNERABILITIES.md
-SECURITY.md
-DEPLOYMENT.md
-DEPLOYMENT_FIX.md
-SEED_DATA_DOCUMENTATION.md
-PAYMENT_MONTH_FEATURE.md
-FILE_UPLOAD_DOCUMENTATION.md
+docs/
+
+.next/
+
+# Playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/
+e2e/.auth/

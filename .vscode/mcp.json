@@ -2,7 +2,10 @@
   "servers": {
     "shadcn": {
       "command": "npx",
-      "args": ["shadcn@latest", "mcp"]
+      "args": [
+        "shadcn@latest",
+        "mcp"
+      ]
     },
     "context7": {
       "type": "http",
@@ -10,6 +13,14 @@
       "headers": {
         "CONTEXT7_API_KEY": "ctx7sk-e90f440f-cfab-47d1-9e2e-79fb7528e2e0"
       }
+    },
+    "playwright-test": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "playwright",
+        "run-test-mcp-server"
+      ]
     }
   }
 }

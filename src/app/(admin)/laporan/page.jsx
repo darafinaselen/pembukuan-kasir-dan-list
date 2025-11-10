@@ -8,6 +8,7 @@ import LaporanLabaRugiTab from "@/components/laporan/LaporanLabaRugiTab";
 import LaporanPemasukanTab from "@/components/laporan/LaporanPemasukanTab";
 import LaporanRekapTab from "@/components/laporan/LaporanRekapTab";
 import LaporanPengeluaranTab from "@/components/laporan/LaporanPengeluaranTab";
+import LaporanKinerjaTab from "@/components/laporan/LaporanKinerjaTab";
 
 const getThisMonthRange = () => {
   const start = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
@@ -108,7 +109,7 @@ export default function LaporanPage() {
       />
 
       <Tabs defaultValue="laporan-transaksi" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 md:w-[750px]">
+        <TabsList className="grid w-full grid-cols-6 md:w-[900px]">
           <TabsTrigger value="laporan-transaksi">Laporan Transaksi</TabsTrigger>
           <TabsTrigger value="laporan-laba-rugi">Laporan Laba Rugi</TabsTrigger>
           <TabsTrigger value="laporan-pemasukan">Laporan Pemasukan</TabsTrigger>
@@ -116,6 +117,7 @@ export default function LaporanPage() {
             Laporan Pengeluaran
           </TabsTrigger>
           <TabsTrigger value="rekapitulasi">Rekapitulasi</TabsTrigger>
+          <TabsTrigger value="laporan-kinerja">Laporan Kinerja</TabsTrigger>
         </TabsList>
 
         <TabsContent value="laporan-transaksi" className="mt-4">
@@ -157,6 +159,10 @@ export default function LaporanPage() {
               dateRange.to ? dateRange.to.toISOString().split("T")[0] : null
             }
           />
+        </TabsContent>
+
+        <TabsContent value="laporan-kinerja" className="mt-4">
+          <LaporanKinerjaTab dateRange={dateRange} isLoading={isLoading} />
         </TabsContent>
       </Tabs>
     </div>

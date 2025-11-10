@@ -1,0 +1,293 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Users, Package, TrendingUp } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+const PACKAGE_TYPE_LABELS = {
+  CAR_RENTAL: "Sewa Mobil",
+  TOUR_PACKAGE: "Paket Wisata",
+  FULL_DAY_TRIP: "Trip Sehari Penuh",
+};
+
+const PACKAGE_TYPE_COLORS = {
+  CAR_RENTAL: "bg-blue-100 text-blue-800",
+  TOUR_PACKAGE: "bg-green-100 text-green-800",
+  FULL_DAY_TRIP: "bg-purple-100 text-purple-800",
+};
+
+export default function LaporanKinerjaTab({ dateRange, isLoading }) {
+  const [performanceData, setPerformanceData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!dateRange?.from || !dateRange?.to) return;
+
+    const fetchPerformanceData = async () => {
+      setLoading(true);
+      try {
+        const formatDate = (date) => {
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, "0");
+          const day = String(date.getDate()).padStart(2, "0");
+          return `${year}-${month}-${day}`;
+        };
+
+        const fromStr = formatDate(dateRange.from);
+        const toStr = formatDate(dateRange.to);
+
+        const res = await fetch(
+          `/api/reports/performance?from=${fromStr}&to=${toStr}`,
+          {
+            credentials: "include",
+          }
+        );
+
+        if (!res.ok) throw new Error("Gagal mengambil data kinerja");
+
+        const result = await res.json();
+        const data = result.data || result;
+        setPerformanceData(data);
+      } catch (err) {
+        console.error("Error fetching performance data:", err);
+        setPerformanceData(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPerformanceData();
+  }, [dateRange]);
+
+  if (isLoading || loading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <span className="ml-2 text-muted-foreground">Memuat data kinerja...</span>
+      </div>
+    );
+  }
+
+  if (!performanceData) {
+    return (
+      <Card>
+        <CardContent className="p-8 text-center text-muted-foreground">
+          Tidak ada data kinerja untuk periode ini
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const { driverPerformance, packagePerformance, summary } = performanceData;
+
+  return (
+    <div className="space-y-6">
+      {/* Summary Cards */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Sopir</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{summary.totalDrivers}</div>
+            <p className="text-xs text-muted-foreground">Sopir aktif</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Paket</CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{summary.totalPackages}</div>
+            <p className="text-xs text-muted-foreground">Paket digunakan</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Trip</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{summary.totalTrips}</div>
+            <p className="text-xs text-muted-foreground">Transaksi</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Periode</CardTitle>
+            <span className="text-xs text-muted-foreground">📅</span>
+          </CardHeader>
+          <CardContent>
+            <div className="text-sm font-bold">
+              {new Date(summary.period.from).toLocaleDateString("id-ID")} -{" "}
+              {new Date(summary.period.to).toLocaleDateString("id-ID")}
+            </div>
+            <p className="text-xs text-muted-foreground">Rentang laporan</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Performance Tabs */}
+      <Tabs defaultValue="driver" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="driver">Kinerja Sopir</TabsTrigger>
+          <TabsTrigger value="package">Kinerja Paket Jasa</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="driver" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Kinerja Sopir</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {driverPerformance.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Tidak ada data kinerja sopir
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>No</TableHead>
+                      <TableHead>Nama Sopir</TableHead>
+                      <TableHead>No. Telepon</TableHead>
+                      <TableHead>Total Trip</TableHead>
+                      <TableHead>Total Jam Kerja</TableHead>
+                      <TableHead>Rata-rata Jam/Trip</TableHead>
+                      <TableHead>Trip Selesai</TableHead>
+                      <TableHead>Tingkat Penyelesaian</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {driverPerformance.map((driver, index) => (
+                      <TableRow key={driver.driverId}>
+                        <TableCell>{index + 1}</TableCell>
+                        <TableCell className="font-medium">
+                          {driver.driverName}
+                        </TableCell>
+                        <TableCell>{driver.phoneNumber || "-"}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">
+                            {driver.totalTrips} trip
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {driver.totalWorkingHours
+                            ? parseFloat(driver.totalWorkingHours).toFixed(1)
+                            : "0.0"}{" "}
+                          jam
+                        </TableCell>
+                        <TableCell>
+                          {driver.averageHoursPerTrip
+                            ? parseFloat(driver.averageHoursPerTrip).toFixed(1)
+                            : "0.0"}{" "}
+                          jam
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              driver.completedTrips === driver.totalTrips
+                                ? "default"
+                                : "outline"
+                            }
+                          >
+                            {driver.completedTrips}/{driver.totalTrips}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              driver.completionRate &&
+                              parseFloat(driver.completionRate) >= 90
+                                ? "default"
+                                : driver.completionRate &&
+                                    parseFloat(driver.completionRate) >= 70
+                                  ? "secondary"
+                                  : "outline"
+                            }
+                          >
+                            {driver.completionRate || "0.0"}%
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="package" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Kinerja Paket Jasa</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {packagePerformance.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Tidak ada data kinerja paket jasa
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>No</TableHead>
+                      <TableHead>Nama Paket</TableHead>
+                      <TableHead>Tipe Paket</TableHead>
+                      <TableHead>Frekuensi</TableHead>
+                      <TableHead>Total Trip</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {packagePerformance.map((pkg, index) => (
+                      <TableRow key={pkg.packageId}>
+                        <TableCell>{index + 1}</TableCell>
+                        <TableCell className="font-medium">
+                          {pkg.packageName}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            className={`text-xs ${PACKAGE_TYPE_COLORS[pkg.packageType]}`}
+                          >
+                            {PACKAGE_TYPE_LABELS[pkg.packageType]}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">
+                            {pkg.frequency}x
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {pkg.totalTrips} trip
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+

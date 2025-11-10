@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
 import { useAlertDialog } from "@/components/ui/alert-dialog-provider";
 import TransaksiHeader from "@/components/transaksi/TransaksiHeader";
@@ -186,6 +186,16 @@ export default function TransaksiPage() {
     setCalculatedData(calculateTransactionFinancials(formData));
   }, [formData]);
 
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (availabilityCheckTimeoutRef.current) {
+        clearTimeout(availabilityCheckTimeoutRef.current);
+        availabilityCheckTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
   // --- Pagination Handler ---
   const handlePageChange = (page) => {
     setCurrentPage(page);
@@ -284,8 +294,91 @@ export default function TransaksiPage() {
     });
   };
 
+  // Function to fetch available vehicles and drivers based on date range
+  const fetchAvailableVehiclesAndDrivers = async (
+    checkoutDatetime,
+    checkinDatetime,
+    excludeTransactionId = null
+  ) => {
+    if (!checkoutDatetime || !checkinDatetime) {
+      // If dates are not set, fetch all READY vehicles/drivers
+      await fetchDependencies();
+      return;
+    }
+
+    try {
+      setIsLoadingDependencies(true);
+      const params = new URLSearchParams({
+        checkout_datetime: checkoutDatetime,
+        checkin_datetime: checkinDatetime,
+      });
+      if (excludeTransactionId) {
+        params.append("excludeTransactionId", excludeTransactionId);
+      }
+
+      const [vehiclesRes, driversRes] = await Promise.all([
+        fetch(`/api/availability/vehicles?${params}`, {
+          credentials: "include",
+        }),
+        fetch(`/api/availability/drivers?${params}`, {
+          credentials: "include",
+        }),
+      ]);
+
+      const vehiclesResult = await vehiclesRes.json();
+      const driversResult = await driversRes.json();
+
+      const vehiclesData = vehiclesResult.data || vehiclesResult;
+      const driversData = driversResult.data || driversResult;
+
+      // Set available vehicles and drivers
+      setArmadaList(vehiclesData.available || []);
+      setSopirList(driversData.available || []);
+    } catch (err) {
+      console.error("Failed to fetch available vehicles/drivers:", err);
+      // Fallback to fetching all READY items
+      await fetchDependencies();
+    } finally {
+      setIsLoadingDependencies(false);
+    }
+  };
+
+  // Debounce function for availability check - use ref to avoid stale closure
+  const availabilityCheckTimeoutRef = useRef(null);
+  const editingDataRef = useRef(editingData);
+
+  // Update ref when editingData changes
+  useEffect(() => {
+    editingDataRef.current = editingData;
+  }, [editingData]);
+
   const handleFormDateChange = (id, value) => {
-    setFormData((prev) => ({ ...prev, [id]: value }));
+    setFormData((prev) => {
+      const updated = { ...prev, [id]: value };
+
+      // Clear previous timeout
+      if (availabilityCheckTimeoutRef.current) {
+        clearTimeout(availabilityCheckTimeoutRef.current);
+        availabilityCheckTimeoutRef.current = null;
+      }
+
+      // If checkout or checkin datetime changed, check availability after 500ms
+      if (id === "checkout_datetime" || id === "checkin_datetime") {
+        const timeout = setTimeout(() => {
+          const checkout = updated.checkout_datetime;
+          const checkin = updated.checkin_datetime;
+          // Use ref to get latest editingData value
+          const excludeId = editingDataRef.current?.id || null;
+
+          fetchAvailableVehiclesAndDrivers(checkout, checkin, excludeId);
+          availabilityCheckTimeoutRef.current = null;
+        }, 500);
+
+        availabilityCheckTimeoutRef.current = timeout;
+      }
+
+      return updated;
+    });
   };
 
   const handleFormSelectChange = (id, value) => {
@@ -348,8 +441,14 @@ export default function TransaksiPage() {
 
   const openNewDialog = () => {
     setEditingData(null);
-    setFormData(INITIAL_FORM_STATE);
-    fetchDependencies();
+    const initialState = { ...INITIAL_FORM_STATE };
+    setFormData(initialState);
+    // Check availability based on initial dates
+    fetchAvailableVehiclesAndDrivers(
+      initialState.checkout_datetime,
+      initialState.checkin_datetime,
+      null
+    );
     setIsDialogOpen(true);
   };
 
@@ -363,13 +462,18 @@ export default function TransaksiPage() {
     }
 
     setEditingData(item);
+    const checkoutDatetime = getLocalDateTimeString(
+      new Date(item.checkout_datetime)
+    );
+    const checkinDatetime = getLocalDateTimeString(
+      new Date(item.checkin_datetime)
+    );
+
     setFormData({
       ...item,
       booking_date: new Date(item.booking_date).toISOString().split("T")[0],
-      checkout_datetime: getLocalDateTimeString(
-        new Date(item.checkout_datetime)
-      ),
-      checkin_datetime: getLocalDateTimeString(new Date(item.checkin_datetime)),
+      checkout_datetime: checkoutDatetime,
+      checkin_datetime: checkinDatetime,
       packageId: item.packageId || null,
       all_in_rate: item.all_in_rate || 0,
       overtime_rate_per_hour: item.overtime_rate_per_hour || 0,
@@ -379,7 +483,12 @@ export default function TransaksiPage() {
       hotel_tier_id: item.hotel_tier_id || "",
     });
 
-    fetchDependencies();
+    // Check availability based on transaction dates, exclude current transaction
+    fetchAvailableVehiclesAndDrivers(
+      checkoutDatetime,
+      checkinDatetime,
+      item.id
+    );
     setIsDialogOpen(true);
   };
 

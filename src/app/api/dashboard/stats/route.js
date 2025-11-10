@@ -63,9 +63,13 @@ async function handleGetDashboardStats(request) {
         },
         package: {
           select: {
+            id: true,
+            name: true,
+            type: true,
             durationHours: true,
           },
         },
+        packageId: true,
       },
       orderBy: {
         booking_date: "asc",

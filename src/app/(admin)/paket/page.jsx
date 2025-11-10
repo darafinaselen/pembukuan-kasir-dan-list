@@ -87,7 +87,7 @@ export default function PackagesPage() {
             ? "Paket berhasil diupdate!"
             : "Paket berhasil ditambahkan!",
           {
-            description: formData.name,
+            description: data.name || data.namaPaket || "Paket",
           }
         );
         setIsFormOpen(false);

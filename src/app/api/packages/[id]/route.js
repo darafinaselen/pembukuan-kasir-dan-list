@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import { validatePriceRangesForTier } from "@/lib/utils";
+import {
+  protectedRoute,
+  successResponse,
+  errorResponse,
+} from "@/lib/middleware";
 
 const prisma = new PrismaClient();
 
-export async function GET(request, { params }) {
+async function handleGetPackage(request, { params }) {
   try {
     const { id } = await params;
 
@@ -22,19 +27,17 @@ export async function GET(request, { params }) {
     });
 
     if (!packageData) {
-      return NextResponse.json({ error: "Package not found" }, { status: 404 });
+      return errorResponse("Package not found", 404);
     }
 
-    return NextResponse.json(packageData);
+    return successResponse(packageData);
   } catch (error) {
-    return NextResponse.json(
-      { error: "Failed to fetch package" },
-      { status: 500 }
-    );
+    console.error("Error fetching package:", error);
+    return errorResponse("Failed to fetch package", 500);
   }
 }
 
-export async function PUT(request, { params }) {
+async function handleUpdatePackage(request, { params }) {
   try {
     const data = await request.json();
     console.log("=== PUT /api/packages/[id] ===");
@@ -175,7 +178,7 @@ export async function PUT(request, { params }) {
 
     if (!existingPackage) {
       console.error("Package not found:", id);
-      return NextResponse.json({ error: "Package not found" }, { status: 404 });
+      return errorResponse("Package not found", 404);
     }
 
     console.log("Existing package found:", existingPackage.name);
@@ -230,13 +233,9 @@ export async function PUT(request, { params }) {
           const v = validatePriceRangesForTier(tier.priceRanges);
           if (!v.ok) {
             console.error("Price range validation failed:", v.message);
-            return NextResponse.json(
-              {
-                error: `Validasi priceRanges gagal di tingkat ke-${i + 1}: ${
-                  v.message
-                }`,
-              },
-              { status: 400 }
+            return errorResponse(
+              `Validasi priceRanges gagal di tingkat ke-${i + 1}: ${v.message}`,
+              400
             );
           }
         }
@@ -317,22 +316,18 @@ export async function PUT(request, { params }) {
     });
 
     console.log("Updated package result:", result?.name);
-    return NextResponse.json(result);
+    return successResponse(result);
   } catch (error) {
     console.error("=== PUT /api/packages/[id] ERROR ===");
     console.error("Error details:", error);
     console.error("Error stack:", error.stack);
-    return NextResponse.json(
-      {
-        error: "Failed to update package",
-        details: error.message,
-      },
-      { status: 500 }
-    );
+    return errorResponse("Failed to update package", 500, {
+      details: error.message,
+    });
   }
 }
 
-export async function DELETE(request, { params }) {
+async function handleDeletePackage(request, { params }) {
   try {
     const { id } = await params;
 
@@ -342,9 +337,22 @@ export async function DELETE(request, { params }) {
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {
-    return NextResponse.json(
-      { error: "Failed to delete package" },
-      { status: 500 }
-    );
+    console.error("Error deleting package:", error);
+    return errorResponse("Failed to delete package", 500);
   }
 }
+
+// All roles can view packages
+export const GET = protectedRoute(handleGetPackage, {
+  roles: ["ADMIN", "MANAGER", "OPERATOR"],
+});
+
+// Only ADMIN and MANAGER can update packages
+export const PUT = protectedRoute(handleUpdatePackage, {
+  roles: ["ADMIN", "MANAGER"],
+});
+
+// Only ADMIN and MANAGER can delete packages
+export const DELETE = protectedRoute(handleDeletePackage, {
+  roles: ["ADMIN", "MANAGER"],
+});

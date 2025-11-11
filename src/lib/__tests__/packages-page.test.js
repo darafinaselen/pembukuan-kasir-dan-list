@@ -8,6 +8,27 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import PackagesPage from "../../app/(admin)/paket/page.jsx";
 
+// Mock UI components
+jest.mock("../../components/ui/sidebar", () => ({
+  SidebarTrigger: ({ className }) => (
+    <div data-testid="sidebar-trigger" className={className} />
+  ),
+}));
+
+jest.mock("../../components/ui/button", () => ({
+  Button: ({ children, onClick, ...props }) => (
+    <button onClick={onClick} {...props}>
+      {children}
+    </button>
+  ),
+}));
+
+jest.mock("../../components/ui/skeleton", () => ({
+  Skeleton: ({ className }) => (
+    <div data-testid="skeleton" className={className} />
+  ),
+}));
+
 // Mock all child components
 jest.mock("../../components/packages/PackageHeader", () => {
   return function MockPackageHeader({ onAdd }) {
@@ -21,8 +42,13 @@ jest.mock("../../components/packages/PackageHeader", () => {
   };
 });
 
-jest.mock("../../components/packages/PackageList", () => {
-  return function MockPackageList({ packages, onEdit, onDelete, onView }) {
+jest.mock("../../components/packages/PackageList", () => ({
+  PackageList: function MockPackageList({
+    packages,
+    onEdit,
+    onDelete,
+    onView,
+  }) {
     return (
       <div data-testid="package-list">
         {packages?.map((pkg) => (
@@ -43,11 +69,11 @@ jest.mock("../../components/packages/PackageList", () => {
         )) || <div>No packages</div>}
       </div>
     );
-  };
-});
+  },
+}));
 
-jest.mock("../../components/packages/PackageForm", () => {
-  return function MockPackageForm({
+jest.mock("../../components/packages/PackageForm", () => ({
+  PackageForm: function MockPackageForm({
     open,
     onOpenChange,
     onSubmit,
@@ -66,11 +92,11 @@ jest.mock("../../components/packages/PackageForm", () => {
         </button>
       </div>
     ) : null;
-  };
-});
+  },
+}));
 
-jest.mock("../../components/packages/PackageDetail", () => {
-  return function MockPackageDetail({ open, onOpenChange, pkg }) {
+jest.mock("../../components/packages/PackageDetail", () => ({
+  PackageDetail: function MockPackageDetail({ open, onOpenChange, pkg }) {
     return open ? (
       <div data-testid="package-detail">
         <div>Detail for {pkg?.name}</div>
@@ -79,11 +105,15 @@ jest.mock("../../components/packages/PackageDetail", () => {
         </button>
       </div>
     ) : null;
-  };
-});
+  },
+}));
 
-jest.mock("../../components/packages/DeleteConfirmation", () => {
-  return function MockDeleteConfirmation({ open, onOpenChange, onConfirm }) {
+jest.mock("../../components/packages/DeleteConfirmation", () => ({
+  DeleteConfirmation: function MockDeleteConfirmation({
+    open,
+    onOpenChange,
+    onConfirm,
+  }) {
     return open ? (
       <div data-testid="delete-confirmation">
         <button data-testid="cancel-delete" onClick={() => onOpenChange(false)}>
@@ -94,8 +124,8 @@ jest.mock("../../components/packages/DeleteConfirmation", () => {
         </button>
       </div>
     ) : null;
-  };
-});
+  },
+}));
 
 // Mock sonner toast
 jest.mock("sonner", () => ({
@@ -170,8 +200,8 @@ describe("PackagesPage Component", () => {
       render(<PackagesPage />);
 
       await waitFor(() => {
-        expect(screen.getByTestId("package-list")).toBeInTheDocument();
-        // Should show empty state or handle error
+        expect(screen.getByText("Belum ada paket jasa")).toBeInTheDocument();
+        // Should show empty state when API fails
       });
     });
 
@@ -181,8 +211,8 @@ describe("PackagesPage Component", () => {
       render(<PackagesPage />);
 
       await waitFor(() => {
-        expect(screen.getByTestId("package-list")).toBeInTheDocument();
-        // Should handle error gracefully
+        expect(screen.getByText("Belum ada paket jasa")).toBeInTheDocument();
+        // Should show empty state when network fails
       });
     });
   });
@@ -198,7 +228,11 @@ describe("PackagesPage Component", () => {
 
       await waitFor(() => {
         expect(screen.getByText("Belum ada paket jasa")).toBeInTheDocument();
-        expect(screen.getByText("Tambah Paket")).toBeInTheDocument();
+        expect(
+          screen.getByText(
+            "Tambahkan paket jasa pertama Anda untuk mulai mencatat layanan."
+          )
+        ).toBeInTheDocument();
       });
     });
   });

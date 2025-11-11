@@ -16,11 +16,13 @@ function DashboardPage() {
   const [period, setPeriod] = useState("month");
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const router = useRouter();
   const authFetch = useAuthFetch();
 
   const fetchDashboardData = async () => {
     setLoading(true);
+    setError(null); // Reset error on each fetch
     console.log("Fetching dashboard data for period:", period);
     try {
       const res = await authFetch(`/api/dashboard/stats?period=${period}`);
@@ -28,9 +30,9 @@ function DashboardPage() {
       if (!res) return; // authFetch returns null on 401/403 and redirects
 
       if (!res.ok) {
-        console.error("Failed to fetch dashboard stats:", res.status);
-        setStats(null);
-        return;
+        throw new Error(
+          `Gagal mengambil data: ${res.statusText || res.status}`
+        );
       }
       const result = await res.json();
 
@@ -38,8 +40,10 @@ function DashboardPage() {
       const data = result.data || result;
       console.log("Dashboard data received:", data);
       setStats(data);
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error);
+      setError(null); // Clear any previous errors
+    } catch (err) {
+      console.error("Error fetching dashboard data:", err);
+      setError(err.message || "Terjadi kesalahan yang tidak diketahui.");
       setStats(null);
     } finally {
       setLoading(false);
@@ -119,45 +123,59 @@ function DashboardPage() {
         </div>
       </header>
       <div className="flex flex-1 flex-col gap-6 p-6 pt-0">
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-3">
-            <h2 className="text-xl font-semibold tracking-tight">
-              Ringkasan {getPeriodLabel()}
-            </h2>
-            <span className="px-3 py-1 text-sm font-medium bg-blue-100 text-blue-700 rounded-full">
-              {getPeriodDateRange()}
-            </span>
+        {error ? (
+          <div className="flex flex-col items-center justify-center h-64 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-600 font-semibold text-lg">
+              Gagal memuat data dashboard
+            </p>
+            <p className="text-sm text-gray-600 mt-2">{error}</p>
+            <Button onClick={fetchDashboardData} className="mt-4">
+              Coba Lagi
+            </Button>
           </div>
-        </div>
+        ) : (
+          <>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl font-semibold tracking-tight">
+                  Ringkasan {getPeriodLabel()}
+                </h2>
+                <span className="px-3 py-1 text-sm font-medium bg-blue-100 text-blue-700 rounded-full">
+                  {getPeriodDateRange()}
+                </span>
+              </div>
+            </div>
 
-        {/* Stats Cards */}
-        <DashboardStats stats={stats} loading={loading} />
+            {/* Stats Cards */}
+            <DashboardStats stats={stats} loading={loading} />
 
-        {/* Charts Row 1 */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-          <div className="lg:col-span-4">
-            <TransactionChart
-              data={stats?.transactionTrend}
-              period={period}
+            {/* Charts Row 1 */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+              <div className="lg:col-span-4">
+                <TransactionChart
+                  data={stats?.transactionTrend}
+                  period={period}
+                  loading={loading}
+                />
+              </div>
+              <div className="lg:col-span-3">
+                <FleetStatusChart data={stats?.fleetStatus} loading={loading} />
+              </div>
+            </div>
+
+            {/* Fleet Revenue Chart */}
+            <FleetRevenueChart data={stats?.fleetRevenue} loading={loading} />
+
+            {/* Top Packages Widget */}
+            <TopPackagesWidget
+              incomeData={{
+                incomeByPackage: stats?.topPackages || [],
+                summary: stats?.packageSummary,
+              }}
               loading={loading}
             />
-          </div>
-          <div className="lg:col-span-3">
-            <FleetStatusChart data={stats?.fleetStatus} loading={loading} />
-          </div>
-        </div>
-
-        {/* Fleet Revenue Chart */}
-        <FleetRevenueChart data={stats?.fleetRevenue} loading={loading} />
-
-        {/* Top Packages Widget */}
-        <TopPackagesWidget
-          incomeData={{
-            incomeByPackage: stats?.topPackages || [],
-            summary: stats?.packageSummary,
-          }}
-          loading={loading}
-        />
+          </>
+        )}
       </div>
     </>
   );

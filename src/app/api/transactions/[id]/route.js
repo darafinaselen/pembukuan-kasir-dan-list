@@ -5,6 +5,7 @@ import {
   permissions,
 } from "@/lib/middleware";
 import { prisma } from "@/lib/prisma";
+import { validateTransactionData } from "@/lib/validators/transaction-validator";
 
 async function handleGetTransaction(request, { params }) {
   try {
@@ -57,6 +58,18 @@ async function handleUpdateTransaction(request, { params }) {
       return errorResponse("Transaction ID is required", 400);
     }
 
+    // Validate input data
+    const validation = validateTransactionData(body, true);
+    if (!validation.success) {
+      const errors = validation.error.errors.map((err) => ({
+        field: err.path.join("."),
+        message: err.message,
+      }));
+      return errorResponse({ message: "Validasi gagal", errors }, 400);
+    }
+
+    const validatedData = validation.data;
+
     // Check if transaction exists
     const existingTransaction = await prisma.transaction.findUnique({
       where: { id },
@@ -69,40 +82,74 @@ async function handleUpdateTransaction(request, { params }) {
     // Build update data object explicitly
     const updateData = {
       // Customer data
-      customer_name: body.customer_name,
-      customer_phone: body.customer_phone,
+      customer_name: validatedData.customer_name,
+      customer_phone: validatedData.customer_phone,
 
       // Dates
-      booking_date: body.booking_date,
-      checkout_datetime: body.checkout_datetime,
-      checkin_datetime: body.checkin_datetime,
+      booking_date: validatedData.booking_date,
+      checkout_datetime: validatedData.checkout_datetime,
+      checkin_datetime: validatedData.checkin_datetime,
 
       // Financial data
-      all_in_rate: body.all_in_rate,
-      overtime_rate_per_hour: body.overtime_rate_per_hour,
-      dp_amount: body.dp_amount,
-      payment_status: body.payment_status,
+      all_in_rate: validatedData.all_in_rate,
+      overtime_rate_per_hour: validatedData.overtime_rate_per_hour,
+      dp_amount: validatedData.dp_amount,
+      payment_status: validatedData.payment_status,
 
       // Optional tour package data
-      hotel_name: body.hotel_name,
-      pax_count: body.pax_count,
+      hotel_name: validatedData.hotel_name,
+      pax_count: validatedData.pax_count,
 
       // Relations
-      armadaId: body.armadaId,
-      driverId: body.driverId,
-      packageId: body.packageId,
+      armadaId: validatedData.armadaId,
+      driverId: validatedData.driverId,
+      packageId: validatedData.packageId,
     };
 
-    // Determine new status for armada and driver
+    // Determine new status for armada and driver based on checkout date
     const isStartingTodayOrPast =
-      new Date(body.checkout_datetime) <= new Date();
+      new Date(validatedData.checkout_datetime) <= new Date();
     const newArmadaStatus = isStartingTodayOrPast ? "ON_TRIP" : "BOOKED";
-    const newDriverStatus = "ON_TRIP";
+    const newDriverStatus = isStartingTodayOrPast ? "ON_TRIP" : "BOOKED";
 
-    // Prepare transaction operations
-    const operations = [
+    // Use atomic transaction with availability verification to prevent race condition
+    const updatedTransaction = await prisma.$transaction(async (tx) => {
+      // If armada changed, verify new armada availability
+      if (
+        existingTransaction.armadaId !== validatedData.armadaId &&
+        validatedData.armadaId
+      ) {
+        const armada = await tx.armada.findFirst({
+          where: {
+            id: validatedData.armadaId,
+            status: "READY",
+          },
+        });
+
+        if (!armada) {
+          throw new Error("Armada baru tidak tersedia atau tidak ditemukan.");
+        }
+      }
+
+      // If driver changed, verify new driver availability
+      if (
+        existingTransaction.driverId !== validatedData.driverId &&
+        validatedData.driverId
+      ) {
+        const driver = await tx.driver.findFirst({
+          where: {
+            id: validatedData.driverId,
+            status: "READY",
+          },
+        });
+
+        if (!driver) {
+          throw new Error("Sopir baru tidak tersedia atau tidak ditemukan.");
+        }
+      }
+
       // Update transaction
-      prisma.transaction.update({
+      const updated = await tx.transaction.update({
         where: { id },
         data: updateData,
         include: {
@@ -110,55 +157,52 @@ async function handleUpdateTransaction(request, { params }) {
           armada: true,
           driver: true,
         },
-      }),
-    ];
+      });
 
-    // If armada changed, reset old armada status and set new armada status
-    if (existingTransaction.armadaId !== body.armadaId) {
-      if (existingTransaction.armadaId) {
-        operations.push(
-          prisma.armada.update({
+      // If armada changed, reset old armada status and set new armada status
+      if (existingTransaction.armadaId !== validatedData.armadaId) {
+        if (existingTransaction.armadaId) {
+          await tx.armada.update({
             where: { id: existingTransaction.armadaId },
             data: { status: "READY" },
-          })
-        );
-      }
-      if (body.armadaId) {
-        operations.push(
-          prisma.armada.update({
-            where: { id: body.armadaId },
+          });
+        }
+        if (validatedData.armadaId) {
+          await tx.armada.update({
+            where: { id: validatedData.armadaId },
             data: { status: newArmadaStatus },
-          })
-        );
+          });
+        }
       }
-    }
 
-    // If driver changed, reset old driver status and set new driver status
-    if (existingTransaction.driverId !== body.driverId) {
-      if (existingTransaction.driverId) {
-        operations.push(
-          prisma.driver.update({
+      // If driver changed, reset old driver status and set new driver status
+      if (existingTransaction.driverId !== validatedData.driverId) {
+        if (existingTransaction.driverId) {
+          await tx.driver.update({
             where: { id: existingTransaction.driverId },
             data: { status: "READY" },
-          })
-        );
-      }
-      if (body.driverId) {
-        operations.push(
-          prisma.driver.update({
-            where: { id: body.driverId },
+          });
+        }
+        if (validatedData.driverId) {
+          await tx.driver.update({
+            where: { id: validatedData.driverId },
             data: { status: newDriverStatus },
-          })
-        );
+          });
+        }
       }
-    }
 
-    // Execute all operations in a transaction
-    const [updatedTransaction] = await prisma.$transaction(operations);
+      return updated;
+    });
 
     return successResponse(updatedTransaction);
   } catch (error) {
     console.error("Error updating transaction:", error);
+
+    // Handle availability conflicts
+    if (error.message && error.message.includes("tidak tersedia")) {
+      return errorResponse(error.message, 409);
+    }
+
     return errorResponse("Failed to update transaction", 500);
   }
 }

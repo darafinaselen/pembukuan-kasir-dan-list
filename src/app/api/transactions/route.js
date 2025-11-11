@@ -6,6 +6,7 @@ import {
 } from "@/lib/middleware";
 import { prisma } from "@/lib/prisma";
 import { logTransactionEvent } from "@/lib/audit";
+import { validateTransactionData } from "@/lib/validators/transaction-validator";
 
 async function handleGetTransactions(request) {
   try {
@@ -63,81 +64,127 @@ async function handleCreateTransaction(request) {
 
     const body = await request.json();
 
-    if (!body.armadaId || !body.driverId) {
-      return errorResponse("Armada dan Sopir wajib diisi", 400);
+    // Validate input data
+    const validation = validateTransactionData(body, false);
+    if (!validation.success) {
+      const errors = validation.error.errors.map((err) => ({
+        field: err.path.join("."),
+        message: err.message,
+      }));
+      return errorResponse({ message: "Validasi gagal", errors }, 400);
     }
 
-    const isStartingTodayOrPast =
-      new Date(body.checkout_datetime) <= new Date();
-    const armadaStatus = isStartingTodayOrPast ? "ON_TRIP" : "BOOKED";
-    const driverStatus = "ON_TRIP";
+    const validatedData = validation.data;
 
+    // Generate collision-resistant invoice code
+    const { nanoid } = await import("nanoid");
     const date = new Date();
     const yyyymmdd = date.toISOString().slice(0, 10).replace(/-/g, "");
-    const invoice_code = `RLM-${yyyymmdd}-${date
-      .getTime()
-      .toString()
-      .slice(-5)}`;
+    const uniqueSuffix = nanoid(6).toUpperCase();
+    const invoice_code = `RLM-${yyyymmdd}-${uniqueSuffix}`;
 
-    const [newTransaction] = await prisma.$transaction([
-      prisma.transaction.create({
+    // Determine status based on checkout date
+    const isStartingTodayOrPast =
+      new Date(validatedData.checkout_datetime) <= new Date();
+    const armadaStatus = isStartingTodayOrPast ? "ON_TRIP" : "BOOKED";
+    const driverStatus = isStartingTodayOrPast ? "ON_TRIP" : "BOOKED";
+
+    // Use atomic transaction with availability verification to prevent race condition
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Lock and verify armada availability
+      const armada = await tx.armada.findFirst({
+        where: {
+          id: validatedData.armadaId,
+          status: "READY",
+        },
+      });
+
+      if (!armada) {
+        throw new Error("Armada tidak tersedia atau tidak ditemukan.");
+      }
+
+      // 2. Lock and verify driver availability
+      const driver = await tx.driver.findFirst({
+        where: {
+          id: validatedData.driverId,
+          status: "READY",
+        },
+      });
+
+      if (!driver) {
+        throw new Error("Sopir tidak tersedia atau tidak ditemukan.");
+      }
+
+      // 3. Create transaction
+      const newTransaction = await tx.transaction.create({
         data: {
           // Customer data
-          customer_name: body.customer_name,
-          customer_phone: body.customer_phone,
+          customer_name: validatedData.customer_name,
+          customer_phone: validatedData.customer_phone,
 
           // Dates
-          booking_date: body.booking_date,
-          checkout_datetime: body.checkout_datetime,
-          checkin_datetime: body.checkin_datetime,
+          booking_date: validatedData.booking_date,
+          checkout_datetime: validatedData.checkout_datetime,
+          checkin_datetime: validatedData.checkin_datetime,
 
           // Financial data
-          all_in_rate: body.all_in_rate,
-          overtime_rate_per_hour: body.overtime_rate_per_hour,
-          dp_amount: body.dp_amount,
-          payment_status: body.payment_status || "UNPAID",
+          all_in_rate: validatedData.all_in_rate,
+          overtime_rate_per_hour: validatedData.overtime_rate_per_hour,
+          dp_amount: validatedData.dp_amount,
+          payment_status: validatedData.payment_status || "UNPAID",
 
           // Optional tour package data
-          hotel_name: body.hotel_name,
-          pax_count: body.pax_count,
+          hotel_name: validatedData.hotel_name,
+          pax_count: validatedData.pax_count,
 
           // Generated
           invoice_code: invoice_code,
 
           // Relations
-          armadaId: body.armadaId,
-          driverId: body.driverId,
-          packageId: body.packageId || null,
+          armadaId: validatedData.armadaId,
+          driverId: validatedData.driverId,
+          packageId: validatedData.packageId || null,
         },
-      }),
+      });
 
-      prisma.armada.update({
-        where: { id: body.armadaId },
+      // 4. Update armada status
+      await tx.armada.update({
+        where: { id: validatedData.armadaId },
         data: { status: armadaStatus },
-      }),
+      });
 
-      prisma.driver.update({
-        where: { id: body.driverId },
+      // 5. Update driver status
+      await tx.driver.update({
+        where: { id: validatedData.driverId },
         data: { status: driverStatus },
-      }),
-    ]);
+      });
+
+      return newTransaction;
+    });
 
     // Log audit event
     await logTransactionEvent(
       request.auth.user.id,
       "CREATE",
-      newTransaction.id,
-      newTransaction,
+      result.id,
+      result,
       request.auth.ipAddress,
       request.auth.userAgent
     );
 
-    return successResponse(newTransaction, 201);
+    return successResponse(result, 201);
   } catch (error) {
     console.error("Error creating transaction:", error);
+
+    // Handle availability conflicts
+    if (error.message && error.message.includes("tidak tersedia")) {
+      return errorResponse(error.message, 409);
+    }
+
     if (error.code === "P2002") {
       return errorResponse("Gagal membuat invoice code unik. Coba lagi.", 409);
     }
+
     return errorResponse("Gagal membuat transaksi", 500);
   }
 }

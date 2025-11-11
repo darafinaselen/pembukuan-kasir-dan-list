@@ -28,6 +28,7 @@ enum ArmadaStatus {
 
 enum DriverStatus {
   READY
+  BOOKED
   ON_TRIP
   OFF_DUTY
 }
@@ -60,6 +61,24 @@ enum StaffStatus {
   INACTIVE
   ON_LEAVE
   TERMINATED
+}
+
+enum ExpenseCategory {
+  LISTRIK
+  INTERNET
+  PAKET_DATA
+  KONSUMSI
+  GAJI_STAF_OPERASIONAL
+  GAJI_STAF_ADMIN
+  INSENTIF_BONUS
+  PAJAK
+  ALAT_TULIS_KANTOR
+  KOMPUTER_SUPPLIES
+  OPERASIONAL_LAINNYA
+  BBM
+  PERAWATAN_ARMADA
+  GAJI_SOPIR
+  LAINNYA
 }
 
 // Modul 2.5: Manajemen Paket Jasa
@@ -190,10 +209,10 @@ model Driver {
 
 // Modul 5: Manajemen Pengeluaran Operasional
 model Expense {
-  id           String    @id @default(uuid())
-  date         DateTime  @db.Date
-  paymentMonth DateTime? @db.Date // Bulan untuk periode pembayaran
-  category     String // Misal: "Servis", "Biaya Kantor", "Gaji Admin"
+  id           String          @id @default(uuid())
+  date         DateTime        @db.Date
+  paymentMonth DateTime?       @db.Date // Bulan untuk periode pembayaran
+  category     ExpenseCategory // Kategori pengeluaran menggunakan enum
   description  String
   amount       Int
 

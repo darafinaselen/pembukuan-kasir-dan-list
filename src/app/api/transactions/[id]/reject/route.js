@@ -1,5 +1,9 @@
 import { prisma } from "@/lib/prisma";
-import { protectedRoute, successResponse, errorResponse } from "@/lib/middleware";
+import {
+  protectedRoute,
+  successResponse,
+  errorResponse,
+} from "@/lib/middleware";
 import { logTransactionEvent } from "@/lib/audit";
 
 /**
@@ -9,7 +13,7 @@ import { logTransactionEvent } from "@/lib/audit";
  */
 async function handleRejectTransaction(request, context) {
   try {
-    const { id} = await context.params;
+    const { id } = await context.params;
     const user = request.auth.user;
     const body = await request.json();
     const { rejection_reason } = body;

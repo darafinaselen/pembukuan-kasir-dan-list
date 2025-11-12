@@ -118,12 +118,9 @@ async function getReportSummary(token, startDate, endDate) {
     to: endDate.toISOString().split("T")[0],
   });
 
-  const response = await fetch(
-    `${BASE_URL}/api/reports/summary?${params}`,
-    {
-      headers: { Authorization: `Bearer ${token}` },
-    }
-  );
+  const response = await fetch(`${BASE_URL}/api/reports/summary?${params}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -174,8 +171,11 @@ async function getExpenses(token) {
 }
 
 async function getAuditLogs(token, page = 1, limit = 10) {
-  const params = new URLSearchParams({ page: page.toString(), limit: limit.toString() });
-  
+  const params = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString(),
+  });
+
   const response = await fetch(`${BASE_URL}/api/audit-logs?${params}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -204,13 +204,22 @@ async function runAdminScenario() {
     // STEP 2: Get pending transactions
     logStep(2, "Lihat Daftar Transaksi yang Menunggu Persetujuan (PENDING)");
     const pendingData = await getPendingTransactions(adminToken);
-    log(`✅ Ditemukan ${pendingData.transactions.length} transaksi PENDING`, "green");
-    
+    log(
+      `✅ Ditemukan ${pendingData.transactions.length} transaksi PENDING`,
+      "green"
+    );
+
     if (pendingData.transactions.length > 0) {
       pendingData.transactions.forEach((trans, idx) => {
-        log(`   ${idx + 1}. ${trans.invoice_code} - ${trans.customer_name}`, "yellow");
+        log(
+          `   ${idx + 1}. ${trans.invoice_code} - ${trans.customer_name}`,
+          "yellow"
+        );
         log(`      Status: ${trans.approval_status}`, "yellow");
-        log(`      Diajukan: ${new Date(trans.submitted_at).toLocaleString("id-ID")}`, "yellow");
+        log(
+          `      Diajukan: ${new Date(trans.submitted_at).toLocaleString("id-ID")}`,
+          "yellow"
+        );
         log(`      Oleh: ${trans.submitted_by}`, "yellow");
       });
     } else {
@@ -222,11 +231,20 @@ async function runAdminScenario() {
     if (pendingData.transactions.length > 0) {
       logStep(3, "Approve Transaksi Pertama (PENDING → APPROVED)");
       const firstPending = pendingData.transactions[0];
-      
-      const approvedTrans = await approveTransaction(adminToken, firstPending.id);
-      log(`✅ Transaksi berhasil DISETUJUI: ${approvedTrans.invoice_code}`, "green");
+
+      const approvedTrans = await approveTransaction(
+        adminToken,
+        firstPending.id
+      );
+      log(
+        `✅ Transaksi berhasil DISETUJUI: ${approvedTrans.invoice_code}`,
+        "green"
+      );
       log(`   Status: ${approvedTrans.approval_status}`, "yellow");
-      log(`   Approved at: ${new Date(approvedTrans.approved_at).toLocaleString("id-ID")}`, "yellow");
+      log(
+        `   Approved at: ${new Date(approvedTrans.approved_at).toLocaleString("id-ID")}`,
+        "yellow"
+      );
       log(`   Approved by: ${approvedTrans.approved_by}`, "yellow");
 
       if (approvedTrans.approval_status !== "APPROVED") {
@@ -245,16 +263,23 @@ async function runAdminScenario() {
     if (pendingData.transactions.length > 1) {
       logStep(5, "Reject Transaksi Kedua (PENDING → REJECTED)");
       const secondPending = pendingData.transactions[1];
-      const rejectionReason = "Data tidak lengkap, mohon dilengkapi informasi customer";
-      
+      const rejectionReason =
+        "Data tidak lengkap, mohon dilengkapi informasi customer";
+
       const rejectedTrans = await rejectTransaction(
         adminToken,
         secondPending.id,
         rejectionReason
       );
-      log(`✅ Transaksi berhasil DITOLAK: ${rejectedTrans.invoice_code}`, "green");
+      log(
+        `✅ Transaksi berhasil DITOLAK: ${rejectedTrans.invoice_code}`,
+        "green"
+      );
       log(`   Status: ${rejectedTrans.approval_status}`, "yellow");
-      log(`   Rejected at: ${new Date(rejectedTrans.rejected_at).toLocaleString("id-ID")}`, "yellow");
+      log(
+        `   Rejected at: ${new Date(rejectedTrans.rejected_at).toLocaleString("id-ID")}`,
+        "yellow"
+      );
       log(`   Rejected by: ${rejectedTrans.rejected_by}`, "yellow");
       log(`   Alasan: ${rejectedTrans.rejection_reason}`, "yellow");
 
@@ -264,10 +289,19 @@ async function runAdminScenario() {
 
       // STEP 6: Verify rejected transaction
       logStep(6, "Verifikasi Status Transaksi berubah menjadi REJECTED");
-      const verifiedRejected = await getTransaction(adminToken, secondPending.id);
-      log(`✅ Status terverifikasi: ${verifiedRejected.approval_status}`, "green");
+      const verifiedRejected = await getTransaction(
+        adminToken,
+        secondPending.id
+      );
+      log(
+        `✅ Status terverifikasi: ${verifiedRejected.approval_status}`,
+        "green"
+      );
       log(`   Invoice: ${verifiedRejected.invoice_code}`, "yellow");
-      log(`   Alasan penolakan: ${verifiedRejected.rejection_reason}`, "yellow");
+      log(
+        `   Alasan penolakan: ${verifiedRejected.rejection_reason}`,
+        "yellow"
+      );
     }
 
     // STEP 7: Check Income Report (W1)
@@ -276,59 +310,106 @@ async function runAdminScenario() {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - 30);
 
-    const reportSummary = await getReportSummary(adminToken, startDate, endDate);
+    const reportSummary = await getReportSummary(
+      adminToken,
+      startDate,
+      endDate
+    );
     log("✅ Laporan Pemasukan berhasil diambil", "green");
-    log(`   Total Pemasukan: Rp ${(reportSummary.totalRevenue || 0).toLocaleString("id-ID")}`, "yellow");
-    log(`   Total Transaksi: ${reportSummary.totalTransactions || 0}`, "yellow");
-    log(`   Rata-rata per Transaksi: Rp ${(reportSummary.averageRevenue || 0).toLocaleString("id-ID")}`, "yellow");
+    log(
+      `   Total Pemasukan: Rp ${(reportSummary.totalRevenue || 0).toLocaleString("id-ID")}`,
+      "yellow"
+    );
+    log(
+      `   Total Transaksi: ${reportSummary.totalTransactions || 0}`,
+      "yellow"
+    );
+    log(
+      `   Rata-rata per Transaksi: Rp ${(reportSummary.averageRevenue || 0).toLocaleString("id-ID")}`,
+      "yellow"
+    );
 
     // STEP 8: Check Expense Report (W2)
     logStep(8, "Cek Laporan Pengeluaran (W2)");
     const expensesResult = await getExpenses(adminToken);
-    const expenses = Array.isArray(expensesResult) ? expensesResult : (expensesResult?.expenses || []);
+    const expenses = Array.isArray(expensesResult)
+      ? expensesResult
+      : expensesResult?.expenses || [];
     log(`✅ Ditemukan ${expenses.length} pengeluaran`, "green");
-    
-    const totalExpenses = expenses.length > 0 
-      ? expenses.reduce((sum, exp) => sum + exp.amount, 0)
-      : 0;
-    log(`   Total Pengeluaran: Rp ${totalExpenses.toLocaleString("id-ID")}`, "yellow");
-    
+
+    const totalExpenses =
+      expenses.length > 0
+        ? expenses.reduce((sum, exp) => sum + exp.amount, 0)
+        : 0;
+    log(
+      `   Total Pengeluaran: Rp ${totalExpenses.toLocaleString("id-ID")}`,
+      "yellow"
+    );
+
     if (expenses.length > 0) {
       log(`   Pengeluaran terakhir:`, "yellow");
       expenses.slice(0, 3).forEach((exp, idx) => {
-        log(`     ${idx + 1}. ${exp.description} - Rp ${exp.amount.toLocaleString("id-ID")}`, "yellow");
+        log(
+          `     ${idx + 1}. ${exp.description} - Rp ${exp.amount.toLocaleString("id-ID")}`,
+          "yellow"
+        );
       });
     }
 
     // STEP 9: Check Performance Report (W3/W4)
     logStep(9, "Cek Laporan Kinerja (W3/W4)");
-    const perfReport = await getPerformanceReport(adminToken, startDate, endDate);
+    const perfReport = await getPerformanceReport(
+      adminToken,
+      startDate,
+      endDate
+    );
     log("✅ Laporan Kinerja berhasil diambil", "green");
-    
-    if (perfReport.vehiclePerformance && perfReport.vehiclePerformance.length > 0) {
+
+    if (
+      perfReport.vehiclePerformance &&
+      perfReport.vehiclePerformance.length > 0
+    ) {
       log(`   Top 3 Armada:`, "yellow");
       perfReport.vehiclePerformance.slice(0, 3).forEach((vehicle, idx) => {
-        log(`     ${idx + 1}. ${vehicle.licensePlate} - ${vehicle.tripCount} trips`, "yellow");
+        log(
+          `     ${idx + 1}. ${vehicle.licensePlate} - ${vehicle.tripCount} trips`,
+          "yellow"
+        );
       });
     }
-    
-    if (perfReport.driverPerformance && perfReport.driverPerformance.length > 0) {
+
+    if (
+      perfReport.driverPerformance &&
+      perfReport.driverPerformance.length > 0
+    ) {
       log(`   Top 3 Driver:`, "yellow");
       perfReport.driverPerformance.slice(0, 3).forEach((driver, idx) => {
-        log(`     ${idx + 1}. ${driver.name} - ${driver.tripCount} trips`, "yellow");
+        log(
+          `     ${idx + 1}. ${driver.name} - ${driver.tripCount} trips`,
+          "yellow"
+        );
       });
     }
 
     // STEP 10: Check Audit Logs
     logStep(10, "Cek Audit Log untuk tracking aktivitas");
     const auditLogs = await getAuditLogs(adminToken, 1, 5);
-    log(`✅ Ditemukan ${auditLogs.logs.length} audit log (5 terakhir)`, "green");
-    
+    log(
+      `✅ Ditemukan ${auditLogs.logs.length} audit log (5 terakhir)`,
+      "green"
+    );
+
     if (auditLogs.logs.length > 0) {
       auditLogs.logs.forEach((log_entry, idx) => {
-        log(`   ${idx + 1}. ${log_entry.action} - ${log_entry.resource}`, "yellow");
+        log(
+          `   ${idx + 1}. ${log_entry.action} - ${log_entry.resource}`,
+          "yellow"
+        );
         log(`      ${log_entry.description}`, "yellow");
-        log(`      ${new Date(log_entry.createdAt).toLocaleString("id-ID")}`, "yellow");
+        log(
+          `      ${new Date(log_entry.createdAt).toLocaleString("id-ID")}`,
+          "yellow"
+        );
       });
     }
 
@@ -336,7 +417,7 @@ async function runAdminScenario() {
     log("\n" + "=".repeat(70), "cyan");
     log("✅ ADMIN SCENARIO - ALL TESTS PASSED!", "green");
     log("=".repeat(70), "cyan");
-    
+
     log("\n📊 TEST SUMMARY:", "blue");
     log("  ✓ Login sebagai Admin", "green");
     log("  ✓ Lihat daftar transaksi PENDING", "green");
@@ -354,11 +435,22 @@ async function runAdminScenario() {
     log("  ✓ Cek Audit Log", "green");
 
     log("\n📝 STATISTICS:", "blue");
-    log(`  • Pending Transactions: ${pendingData.transactions.length}`, "yellow");
-    log(`  • Total Pemasukan: Rp ${(reportSummary.totalRevenue || 0).toLocaleString("id-ID")}`, "yellow");
-    log(`  • Total Pengeluaran: Rp ${totalExpenses.toLocaleString("id-ID")}`, "yellow");
-    log(`  • Laba Kotor: Rp ${((reportSummary.totalRevenue || 0) - totalExpenses).toLocaleString("id-ID")}`, "yellow");
-
+    log(
+      `  • Pending Transactions: ${pendingData.transactions.length}`,
+      "yellow"
+    );
+    log(
+      `  • Total Pemasukan: Rp ${(reportSummary.totalRevenue || 0).toLocaleString("id-ID")}`,
+      "yellow"
+    );
+    log(
+      `  • Total Pengeluaran: Rp ${totalExpenses.toLocaleString("id-ID")}`,
+      "yellow"
+    );
+    log(
+      `  • Laba Kotor: Rp ${((reportSummary.totalRevenue || 0) - totalExpenses).toLocaleString("id-ID")}`,
+      "yellow"
+    );
   } catch (error) {
     log(`\n❌ ADMIN SCENARIO FAILED: ${error.message}`, "red");
     console.error(error);

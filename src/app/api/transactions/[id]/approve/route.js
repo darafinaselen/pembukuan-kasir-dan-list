@@ -1,5 +1,9 @@
 import { prisma } from "@/lib/prisma";
-import { protectedRoute, successResponse, errorResponse } from "@/lib/middleware";
+import {
+  protectedRoute,
+  successResponse,
+  errorResponse,
+} from "@/lib/middleware";
 import { logTransactionEvent } from "@/lib/audit";
 
 /**

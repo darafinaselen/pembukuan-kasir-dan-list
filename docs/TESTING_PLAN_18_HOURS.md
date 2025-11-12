@@ -5,8 +5,9 @@
 Comprehensive testing plan untuk approval workflow system mencakup Unit Testing, Integration Testing, dan Full System Regression Testing.
 
 **Total Estimated Time**: 18 hours
+
 - Unit Testing: 5 hours
-- Integration Testing: 5 hours  
+- Integration Testing: 5 hours
 - Full System Regression Testing: 8 hours
 
 **Automated Execution Time**: ~5 minutes
@@ -16,12 +17,15 @@ Comprehensive testing plan untuk approval workflow system mencakup Unit Testing,
 ## 🎯 Phase 1: Unit Testing (5 hours)
 
 ### Objective
+
 Menguji logika perubahan status di backend secara isolated.
 
 ### Test Coverage
 
 #### 1.1 Status Transition Logic (1.5 hours)
+
 **Test Cases**:
+
 - ✅ DRAFT → PENDING (submit)
 - ✅ PENDING → APPROVED (approve)
 - ✅ PENDING → REJECTED (reject)
@@ -32,14 +36,18 @@ Menguji logika perubahan status di backend secara isolated.
 **File**: `src/app/api/__tests__/approval-workflow.test.js`
 
 #### 1.2 Permission Validation (1 hour)
+
 **Test Cases**:
+
 - ✅ OPERATOR can submit transactions
 - ✅ MANAGER can approve/reject
 - ✅ ADMIN can approve/reject
 - ❌ OPERATOR cannot approve/reject
 
 #### 1.3 Edit/Delete Protection (1.5 hours)
+
 **Test Cases**:
+
 - ✅ DRAFT transactions can be edited
 - ✅ REJECTED transactions can be edited
 - ❌ PENDING transactions cannot be edited (403)
@@ -48,7 +56,9 @@ Menguji logika perubahan status di backend secara isolated.
 - ❌ APPROVED transactions cannot be deleted (403)
 
 #### 1.4 Data Validation (1 hour)
+
 **Test Cases**:
+
 - ❌ Submit non-existent transaction
 - ❌ Approve non-PENDING transaction
 - ❌ Reject without reason
@@ -68,6 +78,7 @@ npm run test:approval
 ```
 
 ### Success Criteria
+
 - ✅ All 25 test cases pass
 - ✅ Code coverage > 80%
 - ✅ No console errors
@@ -78,11 +89,13 @@ npm run test:approval
 ## 🎯 Phase 2: Integration Testing (5 hours)
 
 ### Objective
+
 Menguji workflow lengkap dari perspektif user (Operator dan Admin).
 
 ### 2.1 Skenario Operator (2.5 hours)
 
 #### Test Flow:
+
 ```
 1. Login sebagai Operator
 2. Buat Transaksi → Simpan Draft (status: DRAFT)
@@ -97,6 +110,7 @@ Menguji workflow lengkap dari perspektif user (Operator dan Admin).
 ```
 
 **Expected Results**:
+
 - ✅ Transaction created with DRAFT status
 - ✅ DRAFT transaction is editable
 - ✅ Status changes to PENDING after submit
@@ -105,6 +119,7 @@ Menguji workflow lengkap dari perspektif user (Operator dan Admin).
 - ✅ Audit logs recorded for all actions
 
 **Running Test**:
+
 ```powershell
 npm run test:operator
 ```
@@ -114,6 +129,7 @@ npm run test:operator
 ### 2.2 Skenario Admin (2.5 hours)
 
 #### Test Flow:
+
 ```
 1. Login sebagai Admin
 2. Lihat daftar transaksi PENDING
@@ -130,6 +146,7 @@ npm run test:operator
 ```
 
 **Expected Results**:
+
 - ✅ Pending transactions listed correctly
 - ✅ Approve action changes status to APPROVED
 - ✅ Reject action requires reason
@@ -138,6 +155,7 @@ npm run test:operator
 - ✅ Audit logs show all approval actions
 
 **Running Test**:
+
 ```powershell
 npm run test:admin
 ```
@@ -145,6 +163,7 @@ npm run test:admin
 **Test File**: `scripts/test-admin-scenario.js`
 
 ### Success Criteria
+
 - ✅ All operator workflows complete successfully
 - ✅ All admin workflows complete successfully
 - ✅ API responses match expectations
@@ -156,11 +175,13 @@ npm run test:admin
 ## 🎯 Phase 3: Full System Regression Testing (8 hours)
 
 ### Objective
+
 Pengujian menyeluruh semua alur utama sistem dengan approval workflow.
 
 ### 3.1 Operator Role Testing (3 hours)
 
 #### W1: Transaksi Workflow
+
 ```
 ✓ Buat Transaksi (DRAFT)
 ✓ Edit Transaksi (DRAFT allowed)
@@ -171,6 +192,7 @@ Pengujian menyeluruh semua alur utama sistem dengan approval workflow.
 ```
 
 #### W2: Pengeluaran Workflow
+
 ```
 ✓ Buat Pengeluaran
 ✓ Upload Bukti (file attachment)
@@ -180,6 +202,7 @@ Pengujian menyeluruh semua alur utama sistem dengan approval workflow.
 ```
 
 #### Hak Akses W4: Role-based UI
+
 ```
 ✓ Dashboard: Hide "Total Pemasukan" widget
 ✓ Dashboard: Hide "Laba Kotor" widget
@@ -190,6 +213,7 @@ Pengujian menyeluruh semua alur utama sistem dengan approval workflow.
 ```
 
 **Test Checklist**:
+
 - [ ] Create transaction with all required fields
 - [ ] Edit draft transaction successfully
 - [ ] Submit for approval (status PENDING)
@@ -202,6 +226,7 @@ Pengujian menyeluruh semua alur utama sistem dengan approval workflow.
 ### 3.2 Admin Role Testing (3 hours)
 
 #### W1: Laporan Pemasukan
+
 ```
 ✓ View income report summary
 ✓ Filter by date range
@@ -211,6 +236,7 @@ Pengujian menyeluruh semua alur utama sistem dengan approval workflow.
 ```
 
 #### W2: Laporan Pengeluaran
+
 ```
 ✓ View expense report
 ✓ Filter by category
@@ -220,6 +246,7 @@ Pengujian menyeluruh semua alur utama sistem dengan approval workflow.
 ```
 
 #### W3/W4: Laporan Kinerja
+
 ```
 ✓ View vehicle performance (W3)
   - Trip count
@@ -232,6 +259,7 @@ Pengujian menyeluruh semua alur utama sistem dengan approval workflow.
 ```
 
 #### W5: Approval Workflow
+
 ```
 ✓ View pending transactions list
 ✓ Approve transaction (PENDING → APPROVED)
@@ -241,6 +269,7 @@ Pengujian menyeluruh semua alur utama sistem dengan approval workflow.
 ```
 
 **Test Checklist**:
+
 - [ ] Access all report pages
 - [ ] Verify data accuracy
 - [ ] Test date range filters
@@ -263,6 +292,7 @@ Pengujian menyeluruh semua alur utama sistem dengan approval workflow.
 ### 3.4 Cross-cutting Concerns (1 hour)
 
 #### Audit Logging
+
 ```
 ✓ All CREATE actions logged
 ✓ All UPDATE actions logged
@@ -273,6 +303,7 @@ Pengujian menyeluruh semua alur utama sistem dengan approval workflow.
 ```
 
 #### Data Integrity
+
 ```
 ✓ No orphaned records
 ✓ Foreign keys maintained
@@ -281,6 +312,7 @@ Pengujian menyeluruh semua alur utama sistem dengan approval workflow.
 ```
 
 #### Performance
+
 ```
 ✓ Page load < 2 seconds
 ✓ API response < 500ms
@@ -303,6 +335,7 @@ npm run test:regression
 ```
 
 ### Success Criteria
+
 - ✅ All workflows complete without errors
 - ✅ All role permissions enforced
 - ✅ All reports display correct data
@@ -314,19 +347,20 @@ npm run test:regression
 
 ## 📊 Test Execution Matrix
 
-| Test Type | Test Count | Expected Duration | Actual Duration | Status |
-|-----------|-----------|-------------------|-----------------|--------|
-| Unit Tests | 25 | 5 hours | ~3.5s | ✅ PASS |
-| Operator Integration | 10 | 2.5 hours | ~30s | ⏳ PENDING |
-| Admin Integration | 12 | 2.5 hours | ~30s | ⏳ PENDING |
-| Full Regression | 50+ | 8 hours | ~3 min | ⏳ PENDING |
-| **TOTAL** | **97+** | **18 hours** | **~5 min** | ⏳ |
+| Test Type            | Test Count | Expected Duration | Actual Duration | Status     |
+| -------------------- | ---------- | ----------------- | --------------- | ---------- |
+| Unit Tests           | 25         | 5 hours           | ~3.5s           | ✅ PASS    |
+| Operator Integration | 10         | 2.5 hours         | ~30s            | ⏳ PENDING |
+| Admin Integration    | 12         | 2.5 hours         | ~30s            | ⏳ PENDING |
+| Full Regression      | 50+        | 8 hours           | ~3 min          | ⏳ PENDING |
+| **TOTAL**            | **97+**    | **18 hours**      | **~5 min**      | ⏳         |
 
 ---
 
 ## 🛠️ Test Environment Setup
 
 ### Prerequisites
+
 ```powershell
 # 1. Install dependencies
 npm install
@@ -343,6 +377,7 @@ npm run dev
 ```
 
 ### Environment Variables
+
 ```env
 DATABASE_URL="postgresql://..."
 JWT_SECRET="your-secret-key"
@@ -351,6 +386,7 @@ NEXTAUTH_SECRET="your-nextauth-secret"
 ```
 
 ### Test Users
+
 ```
 OPERATOR:
   Email: operator@example.com
@@ -370,11 +406,13 @@ ADMIN:
 ## 📝 Test Execution Steps
 
 ### Step 1: Run Unit Tests (5 hours manual → 3.5s automated)
+
 ```powershell
 npm run test:approval
 ```
 
 **Expected Output**:
+
 ```
 ✅ Test Suites: 1 passed, 1 total
 ✅ Tests:       25 passed, 25 total
@@ -382,11 +420,13 @@ npm run test:approval
 ```
 
 ### Step 2: Run Operator Scenario (2.5 hours manual → 30s automated)
+
 ```powershell
 npm run test:operator
 ```
 
 **Expected Output**:
+
 ```
 ✅ OPERATOR SCENARIO - ALL TESTS PASSED!
 
@@ -399,11 +439,13 @@ npm run test:operator
 ```
 
 ### Step 3: Run Admin Scenario (2.5 hours manual → 30s automated)
+
 ```powershell
 npm run test:admin
 ```
 
 **Expected Output**:
+
 ```
 ✅ ADMIN SCENARIO - ALL TESTS PASSED!
 
@@ -417,11 +459,13 @@ npm run test:admin
 ```
 
 ### Step 4: Run Full Regression (8 hours manual → 3 min automated)
+
 ```powershell
 npm run test:regression
 ```
 
 **Expected Output**:
+
 ```
 ═══════════════════════════════════════════════════════════════════════
   🎉 ALL TESTS PASSED!
@@ -436,6 +480,7 @@ Duration: 3.5 minutes
 ```
 
 ### Step 5: Run All Tests Together
+
 ```powershell
 npm run test:all
 ```
@@ -447,24 +492,28 @@ npm run test:all
 ### Common Issues
 
 #### 1. Server Not Running
+
 ```
 ❌ Development server is NOT running!
 💡 Solution: npm run dev
 ```
 
 #### 2. Database Not Seeded
+
 ```
 ❌ Login failed for operator@example.com
 💡 Solution: npm run db:seed-complete
 ```
 
 #### 3. Port Already in Use
+
 ```
 ❌ Port 3000 is already in use
 💡 Solution: Kill process or use different port
 ```
 
 #### 4. Prisma Client Not Generated
+
 ```
 ❌ Cannot find module '@prisma/client'
 💡 Solution: npx prisma generate
@@ -473,6 +522,7 @@ npm run test:all
 ### Debug Mode
 
 Enable verbose logging:
+
 ```powershell
 $env:DEBUG="*"
 npm run test:regression
@@ -483,16 +533,19 @@ npm run test:regression
 ## 📈 Test Metrics
 
 ### Coverage Goals
+
 - Unit Test Coverage: > 80%
 - Integration Test Coverage: 100% of workflows
 - Regression Test Coverage: 100% of features
 
 ### Performance Benchmarks
+
 - API Response Time: < 500ms
 - Page Load Time: < 2s
 - Database Query Time: < 100ms
 
 ### Quality Metrics
+
 - Zero Critical Bugs
 - Zero High-Priority Bugs
 - 100% Pass Rate on Regression Tests
@@ -502,18 +555,21 @@ npm run test:regression
 ## ✅ Sign-off Checklist
 
 ### Unit Testing Phase
+
 - [ ] All 25 unit tests pass
 - [ ] Code coverage > 80%
 - [ ] No console errors
 - [ ] All edge cases covered
 
 ### Integration Testing Phase
+
 - [ ] Operator scenario passes
 - [ ] Admin scenario passes
 - [ ] All API endpoints tested
 - [ ] All user flows validated
 
 ### Regression Testing Phase
+
 - [ ] All workflows tested
 - [ ] All roles tested
 - [ ] All reports validated
@@ -521,15 +577,16 @@ npm run test:regression
 - [ ] Audit logs complete
 
 ### Final Approval
+
 - [ ] All test phases complete
 - [ ] Documentation updated
 - [ ] Known issues documented
 - [ ] Ready for UAT
 
-**Tested By**: _________________  
-**Date**: _________________  
-**Approved By**: _________________  
-**Date**: _________________
+**Tested By**: ********\_********  
+**Date**: ********\_********  
+**Approved By**: ********\_********  
+**Date**: ********\_********
 
 ---
 

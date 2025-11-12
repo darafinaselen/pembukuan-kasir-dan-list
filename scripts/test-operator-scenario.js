@@ -58,20 +58,24 @@ async function getAvailableResources(token) {
 
   // Check responses
   if (!armadasRes.ok) throw new Error(`Armada API error: ${armadasRes.status}`);
-  if (!driversRes.ok) throw new Error(`Drivers API error: ${driversRes.status}`);
-  if (!packagesRes.ok) throw new Error(`Packages API error: ${packagesRes.status}`);
+  if (!driversRes.ok)
+    throw new Error(`Drivers API error: ${driversRes.status}`);
+  if (!packagesRes.ok)
+    throw new Error(`Packages API error: ${packagesRes.status}`);
 
   const armadas = await armadasRes.json();
   const drivers = await driversRes.json();
   const packages = await packagesRes.json();
 
   // Find available (READY status) armada and driver
-  const availableArmada = armadas.data?.find(a => a.status === 'READY') || armadas.data?.[0];
-  const availableDriver = drivers.data?.find(d => d.status === 'READY') || drivers.data?.[0];
+  const availableArmada =
+    armadas.data?.find((a) => a.status === "READY") || armadas.data?.[0];
+  const availableDriver =
+    drivers.data?.find((d) => d.status === "READY") || drivers.data?.[0];
 
-  if (!availableArmada) throw new Error('No armada available');
-  if (!availableDriver) throw new Error('No driver available');
-  if (!packages.data?.[0]) throw new Error('No package available');
+  if (!availableArmada) throw new Error("No armada available");
+  if (!availableDriver) throw new Error("No driver available");
+  if (!packages.data?.[0]) throw new Error("No package available");
 
   return {
     armada: availableArmada,
@@ -138,17 +142,19 @@ async function submitForApproval(token, transactionId) {
     `${BASE_URL}/api/transactions/${transactionId}/submit`,
     {
       method: "POST",
-      headers: { 
+      headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}` 
+        Authorization: `Bearer ${token}`,
       },
     }
   );
 
   const text = await response.text();
-  
+
   if (!response.ok) {
-    throw new Error(`Submit failed (${response.status}): ${text.substring(0, 200)}`);
+    throw new Error(
+      `Submit failed (${response.status}): ${text.substring(0, 200)}`
+    );
   }
 
   try {
@@ -160,16 +166,19 @@ async function submitForApproval(token, transactionId) {
 }
 
 async function tryEditTransaction(token, transactionId) {
-  const response = await fetch(`${BASE_URL}/api/transactions/${transactionId}`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      customer_name: "Attempt to Edit",
-    }),
-  });
+  const response = await fetch(
+    `${BASE_URL}/api/transactions/${transactionId}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        customer_name: "Attempt to Edit",
+      }),
+    }
+  );
 
   return {
     ok: response.ok,
@@ -179,9 +188,11 @@ async function tryEditTransaction(token, transactionId) {
 }
 
 async function tryDeleteTransaction(token, transactionId) {
-  const response = await fetch(`${BASE_URL}/api/transactions/${transactionId}`, {
-    method: "DELETE",
-    headers: { Authorization: `Bearer ${token}` },
+  const response = await fetch(
+    `${BASE_URL}/api/transactions/${transactionId}`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
     }
   );
 
@@ -270,7 +281,7 @@ async function runOperatorScenario() {
       operatorToken,
       transaction.id
     );
-    
+
     if (editDraftResult.ok) {
       log("✅ Transaksi DRAFT dapat diedit (as expected)", "green");
     } else {
@@ -279,14 +290,20 @@ async function runOperatorScenario() {
     }
 
     // STEP 5: Submit transaction for approval
-    logStep(5, 'Kirim Transaksi untuk Persetujuan (DRAFT → PENDING)');
+    logStep(5, "Kirim Transaksi untuk Persetujuan (DRAFT → PENDING)");
     const submittedTrans = await submitForApproval(
       operatorToken,
       transaction.id
     );
-    log(`✅ Transaksi berhasil diajukan: ${submittedTrans.invoice_code}`, "green");
+    log(
+      `✅ Transaksi berhasil diajukan: ${submittedTrans.invoice_code}`,
+      "green"
+    );
     log(`   Status Approval: ${submittedTrans.approval_status}`, "yellow");
-    log(`   Submitted at: ${new Date(submittedTrans.submitted_at).toLocaleString("id-ID")}`, "yellow");
+    log(
+      `   Submitted at: ${new Date(submittedTrans.submitted_at).toLocaleString("id-ID")}`,
+      "yellow"
+    );
     log(`   Submitted by: ${submittedTrans.submitted_by}`, "yellow");
 
     if (submittedTrans.approval_status !== "PENDING") {
@@ -295,7 +312,7 @@ async function runOperatorScenario() {
 
     // STEP 6: Verify data is locked (Edit button should be disabled)
     logStep(6, "Verifikasi Data Terkunci - Tombol Edit/Hapus harus hilang");
-    
+
     // Try to edit PENDING transaction
     const editResult = await tryEditTransaction(operatorToken, transaction.id);
     if (!editResult.ok && editResult.status === 403) {
@@ -322,7 +339,10 @@ async function runOperatorScenario() {
     const refetchedTrans = await getTransaction(operatorToken, transaction.id);
     log(`✅ Transaksi di-fetch ulang: ${refetchedTrans.invoice_code}`, "green");
     log(`   Status Approval: ${refetchedTrans.approval_status}`, "yellow");
-    log(`   Submitted at: ${new Date(refetchedTrans.submitted_at).toLocaleString("id-ID")}`, "yellow");
+    log(
+      `   Submitted at: ${new Date(refetchedTrans.submitted_at).toLocaleString("id-ID")}`,
+      "yellow"
+    );
 
     if (refetchedTrans.approval_status !== "PENDING") {
       throw new Error("Transaction status should remain PENDING");
@@ -330,7 +350,10 @@ async function runOperatorScenario() {
 
     // STEP 8: Create Expense - SKIPPED (Operator doesn't have permission)
     logStep(8, "Buat Pengeluaran Baru (Expense) - SKIPPED");
-    log("⏭️  SKIPPED: Operator tidak memiliki izin untuk membuat pengeluaran", "yellow");
+    log(
+      "⏭️  SKIPPED: Operator tidak memiliki izin untuk membuat pengeluaran",
+      "yellow"
+    );
     log("   (Requires ADMIN atau MANAGER role)", "dim");
 
     // STEP 9: Re-fetch expense - SKIPPED
@@ -342,7 +365,7 @@ async function runOperatorScenario() {
     log("✅ OPERATOR SCENARIO - TESTS PASSED (8/9 steps)", "green");
     log("   ⏭️  1 step skipped due to permission restrictions", "yellow");
     log("=".repeat(70), "cyan");
-    
+
     log("\n📊 TEST SUMMARY:", "blue");
     log("  ✓ Login sebagai Operator", "green");
     log("  ✓ Ambil data Armada, Driver, Package", "green");
@@ -358,7 +381,6 @@ async function runOperatorScenario() {
     log("\n📝 CREATED TEST DATA:", "blue");
     log(`  • Transaction: ${transaction.invoice_code} (PENDING)`, "yellow");
     // log(`  • Expense: ${expense.description} (Rp ${expense.amount.toLocaleString("id-ID")})`, "yellow");
-
   } catch (error) {
     log(`\n❌ OPERATOR SCENARIO FAILED: ${error.message}`, "red");
     console.error(error);

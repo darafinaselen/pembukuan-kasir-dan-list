@@ -50,8 +50,7 @@ async function createOperatorUser() {
   }
 }
 
-createOperatorUser()
-  .catch((error) => {
-    console.error("Fatal error:", error);
-    process.exit(1);
-  });
+createOperatorUser().catch((error) => {
+  console.error("Fatal error:", error);
+  process.exit(1);
+});

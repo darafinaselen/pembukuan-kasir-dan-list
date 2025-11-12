@@ -163,12 +163,7 @@ async function handleCreateTransaction(request) {
     });
 
     // Log audit event
-    await logTransactionEvent(
-      request.auth.user,
-      "CREATE",
-      result,
-      request
-    );
+    await logTransactionEvent(request.auth.user, "CREATE", result, request);
 
     return successResponse(result, 201);
   } catch (error) {

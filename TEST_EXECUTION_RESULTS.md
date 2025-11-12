@@ -29,40 +29,47 @@ npm run test:approval
 ### Detailed Test Results
 
 #### 1. Submit Transaction (4/4 tests passed ✅)
+
 - ✅ Should submit DRAFT transaction to PENDING (13ms)
 - ✅ Should reject if transaction not found (2ms)
 - ✅ Should reject if transaction is not in DRAFT status (2ms)
 - ✅ Should allow OPERATOR to submit (2ms)
 
 #### 2. Approve Transaction (3/3 tests passed ✅)
+
 - ✅ Should approve PENDING transaction to APPROVED (2ms)
 - ✅ Should reject if transaction is not in PENDING status (2ms)
 - ✅ Should allow ADMIN to approve (1ms)
 
 #### 3. Reject Transaction (4/4 tests passed ✅)
+
 - ✅ Should reject PENDING transaction with reason (3ms)
 - ✅ Should reject if rejection_reason is empty (2ms)
 - ✅ Should reject if rejection_reason is missing (1ms)
 - ✅ Should reject if transaction is not in PENDING status (1ms)
 
 #### 4. Get Pending Transactions (3/3 tests passed ✅)
+
 - ✅ Should return list of pending transactions with pagination (5ms)
 - ✅ Should handle empty pending list (2ms)
 - ✅ Should handle pagination parameters (2ms)
 
 #### 5. Edit Protection (4/4 tests passed ✅)
+
 - ✅ Should prevent editing PENDING transaction (2ms)
 - ✅ Should prevent editing APPROVED transaction (1ms)
 - ✅ Should allow editing DRAFT transaction (1ms)
 - ✅ Should allow editing REJECTED transaction (1ms)
 
 #### 6. Delete Protection (4/4 tests passed ✅)
+
 - ✅ Should prevent deleting PENDING transaction (2ms)
 - ✅ Should prevent deleting APPROVED transaction (1ms)
 - ✅ Should allow deleting DRAFT transaction
 - ✅ Should allow deleting REJECTED transaction (1ms)
 
 #### 7. Status Transitions (3/3 tests passed ✅)
+
 - ✅ Should follow correct status flow: DRAFT → PENDING → APPROVED (30ms)
 - ✅ Should follow correct status flow: DRAFT → PENDING → REJECTED (1ms)
 - ✅ Should prevent skipping PENDING status
@@ -96,6 +103,7 @@ TypeError: fetch failed
 ### Root Cause Analysis
 
 **Potential Issues**:
+
 1. Server may be crashing after "Ready" message
 2. Port 3000 may not actually be listening
 3. Next.js 16.0.0 compatibility issue with current Node.js version
@@ -129,27 +137,27 @@ TypeError: fetch failed
 
 ### Current Coverage
 
-| Test Phase | Test Count | Executed | Passed | Failed | Blocked | Status |
-|-----------|-----------|----------|--------|--------|---------|--------|
-| **Phase 1: Unit Tests** | 25 | 25 | 25 | 0 | 0 | ✅ COMPLETED |
-| **Phase 2: Operator Integration** | 10 | 0 | 0 | 0 | 10 | ⚠️ BLOCKED |
-| **Phase 3: Admin Integration** | 12 | 0 | 0 | 0 | 12 | ⚠️ BLOCKED |
-| **Phase 4: Full Regression** | 50+ | 0 | 0 | 0 | 50+ | ⚠️ BLOCKED |
-| **TOTAL** | **97+** | **25** | **25** | **0** | **72+** | **⚠️ 26% COMPLETE** |
+| Test Phase                        | Test Count | Executed | Passed | Failed | Blocked | Status              |
+| --------------------------------- | ---------- | -------- | ------ | ------ | ------- | ------------------- |
+| **Phase 1: Unit Tests**           | 25         | 25       | 25     | 0      | 0       | ✅ COMPLETED        |
+| **Phase 2: Operator Integration** | 10         | 0        | 0      | 0      | 10      | ⚠️ BLOCKED          |
+| **Phase 3: Admin Integration**    | 12         | 0        | 0      | 0      | 12      | ⚠️ BLOCKED          |
+| **Phase 4: Full Regression**      | 50+        | 0        | 0      | 0      | 50+     | ⚠️ BLOCKED          |
+| **TOTAL**                         | **97+**    | **25**   | **25** | **0**  | **72+** | **⚠️ 26% COMPLETE** |
 
 ### Feature Coverage
 
-| Feature | Unit Tests | Integration Tests | Status |
-|---------|-----------|-------------------|--------|
-| Status Transitions | ✅ Tested | ⚠️ Blocked | 50% |
-| Permission Validation | ✅ Tested | ⚠️ Blocked | 50% |
-| Edit Protection | ✅ Tested | ⚠️ Blocked | 50% |
-| Delete Protection | ✅ Tested | ⚠️ Blocked | 50% |
-| Approval Workflow | ✅ Tested | ⚠️ Blocked | 50% |
-| Rejection with Reason | ✅ Tested | ⚠️ Blocked | 50% |
-| Pending List | ✅ Tested | ⚠️ Blocked | 50% |
-| Role-based UI | ❌ Not Tested | ⚠️ Blocked | 0% |
-| Audit Logging | ❌ Not Tested | ⚠️ Blocked | 0% |
+| Feature               | Unit Tests    | Integration Tests | Status |
+| --------------------- | ------------- | ----------------- | ------ |
+| Status Transitions    | ✅ Tested     | ⚠️ Blocked        | 50%    |
+| Permission Validation | ✅ Tested     | ⚠️ Blocked        | 50%    |
+| Edit Protection       | ✅ Tested     | ⚠️ Blocked        | 50%    |
+| Delete Protection     | ✅ Tested     | ⚠️ Blocked        | 50%    |
+| Approval Workflow     | ✅ Tested     | ⚠️ Blocked        | 50%    |
+| Rejection with Reason | ✅ Tested     | ⚠️ Blocked        | 50%    |
+| Pending List          | ✅ Tested     | ⚠️ Blocked        | 50%    |
+| Role-based UI         | ❌ Not Tested | ⚠️ Blocked        | 0%     |
+| Audit Logging         | ❌ Not Tested | ⚠️ Blocked        | 0%     |
 
 ### Code Coverage (Unit Tests Only)
 
@@ -168,23 +176,25 @@ Coverage Summary (estimated):
 ### Immediate Actions (High Priority)
 
 1. **Debug Development Server**
+
    ```powershell
    # Check if port is actually listening
    netstat -ano | findstr :3000
-   
+
    # Check Node.js processes
    Get-Process -Name node
-   
+
    # Try running in verbose mode
    $env:DEBUG="*"
    npm run dev
    ```
 
 2. **Test Server Manually**
+
    ```powershell
    # After server starts, test in browser
    # Open: http://localhost:3000
-   
+
    # Or test API directly
    curl http://localhost:3000/api/auth/login -Method POST
    ```
@@ -228,9 +238,9 @@ Coverage Summary (estimated):
    // src/app/api/health/route.js
    export async function GET() {
      return NextResponse.json({
-       status: 'healthy',
+       status: "healthy",
        timestamp: new Date().toISOString(),
-       database: await checkDatabaseConnection()
+       database: await checkDatabaseConnection(),
      });
    }
    ```
@@ -310,16 +320,16 @@ Coverage Summary (estimated):
 
 ## 📊 Time Investment
 
-| Activity | Estimated | Actual | Efficiency |
-|----------|-----------|--------|-----------|
-| Test Infrastructure Setup | 2 hours | 30 min | ⚡ 4x faster |
-| Unit Test Development | 5 hours | 1 hour | ⚡ 5x faster |
-| Unit Test Execution | 5 hours manual | 4.5s automated | ⚡ 4000x faster |
-| Integration Test Setup | 2 hours | 1 hour | ⚡ 2x faster |
-| Integration Test Execution | 5 hours manual | ⚠️ Blocked | - |
-| Regression Test Setup | 3 hours | 1 hour | ⚡ 3x faster |
-| Regression Test Execution | 8 hours manual | ⚠️ Blocked | - |
-| **TOTAL** | **30 hours** | **3.5 hours + BLOCKED** | **⚡ 8.6x faster** |
+| Activity                   | Estimated      | Actual                  | Efficiency         |
+| -------------------------- | -------------- | ----------------------- | ------------------ |
+| Test Infrastructure Setup  | 2 hours        | 30 min                  | ⚡ 4x faster       |
+| Unit Test Development      | 5 hours        | 1 hour                  | ⚡ 5x faster       |
+| Unit Test Execution        | 5 hours manual | 4.5s automated          | ⚡ 4000x faster    |
+| Integration Test Setup     | 2 hours        | 1 hour                  | ⚡ 2x faster       |
+| Integration Test Execution | 5 hours manual | ⚠️ Blocked              | -                  |
+| Regression Test Setup      | 3 hours        | 1 hour                  | ⚡ 3x faster       |
+| Regression Test Execution  | 8 hours manual | ⚠️ Blocked              | -                  |
+| **TOTAL**                  | **30 hours**   | **3.5 hours + BLOCKED** | **⚡ 8.6x faster** |
 
 ---
 
@@ -374,19 +384,19 @@ Coverage Summary (estimated):
 
 ### Open Issues
 
-| ID | Priority | Issue | Status | Assigned To |
-|----|----------|-------|--------|-------------|
-| 001 | 🔴 HIGH | Dev server ECONNREFUSED after "Ready" message | ⚠️ OPEN | DevOps |
-| 002 | 🔴 HIGH | Cannot execute integration tests | ⚠️ OPEN | QA Team |
-| 003 | 🟡 MEDIUM | Missing Operator user in seed data | ⚠️ OPEN | Backend |
-| 004 | 🟡 MEDIUM | Need health check endpoint | ⚠️ OPEN | Backend |
-| 005 | 🟢 LOW | Console Ninja compatibility warning | ℹ️ INFO | - |
+| ID  | Priority  | Issue                                         | Status  | Assigned To |
+| --- | --------- | --------------------------------------------- | ------- | ----------- |
+| 001 | 🔴 HIGH   | Dev server ECONNREFUSED after "Ready" message | ⚠️ OPEN | DevOps      |
+| 002 | 🔴 HIGH   | Cannot execute integration tests              | ⚠️ OPEN | QA Team     |
+| 003 | 🟡 MEDIUM | Missing Operator user in seed data            | ⚠️ OPEN | Backend     |
+| 004 | 🟡 MEDIUM | Need health check endpoint                    | ⚠️ OPEN | Backend     |
+| 005 | 🟢 LOW    | Console Ninja compatibility warning           | ℹ️ INFO | -           |
 
 ### Resolved Issues
 
-| ID | Issue | Resolution | Date |
-|----|-------|-----------|------|
-| - | No issues resolved yet | - | - |
+| ID  | Issue                  | Resolution | Date |
+| --- | ---------------------- | ---------- | ---- |
+| -   | No issues resolved yet | -          | -    |
 
 ---
 
@@ -395,13 +405,14 @@ Coverage Summary (estimated):
 **QA Team Lead**: [Your Name]  
 **Testing Date**: November 13, 2025  
 **Report Generated**: November 13, 2025 at 14:30 WIB  
-**Next Review**: After dev server issue resolution  
+**Next Review**: After dev server issue resolution
 
 ---
 
 ## ✍️ Sign-off
 
 **Phase 1 (Unit Testing)**:
+
 - Tested By: GitHub Copilot (Automated)
 - Date: November 13, 2025
 - Status: ✅ **APPROVED** - All 25 tests passed
@@ -409,23 +420,26 @@ Coverage Summary (estimated):
 - Ready for: Phase 2 (pending server fix)
 
 **Phase 2 (Integration Testing)**:
+
 - Status: ⚠️ **BLOCKED** - Awaiting server connection fix
 - Blocker: ECONNREFUSED error
 - Action Required: Debug development server
 
 **Phase 3 (Regression Testing)**:
+
 - Status: ⚠️ **BLOCKED** - Depends on Phase 2 completion
 - Action Required: Resolve Phase 2 blocker first
 
 ---
 
-**Overall Recommendation**: 
+**Overall Recommendation**:
 
 ✅ **Unit Testing is production-ready** - The approval workflow logic is thoroughly tested and validated at the unit level. All 25 test cases pass successfully.
 
 ⚠️ **Integration Testing is blocked** - The development server connection issue must be resolved before proceeding with integration and regression testing.
 
-🔧 **Immediate Action Required**: 
+🔧 **Immediate Action Required**:
+
 1. Debug dev server connection issue
 2. Create Operator test user
 3. Re-run integration tests once server is stable
@@ -433,4 +447,4 @@ Coverage Summary (estimated):
 
 ---
 
-*End of Test Execution Report*
+_End of Test Execution Report_

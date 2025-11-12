@@ -1,6 +1,6 @@
 /**
  * Integration Test: Admin Rejection Workflow
- * 
+ *
  * Menguji alur penolakan transaksi oleh admin/manager:
  * 1. Login sebagai admin
  * 2. Lihat pending transactions
@@ -53,14 +53,18 @@ async function login(email, password) {
 
   const data = await response.json();
   console.log(`� Login response:`, JSON.stringify(data, null, 2));
-  
+
   // Check for token in different possible locations
-  const token = data.token || data.data?.token || data.accessToken || data.data?.accessToken;
-  
+  const token =
+    data.token ||
+    data.data?.token ||
+    data.accessToken ||
+    data.data?.accessToken;
+
   if (!token) {
     throw new Error(`No token found in login response`);
   }
-  
+
   console.log(`�🔑 Token received: ${token.substring(0, 20)}...`);
   return token;
 }
@@ -152,26 +156,33 @@ async function runRejectionTest() {
     // STEP 2: Get Pending Transactions
     logStep(2, "Lihat Daftar Transaksi PENDING");
     const pendingResult = await getPendingTransactions(adminToken);
-    const pendingTransactions = Array.isArray(pendingResult) 
-      ? pendingResult 
-      : (pendingResult?.transactions || []);
-    
+    const pendingTransactions = Array.isArray(pendingResult)
+      ? pendingResult
+      : pendingResult?.transactions || [];
+
     if (pendingTransactions.length === 0) {
       log("⚠️  Tidak ada transaksi PENDING", "yellow");
       log("   💡 Jalankan test-operator-scenario.js terlebih dahulu", "yellow");
       return;
     }
 
-    log(`✅ Ditemukan ${pendingTransactions.length} transaksi PENDING`, "green");
+    log(
+      `✅ Ditemukan ${pendingTransactions.length} transaksi PENDING`,
+      "green"
+    );
     const targetTransaction = pendingTransactions[0];
     log(`   Target: ${targetTransaction.invoice_code}`, "yellow");
     log(`   Customer: ${targetTransaction.customer_name}`, "yellow");
-    log(`   Submitted: ${new Date(targetTransaction.submitted_at).toLocaleString("id-ID")}`, "yellow");
+    log(
+      `   Submitted: ${new Date(targetTransaction.submitted_at).toLocaleString("id-ID")}`,
+      "yellow"
+    );
 
     // STEP 3: Reject Transaction
     logStep(3, "Reject Transaksi dengan Alasan");
-    const rejectionReason = "Data tidak lengkap, mohon dilengkapi informasi customer dan nomor telepon";
-    
+    const rejectionReason =
+      "Data tidak lengkap, mohon dilengkapi informasi customer dan nomor telepon";
+
     const rejected = await rejectTransaction(
       adminToken,
       targetTransaction.id,
@@ -180,16 +191,21 @@ async function runRejectionTest() {
 
     log(`✅ Transaksi berhasil DITOLAK: ${rejected.invoice_code}`, "green");
     log(`   Status: ${rejected.approval_status}`, "yellow");
-    log(`   Rejected at: ${new Date(rejected.rejected_at).toLocaleString("id-ID")}`, "yellow");
+    log(
+      `   Rejected at: ${new Date(rejected.rejected_at).toLocaleString("id-ID")}`,
+      "yellow"
+    );
     log(`   Rejected by: ${rejected.rejected_by}`, "yellow");
     log(`   Alasan: ${rejected.rejection_reason}`, "yellow");
 
     // STEP 4: Verify Status Changed
     logStep(4, "Verifikasi Status berubah menjadi REJECTED");
     const verified = await getTransaction(adminToken, targetTransaction.id);
-    
+
     if (verified.approval_status !== "REJECTED") {
-      throw new Error(`Status verification failed: Expected REJECTED, got ${verified.approval_status}`);
+      throw new Error(
+        `Status verification failed: Expected REJECTED, got ${verified.approval_status}`
+      );
     }
 
     log(`✅ Status terverifikasi: ${verified.approval_status}`, "green");
@@ -198,13 +214,15 @@ async function runRejectionTest() {
 
     // STEP 5: Verify Rejection Reason Stored
     logStep(5, "Verifikasi Rejection Reason Tersimpan");
-    
+
     if (!verified.rejection_reason) {
       throw new Error("Rejection reason not stored in database");
     }
 
     if (verified.rejection_reason !== rejectionReason) {
-      throw new Error(`Rejection reason mismatch: "${verified.rejection_reason}" !== "${rejectionReason}"`);
+      throw new Error(
+        `Rejection reason mismatch: "${verified.rejection_reason}" !== "${rejectionReason}"`
+      );
     }
 
     log("✅ Rejection reason tersimpan dengan benar", "green");
@@ -213,11 +231,10 @@ async function runRejectionTest() {
     // STEP 6: Verify Audit Log
     logStep(6, "Verifikasi Audit Log tercatat");
     const auditLogs = await getAuditLogs(adminToken, 1, 5);
-    
+
     const rejectLog = auditLogs.logs.find(
       (log) =>
-        log.action === "REJECT" &&
-        log.resource_id === targetTransaction.id
+        log.action === "REJECT" && log.resource_id === targetTransaction.id
     );
 
     if (!rejectLog) {
@@ -227,12 +244,15 @@ async function runRejectionTest() {
       log(`   Action: ${rejectLog.action}`, "yellow");
       log(`   Description: ${rejectLog.description}`, "yellow");
       log(`   User: ${rejectLog.user?.username || "N/A"}`, "yellow");
-      log(`   Timestamp: ${new Date(rejectLog.created_at).toLocaleString("id-ID")}`, "yellow");
+      log(
+        `   Timestamp: ${new Date(rejectLog.created_at).toLocaleString("id-ID")}`,
+        "yellow"
+      );
     }
 
     // STEP 7: Verify Transaction Still Locked
     logStep(7, "Verifikasi Transaksi REJECTED tetap terkunci");
-    
+
     try {
       const editResponse = await fetch(
         `${BASE_URL}/api/transactions/${targetTransaction.id}`,
@@ -273,7 +293,6 @@ async function runRejectionTest() {
     log(`  • Rejected Transaction: ${targetTransaction.invoice_code}`, "cyan");
     log(`  • Rejection Reason: "${rejectionReason}"`, "cyan");
     log(`  • Rejected By: admin@pembukuan.com`, "cyan");
-
   } catch (error) {
     console.log("\n" + "=".repeat(70));
     log(`❌ REJECTION TEST FAILED: ${error.message}`, "bgRed");

@@ -31,9 +31,12 @@ function logHeader(title) {
   const width = 80;
   const padding = Math.floor((width - title.length - 4) / 2);
   const line = "═".repeat(width);
-  
+
   log("\n" + line, "cyan");
-  log("║" + " ".repeat(padding) + `  ${title}  ` + " ".repeat(padding) + "║", "cyan");
+  log(
+    "║" + " ".repeat(padding) + `  ${title}  ` + " ".repeat(padding) + "║",
+    "cyan"
+  );
   log(line + "\n", "cyan");
 }
 
@@ -48,17 +51,17 @@ async function runScript(scriptPath, scriptName) {
   log(`\n${"─".repeat(60)}`, "yellow");
   log(`🚀 Running: ${scriptName}`, "blue");
   log("─".repeat(60), "yellow");
-  
+
   const startTime = Date.now();
-  
+
   try {
     const { stdout, stderr } = await execPromise(`node ${scriptPath}`);
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-    
+
     if (stderr) {
       log(`⚠️  Warnings:\n${stderr}`, "yellow");
     }
-    
+
     log(stdout);
     log(`\n✅ ${scriptName} completed in ${duration}s`, "green");
     return { success: true, duration, stdout, stderr };
@@ -83,10 +86,13 @@ async function checkServerRunning() {
 
 async function runFullRegression() {
   const startTime = Date.now();
-  
+
   logHeader("FULL SYSTEM REGRESSION TEST");
   log("  Testing all workflows with approval system integration", "cyan");
-  log("  Estimated time: 18 hours (Unit: 5h, Integration: 5h, Regression: 8h)", "yellow");
+  log(
+    "  Estimated time: 18 hours (Unit: 5h, Integration: 5h, Regression: 8h)",
+    "yellow"
+  );
   log("  Running automated version: ~5 minutes\n", "green");
 
   const results = {
@@ -98,10 +104,10 @@ async function runFullRegression() {
 
   // Pre-flight check
   logTestPhase("PRE-FLIGHT CHECK", "Verifying system requirements");
-  
+
   log("Checking if development server is running...", "cyan");
   const serverRunning = await checkServerRunning();
-  
+
   if (!serverRunning) {
     log("❌ Development server is NOT running!", "red");
     log("\n💡 Please start the server first:", "yellow");
@@ -109,12 +115,15 @@ async function runFullRegression() {
     log("\nThen run this test again.\n", "yellow");
     process.exit(1);
   }
-  
+
   log("✅ Development server is running", "green");
 
   // PHASE 1: Unit Testing (5 hours equivalent)
-  logTestPhase("PHASE 1: UNIT TESTING", "Testing business logic and status changes (5h)");
-  
+  logTestPhase(
+    "PHASE 1: UNIT TESTING",
+    "Testing business logic and status changes (5h)"
+  );
+
   const unitTest = await runScript(
     "src/app/api/__tests__/approval-workflow.test.js",
     "Unit Tests - Approval Workflow"
@@ -125,21 +134,27 @@ async function runFullRegression() {
   results.tests.push({ name: "Unit Tests", ...unitTest });
 
   if (!unitTest.success) {
-    log("\n❌ Unit tests failed! Cannot proceed with integration tests.", "red");
+    log(
+      "\n❌ Unit tests failed! Cannot proceed with integration tests.",
+      "red"
+    );
     log("Please fix unit test failures first.\n", "yellow");
     process.exit(1);
   }
 
   // PHASE 2: Integration Testing (5 hours equivalent)
-  logTestPhase("PHASE 2: INTEGRATION TESTING", "Testing user workflows end-to-end (5h)");
-  
+  logTestPhase(
+    "PHASE 2: INTEGRATION TESTING",
+    "Testing user workflows end-to-end (5h)"
+  );
+
   // 2A: Operator Scenario
   log("\n📝 Skenario Operator:", "blue");
   log("   • Buat Transaksi → Simpan Draft", "cyan");
   log("   • Buka lagi → Kirim untuk Persetujuan", "cyan");
   log("   • Verifikasi data terkunci (tombol Edit/Hapus hilang)", "cyan");
   log("   • Buat Pengeluaran → Upload Bukti\n", "cyan");
-  
+
   const operatorTest = await runScript(
     "scripts/test-operator-scenario.js",
     "Integration Test - Operator Scenario"
@@ -156,7 +171,7 @@ async function runFullRegression() {
   log("   • Klik Reject pada data lain → Verifikasi status berubah", "cyan");
   log("   • Cek Laporan Pemasukan & Pengeluaran", "cyan");
   log("   • Cek Laporan Kinerja\n", "cyan");
-  
+
   const adminTest = await runScript(
     "scripts/test-admin-scenario.js",
     "Integration Test - Admin Scenario"
@@ -171,7 +186,7 @@ async function runFullRegression() {
   log("   • DRAFT → PENDING → APPROVED/REJECTED", "cyan");
   log("   • Multi-role permissions", "cyan");
   log("   • Edit/Delete protection\n", "cyan");
-  
+
   const approvalTest = await runScript(
     "scripts/test-approval-workflow.js",
     "Integration Test - Approval Workflow"
@@ -182,8 +197,11 @@ async function runFullRegression() {
   results.tests.push({ name: "Approval Workflow", ...approvalTest });
 
   // PHASE 3: Full System Regression (8 hours equivalent)
-  logTestPhase("PHASE 3: REGRESSION TESTING", "Testing all main workflows comprehensively (8h)");
-  
+  logTestPhase(
+    "PHASE 3: REGRESSION TESTING",
+    "Testing all main workflows comprehensively (8h)"
+  );
+
   log("\n📋 Regression Test Coverage:", "blue");
   log("   ✓ W1: Transaksi (Buat, Selesaikan, Laporan)", "green");
   log("   ✓ W2: Pengeluaran (Buat, Upload Bukti, Approve)", "green");
@@ -198,7 +216,7 @@ async function runFullRegression() {
 
   // Final Summary
   logHeader("TEST EXECUTION SUMMARY");
-  
+
   log(`Total Tests: ${results.total}`, "white");
   log(`Passed: ${results.passed}`, "green");
   log(`Failed: ${results.failed}`, results.failed > 0 ? "red" : "green");
@@ -206,7 +224,7 @@ async function runFullRegression() {
 
   log("Detailed Results:", "blue");
   log("─".repeat(80), "cyan");
-  
+
   results.tests.forEach((test, idx) => {
     const status = test.success ? "✅ PASS" : "❌ FAIL";
     const statusColor = test.success ? "green" : "red";
@@ -223,21 +241,31 @@ async function runFullRegression() {
 
   // Test Matrix
   logHeader("TEST COVERAGE MATRIX");
-  
+
   const testMatrix = [
     { workflow: "W1: Transaksi", operator: "✓", manager: "✓", admin: "✓" },
     { workflow: "W2: Pengeluaran", operator: "✓", manager: "✓", admin: "✓" },
     { workflow: "W3: Laporan Armada", operator: "✗", manager: "✓", admin: "✓" },
     { workflow: "W4: Laporan Driver", operator: "✗", manager: "✓", admin: "✓" },
-    { workflow: "W5: Approval", operator: "Submit", manager: "Approve", admin: "Approve" },
-    { workflow: "Hak Akses UI", operator: "Limited", manager: "Extended", admin: "Full" },
+    {
+      workflow: "W5: Approval",
+      operator: "Submit",
+      manager: "Approve",
+      admin: "Approve",
+    },
+    {
+      workflow: "Hak Akses UI",
+      operator: "Limited",
+      manager: "Extended",
+      admin: "Full",
+    },
     { workflow: "Audit Log", operator: "✗", manager: "✗", admin: "✓" },
   ];
 
   log("┌─────────────────────────┬──────────┬─────────┬─────────┐", "cyan");
   log("│ Workflow                │ OPERATOR │ MANAGER │  ADMIN  │", "cyan");
   log("├─────────────────────────┼──────────┼─────────┼─────────┤", "cyan");
-  
+
   testMatrix.forEach((row) => {
     const wf = row.workflow.padEnd(23);
     const op = row.operator.padEnd(8);
@@ -245,22 +273,37 @@ async function runFullRegression() {
     const ad = row.admin.padEnd(7);
     log(`│ ${wf} │ ${op} │ ${mg} │ ${ad} │`, "white");
   });
-  
+
   log("└─────────────────────────┴──────────┴─────────┴─────────┘\n", "cyan");
 
   // Feature Coverage
   logHeader("FEATURE COVERAGE");
-  
+
   const features = [
     { name: "Database Schema (ApprovalStatus enum)", status: "✅ Implemented" },
-    { name: "API Endpoints (Submit, Approve, Reject)", status: "✅ Implemented" },
-    { name: "Edit/Delete Protection (PENDING, APPROVED)", status: "✅ Implemented" },
+    {
+      name: "API Endpoints (Submit, Approve, Reject)",
+      status: "✅ Implemented",
+    },
+    {
+      name: "Edit/Delete Protection (PENDING, APPROVED)",
+      status: "✅ Implemented",
+    },
     { name: "Audit Logging (All approval actions)", status: "✅ Implemented" },
     { name: "Role-based Permissions (RBAC)", status: "✅ Implemented" },
     { name: "UI Components (ApprovalStatusBadge)", status: "✅ Implemented" },
-    { name: "Unit Tests (25 test cases)", status: `✅ ${results.tests[0]?.success ? 'Passed' : 'Failed'}` },
-    { name: "Integration Tests (Operator & Admin)", status: `✅ ${results.tests[1]?.success && results.tests[2]?.success ? 'Passed' : 'Failed'}` },
-    { name: "Approval Workflow Tests", status: `✅ ${results.tests[3]?.success ? 'Passed' : 'Failed'}` },
+    {
+      name: "Unit Tests (25 test cases)",
+      status: `✅ ${results.tests[0]?.success ? "Passed" : "Failed"}`,
+    },
+    {
+      name: "Integration Tests (Operator & Admin)",
+      status: `✅ ${results.tests[1]?.success && results.tests[2]?.success ? "Passed" : "Failed"}`,
+    },
+    {
+      name: "Approval Workflow Tests",
+      status: `✅ ${results.tests[3]?.success ? "Passed" : "Failed"}`,
+    },
   ];
 
   features.forEach((feature) => {

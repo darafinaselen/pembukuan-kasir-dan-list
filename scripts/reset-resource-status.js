@@ -4,7 +4,7 @@ const prisma = new PrismaClient();
 async function resetResourceStatus() {
   try {
     console.log("🔄 Resetting all armada and driver statuses to READY...");
-    
+
     const [armadas, drivers] = await Promise.all([
       prisma.armada.updateMany({
         data: { status: "READY" },

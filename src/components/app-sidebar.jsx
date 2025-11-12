@@ -1,7 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { BookOpen, GalleryVerticalEnd, DollarSign, Users } from "lucide-react";
+import {
+  BookOpen,
+  GalleryVerticalEnd,
+  DollarSign,
+  Users,
+  Shield,
+} from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
@@ -82,7 +88,10 @@ export function AppSidebar({ ...props }) {
     name: "Loading...",
     email: "",
     avatar: "",
+    role: "OPERATOR",
   });
+
+  const [navItems, setNavItems] = React.useState([]);
 
   React.useEffect(() => {
     const fetchUser = async () => {
@@ -103,6 +112,88 @@ export function AppSidebar({ ...props }) {
               avatar: userData.avatar || "",
               role: userData.role || "OPERATOR",
             });
+
+            // Build navigation items based on role
+            const baseNavItems = [
+              {
+                title: "Dashboard",
+                icon: GalleryVerticalEnd,
+                url: "/dashboard",
+              },
+              {
+                title: "Master Data",
+                icon: BookOpen,
+                isActive: true,
+                items: [
+                  {
+                    title: "Paket Jasa",
+                    url: "/paket",
+                  },
+                  {
+                    title: "Armada",
+                    url: "/armada",
+                  },
+                  {
+                    title: "Sopir",
+                    url: "/sopir",
+                  },
+                  {
+                    title: "Staff",
+                    url: "/staff",
+                  },
+                ],
+              },
+            ];
+
+            // Add "Laporan Keuangan" only for ADMIN and MANAGER
+            if (userData.role === "ADMIN" || userData.role === "MANAGER") {
+              baseNavItems.push({
+                title: "Laporan Keuangan",
+                icon: DollarSign,
+                isActive: false,
+                items: [
+                  {
+                    title: "Pengeluaran",
+                    url: "/pengeluaran",
+                  },
+                  {
+                    title: "Transaksi",
+                    url: "/transaksi",
+                  },
+                  {
+                    title: "Laporan",
+                    url: "/laporan",
+                  },
+                ],
+              });
+            } else if (userData.role === "OPERATOR") {
+              // For OPERATOR, show only Transaksi (without Laporan)
+              baseNavItems.push({
+                title: "Transaksi",
+                icon: DollarSign,
+                url: "/transaksi",
+              });
+            }
+
+            // Add "Manajemen User" only for ADMIN
+            if (userData.role === "ADMIN") {
+              baseNavItems.push({
+                title: "Manajemen User",
+                icon: Users,
+                url: "/users",
+              });
+            }
+
+            // Add Audit Log menu only for ADMIN
+            if (userData.role === "ADMIN") {
+              baseNavItems.push({
+                title: "Audit Log",
+                icon: Shield,
+                url: "/audit",
+              });
+            }
+
+            setNavItems(baseNavItems);
           }
         }
       } catch (error) {
@@ -119,7 +210,7 @@ export function AppSidebar({ ...props }) {
         <TeamSwitcher teams={data.teams} />
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <NavMain items={navItems} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={user} />

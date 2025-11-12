@@ -3,8 +3,11 @@ import {
   successResponse,
   errorResponse,
   permissions,
+  getClientIp,
+  getUserAgent,
 } from "@/lib/middleware";
 import { prisma } from "@/lib/prisma";
+import { logReportAccess } from "@/lib/audit";
 
 /**
  * GET /api/reports/expenses
@@ -161,6 +164,15 @@ export async function GET(request) {
         groupBy,
       },
     };
+
+    // Log report access
+    await logReportAccess(
+      request.auth.user.id,
+      "Expenses Report",
+      { startDate, endDate, category, groupBy },
+      getClientIp(request),
+      getUserAgent(request)
+    );
 
     return successResponse({
       summary,

@@ -11,6 +11,7 @@ import { FleetRevenueChart } from "@/components/dashboard/FleetRevenueChart";
 import { TopPackagesWidget } from "@/components/dashboard/TopPackagesWidget";
 import { Calendar, Clock, TrendingUp } from "lucide-react";
 import { useAuthFetch } from "@/lib/useAuthFetch";
+import { useUser } from "@/hooks/useUser";
 
 function DashboardPage() {
   const [period, setPeriod] = useState("month");
@@ -19,6 +20,7 @@ function DashboardPage() {
   const [error, setError] = useState(null);
   const router = useRouter();
   const authFetch = useAuthFetch();
+  const { user } = useUser();
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -151,14 +153,21 @@ function DashboardPage() {
 
             {/* Charts Row 1 */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-              <div className="lg:col-span-4">
-                <TransactionChart
-                  data={stats?.transactionTrend}
-                  period={period}
-                  loading={loading}
-                />
-              </div>
-              <div className="lg:col-span-3">
+              {/* Hide Transaction Chart (Analisis Tren) from OPERATOR */}
+              {user?.role !== "OPERATOR" && (
+                <div className="lg:col-span-4">
+                  <TransactionChart
+                    data={stats?.transactionTrend}
+                    period={period}
+                    loading={loading}
+                  />
+                </div>
+              )}
+              <div
+                className={
+                  user?.role === "OPERATOR" ? "lg:col-span-7" : "lg:col-span-3"
+                }
+              >
                 <FleetStatusChart data={stats?.fleetStatus} loading={loading} />
               </div>
             </div>

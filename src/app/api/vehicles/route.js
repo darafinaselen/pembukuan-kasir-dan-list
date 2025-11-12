@@ -3,8 +3,11 @@ import {
   successResponse,
   errorResponse,
   permissions,
+  getClientIp,
+  getUserAgent,
 } from "@/lib/middleware";
 import { prisma } from "@/lib/prisma";
+import { logArmadaEvent } from "@/lib/audit";
 
 async function handleGetArmadas(request) {
   try {
@@ -47,6 +50,16 @@ async function handleCreateArmada(request) {
         status,
       },
     });
+
+    // Log audit event
+    await logArmadaEvent(
+      request.auth.user.id,
+      "CREATE",
+      newArmada.id,
+      newArmada,
+      getClientIp(request),
+      getUserAgent(request)
+    );
 
     return successResponse(newArmada, 201);
   } catch (error) {

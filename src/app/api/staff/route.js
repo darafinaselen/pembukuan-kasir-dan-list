@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { protectedRoute } from "@/lib/middleware";
+import { protectedRoute, getClientIp, getUserAgent } from "@/lib/middleware";
+import { logStaffEvent } from "@/lib/audit";
 
 /**
  * GET /api/staff
@@ -185,6 +186,16 @@ async function handleCreateStaff(request) {
         notes: body.notes || null,
       },
     });
+
+    // Log audit event
+    await logStaffEvent(
+      request.auth.user.id,
+      "CREATE",
+      staff.id,
+      { staff_name: staff.staff_name, position: staff.position },
+      getClientIp(request),
+      getUserAgent(request)
+    );
 
     return NextResponse.json(staff, { status: 201 });
   } catch (error) {

@@ -5,7 +5,10 @@ import {
   protectedRoute,
   successResponse,
   errorResponse,
+  getClientIp,
+  getUserAgent,
 } from "@/lib/middleware";
+import { logPackageEvent } from "@/lib/audit";
 
 const prisma = new PrismaClient();
 
@@ -70,8 +73,8 @@ async function handleUpdatePackage(request, { params }) {
       tipePaket === "Paket Tour"
         ? "TOUR_PACKAGE"
         : tipePaket === "Full Day Trip"
-        ? "FULL_DAY_TRIP"
-        : "CAR_RENTAL";
+          ? "FULL_DAY_TRIP"
+          : "CAR_RENTAL";
 
     console.log("Mapped type:", type);
     console.log("durasiHari received:", durasiHari);
@@ -122,14 +125,14 @@ async function handleUpdatePackage(request, { params }) {
         typeof hargaDefault === "number"
           ? hargaDefault
           : hargaDefault
-          ? Number(hargaDefault)
-          : null;
+            ? Number(hargaDefault)
+            : null;
       updateData.overtimeRate =
         typeof tarifOvertime === "number"
           ? tarifOvertime
           : tarifOvertime
-          ? Number(tarifOvertime)
-          : null;
+            ? Number(tarifOvertime)
+            : null;
       updateData.durationHours = durasiHari ? Number(durasiHari) : null;
       updateData.durationDays = null;
       updateData.durationNights = null;
@@ -145,14 +148,14 @@ async function handleUpdatePackage(request, { params }) {
         typeof hargaDefault === "number"
           ? hargaDefault
           : hargaDefault
-          ? Number(hargaDefault)
-          : null;
+            ? Number(hargaDefault)
+            : null;
       updateData.overtimeRate =
         typeof tarifOvertime === "number"
           ? tarifOvertime
           : tarifOvertime
-          ? Number(tarifOvertime)
-          : null;
+            ? Number(tarifOvertime)
+            : null;
       updateData.durationHours = durasiHari ? Number(durasiHari) : null;
       updateData.durationDays = null;
       updateData.durationNights = null;
@@ -315,6 +318,16 @@ async function handleUpdatePackage(request, { params }) {
       },
     });
 
+    // Log audit event
+    await logPackageEvent(
+      request.auth.user.id,
+      "UPDATE",
+      id,
+      { name: result.name, type: result.type },
+      getClientIp(request),
+      getUserAgent(request)
+    );
+
     console.log("Updated package result:", result?.name);
     return successResponse(result);
   } catch (error) {
@@ -331,9 +344,29 @@ async function handleDeletePackage(request, { params }) {
   try {
     const { id } = await params;
 
+    // Get package data before deletion for audit log
+    const existingPackage = await prisma.servicePackage.findUnique({
+      where: { id },
+      select: { id: true, name: true, type: true },
+    });
+
+    if (!existingPackage) {
+      return errorResponse("Package not found", 404);
+    }
+
     await prisma.servicePackage.delete({
       where: { id },
     });
+
+    // Log audit event
+    await logPackageEvent(
+      request.auth.user.id,
+      "DELETE",
+      id,
+      { name: existingPackage.name, type: existingPackage.type },
+      getClientIp(request),
+      getUserAgent(request)
+    );
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {

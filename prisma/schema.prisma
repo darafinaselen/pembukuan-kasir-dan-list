@@ -39,6 +39,13 @@ enum PaymentStatus {
   PAID
 }
 
+enum ApprovalStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum UserRole {
   ADMIN
   MANAGER
@@ -280,6 +287,16 @@ model Transaction {
   // Data Tambahan untuk Paket Wisata
   hotel_name String? // Nama hotel yang dipilih (opsional, untuk TOUR_PACKAGE)
   pax_count  Int? // Jumlah penumpang/pax (opsional, untuk TOUR_PACKAGE)
+
+  // Approval Workflow
+  approval_status  ApprovalStatus @default(DRAFT)
+  submitted_at     DateTime? // Waktu submit untuk persetujuan
+  submitted_by     String? // User ID yang submit
+  approved_at      DateTime? // Waktu disetujui
+  approved_by      String? // User ID yang approve
+  rejected_at      DateTime? // Waktu ditolak
+  rejected_by      String? // User ID yang reject
+  rejection_reason String? // Alasan penolakan
 
   // --- Relasi (Foreign Keys) ---
 

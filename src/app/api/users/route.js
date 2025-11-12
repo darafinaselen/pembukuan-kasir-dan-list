@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { protectedRoute, rateLimitPresets } from "@/lib/middleware";
+import {
+  protectedRoute,
+  rateLimitPresets,
+  getClientIp,
+  getUserAgent,
+} from "@/lib/middleware";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { logUserEvent } from "@/lib/audit";
 
 // Schema validation
 const userCreateSchema = z.object({
@@ -122,6 +128,16 @@ async function handler(req) {
           updatedAt: true,
         },
       });
+
+      // Log audit event
+      await logUserEvent(
+        req.auth.user.id,
+        "CREATE",
+        user.id,
+        { username: user.username, name: user.name, role: user.role },
+        getClientIp(req),
+        getUserAgent(req)
+      );
 
       return NextResponse.json(
         {

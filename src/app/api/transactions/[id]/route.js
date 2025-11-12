@@ -3,9 +3,12 @@ import {
   successResponse,
   errorResponse,
   permissions,
+  getClientIp,
+  getUserAgent,
 } from "@/lib/middleware";
 import { prisma } from "@/lib/prisma";
 import { validateTransactionData } from "@/lib/validators/transaction-validator";
+import { logTransactionEvent } from "@/lib/audit";
 
 async function handleGetTransaction(request, { params }) {
   try {
@@ -58,6 +61,30 @@ async function handleUpdateTransaction(request, { params }) {
       return errorResponse("Transaction ID is required", 400);
     }
 
+    // Check if transaction exists and get approval status
+    const existingTransaction = await prisma.transaction.findUnique({
+      where: { id },
+    });
+
+    if (!existingTransaction) {
+      return errorResponse("Transaction not found", 404);
+    }
+
+    // Prevent editing if status is PENDING or APPROVED
+    if (existingTransaction.approval_status === "PENDING") {
+      return errorResponse(
+        "Transaksi tidak dapat diedit karena sedang menunggu persetujuan",
+        403
+      );
+    }
+
+    if (existingTransaction.approval_status === "APPROVED") {
+      return errorResponse(
+        "Transaksi yang sudah disetujui tidak dapat diedit",
+        403
+      );
+    }
+
     // Validate input data
     const validation = validateTransactionData(body, true);
     if (!validation.success) {
@@ -69,15 +96,6 @@ async function handleUpdateTransaction(request, { params }) {
     }
 
     const validatedData = validation.data;
-
-    // Check if transaction exists
-    const existingTransaction = await prisma.transaction.findUnique({
-      where: { id },
-    });
-
-    if (!existingTransaction) {
-      return errorResponse("Transaction not found", 404);
-    }
 
     // Build update data object explicitly
     const updateData = {
@@ -194,6 +212,20 @@ async function handleUpdateTransaction(request, { params }) {
       return updated;
     });
 
+    // Log audit event
+    await logTransactionEvent(
+      request.auth.user.id,
+      "UPDATE",
+      id,
+      {
+        invoice_code: updatedTransaction.invoice_code,
+        before: existingTransaction,
+        after: updatedTransaction,
+      },
+      getClientIp(request),
+      getUserAgent(request)
+    );
+
     return successResponse(updatedTransaction);
   } catch (error) {
     console.error("Error updating transaction:", error);
@@ -230,6 +262,21 @@ async function handleDeleteTransaction(request, { params }) {
       return errorResponse("Transaction not found", 404);
     }
 
+    // Prevent deletion if status is PENDING or APPROVED
+    if (existingTransaction.approval_status === "PENDING") {
+      return errorResponse(
+        "Transaksi tidak dapat dihapus karena sedang menunggu persetujuan",
+        403
+      );
+    }
+
+    if (existingTransaction.approval_status === "APPROVED") {
+      return errorResponse(
+        "Transaksi yang sudah disetujui tidak dapat dihapus",
+        403
+      );
+    }
+
     // Delete transaction and reset armada/driver status in a transaction
     await prisma.$transaction([
       // Delete the transaction
@@ -257,6 +304,16 @@ async function handleDeleteTransaction(request, { params }) {
           ]
         : []),
     ]);
+
+    // Log audit event
+    await logTransactionEvent(
+      request.auth.user.id,
+      "DELETE",
+      id,
+      { invoice_code: existingTransaction.invoice_code },
+      getClientIp(request),
+      getUserAgent(request)
+    );
 
     return successResponse({ message: "Transaction deleted successfully" });
   } catch (error) {

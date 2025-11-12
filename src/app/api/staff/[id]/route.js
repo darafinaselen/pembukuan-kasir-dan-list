@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { protectedRoute } from "@/lib/middleware";
+import { protectedRoute, getClientIp, getUserAgent } from "@/lib/middleware";
+import { logStaffEvent } from "@/lib/audit";
 
 /**
  * GET /api/staff/[id]
@@ -167,6 +168,16 @@ async function handleUpdateStaff(request, context) {
       data: updateData,
     });
 
+    // Log audit event
+    await logStaffEvent(
+      request.auth.user.id,
+      "UPDATE",
+      id,
+      { before: existingStaff, after: updatedStaff },
+      getClientIp(request),
+      getUserAgent(request)
+    );
+
     return NextResponse.json(updatedStaff);
   } catch (error) {
     console.error("Error updating staff:", error);
@@ -205,6 +216,19 @@ async function handleDeleteStaff(request, context) {
         resign_date: new Date(),
       },
     });
+
+    // Log audit event
+    await logStaffEvent(
+      request.auth.user.id,
+      "DELETE",
+      id,
+      {
+        staff_name: existingStaff.staff_name,
+        position: existingStaff.position,
+      },
+      getClientIp(request),
+      getUserAgent(request)
+    );
 
     return NextResponse.json({
       message: "Staff berhasil dihapus",

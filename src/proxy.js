@@ -100,7 +100,7 @@ function addSecurityHeaders(response) {
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Next.js requires unsafe-inline and unsafe-eval in dev
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: https:",
+      "img-src 'self' data: https: blob:", // Added blob: for file preview
       "font-src 'self' data:",
       "connect-src 'self'",
       "frame-ancestors 'none'",

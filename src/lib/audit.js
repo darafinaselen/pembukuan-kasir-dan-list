@@ -82,40 +82,52 @@ export async function logAuthEvent(
  * @param {string} ipAddress - Client IP
  * @param {string} userAgent - User agent
  */
-export async function logTransactionEvent(
-  userId,
-  action,
-  transactionId,
-  changes,
-  ipAddress,
-  userAgent
-) {
+export async function logTransactionEvent(user, action, transaction, request) {
   let description = "";
+  const invoice_code = transaction?.invoice_code || transaction?.id || "N/A";
 
   switch (action) {
     case "CREATE":
-      description = `Created transaction ${changes.invoice_code}`;
+      description = `Created transaction ${invoice_code}`;
       break;
     case "UPDATE":
-      description = `Updated transaction ${changes.invoice_code}`;
+      description = `Updated transaction ${invoice_code}`;
       break;
     case "DELETE":
-      description = `Deleted transaction ${changes.invoice_code}`;
+      description = `Deleted transaction ${invoice_code}`;
       break;
     case "VIEW":
-      description = `Viewed transaction ${changes.invoice_code}`;
+      description = `Viewed transaction ${invoice_code}`;
+      break;
+    case "COMPLETE":
+      description = `Completed transaction ${invoice_code}`;
+      break;
+    case "SUBMIT_APPROVAL":
+      description = `Submitted transaction ${invoice_code} for approval`;
+      break;
+    case "APPROVE":
+      description = `Approved transaction ${invoice_code}`;
+      break;
+    case "REJECT":
+      description = `Rejected transaction ${invoice_code}`;
       break;
     default:
-      description = `${action} transaction ${transactionId}`;
+      description = `${action} transaction ${invoice_code}`;
   }
 
+  const ipAddress =
+    request?.headers?.get("x-forwarded-for") ||
+    request?.headers?.get("x-real-ip") ||
+    "unknown";
+  const userAgent = request?.headers?.get("user-agent") || "unknown";
+
   return await createAuditLog({
-    userId,
+    userId: user?.id || user?.email,
     action,
     resource: "Transaction",
-    resourceId: transactionId,
+    resourceId: transaction?.id,
     description,
-    metadata: changes,
+    metadata: transaction,
     ipAddress,
     userAgent,
   });
@@ -203,6 +215,171 @@ export async function logDataExport(
     resourceId: null,
     description: `Exported ${dataType} data`,
     metadata: { filters, exportedAt: new Date().toISOString() },
+    ipAddress,
+    userAgent,
+  });
+}
+
+/**
+ * Log armada (vehicle) event
+ * @param {string} userId - User ID
+ * @param {string} action - CREATE, UPDATE, DELETE
+ * @param {string} armadaId - Armada ID
+ * @param {object} changes - Changed data
+ * @param {string} ipAddress - Client IP
+ * @param {string} userAgent - User agent
+ */
+export async function logArmadaEvent(
+  userId,
+  action,
+  armadaId,
+  changes,
+  ipAddress,
+  userAgent
+) {
+  const description = changes?.license_plate
+    ? `${action} armada: ${changes.license_plate} (${changes.brand} ${changes.model})`
+    : `${action} armada ID: ${armadaId}`;
+
+  return await createAuditLog({
+    userId,
+    action,
+    resource: "Armada",
+    resourceId: armadaId,
+    description,
+    metadata: changes || {},
+    ipAddress,
+    userAgent,
+  });
+}
+
+/**
+ * Log driver event
+ * @param {string} userId - User ID
+ * @param {string} action - CREATE, UPDATE, DELETE
+ * @param {string} driverId - Driver ID
+ * @param {object} changes - Changed data
+ * @param {string} ipAddress - Client IP
+ * @param {string} userAgent - User agent
+ */
+export async function logDriverEvent(
+  userId,
+  action,
+  driverId,
+  changes,
+  ipAddress,
+  userAgent
+) {
+  const description = changes?.name
+    ? `${action} driver: ${changes.name}`
+    : `${action} driver ID: ${driverId}`;
+
+  return await createAuditLog({
+    userId,
+    action,
+    resource: "Driver",
+    resourceId: driverId,
+    description,
+    metadata: changes || {},
+    ipAddress,
+    userAgent,
+  });
+}
+
+/**
+ * Log user management event
+ * @param {string} userId - User ID (admin performing action)
+ * @param {string} action - CREATE, UPDATE, DELETE
+ * @param {string} targetUserId - Target user ID
+ * @param {object} changes - Changed data
+ * @param {string} ipAddress - Client IP
+ * @param {string} userAgent - User agent
+ */
+export async function logUserEvent(
+  userId,
+  action,
+  targetUserId,
+  changes,
+  ipAddress,
+  userAgent
+) {
+  const description = changes?.username
+    ? `${action} user: ${changes.username} (${changes.name})`
+    : `${action} user ID: ${targetUserId}`;
+
+  return await createAuditLog({
+    userId,
+    action,
+    resource: "User",
+    resourceId: targetUserId,
+    description,
+    metadata: changes || {},
+    ipAddress,
+    userAgent,
+  });
+}
+
+/**
+ * Log staff event
+ * @param {string} userId - User ID
+ * @param {string} action - CREATE, UPDATE, DELETE
+ * @param {string} staffId - Staff ID
+ * @param {object} changes - Changed data
+ * @param {string} ipAddress - Client IP
+ * @param {string} userAgent - User agent
+ */
+export async function logStaffEvent(
+  userId,
+  action,
+  staffId,
+  changes,
+  ipAddress,
+  userAgent
+) {
+  const description = changes?.staff_name
+    ? `${action} staff: ${changes.staff_name} (${changes.position})`
+    : `${action} staff ID: ${staffId}`;
+
+  return await createAuditLog({
+    userId,
+    action,
+    resource: "Staff",
+    resourceId: staffId,
+    description,
+    metadata: changes || {},
+    ipAddress,
+    userAgent,
+  });
+}
+
+/**
+ * Log package event
+ * @param {string} userId - User ID
+ * @param {string} action - CREATE, UPDATE, DELETE
+ * @param {string} packageId - Package ID
+ * @param {object} changes - Changed data
+ * @param {string} ipAddress - Client IP
+ * @param {string} userAgent - User agent
+ */
+export async function logPackageEvent(
+  userId,
+  action,
+  packageId,
+  changes,
+  ipAddress,
+  userAgent
+) {
+  const description = changes?.name
+    ? `${action} package: ${changes.name} (${changes.type})`
+    : `${action} package ID: ${packageId}`;
+
+  return await createAuditLog({
+    userId,
+    action,
+    resource: "Package",
+    resourceId: packageId,
+    description,
+    metadata: changes || {},
     ipAddress,
     userAgent,
   });

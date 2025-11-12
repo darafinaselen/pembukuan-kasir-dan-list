@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { protectedRoute, rateLimitPresets } from "@/lib/middleware";
+import {
+  protectedRoute,
+  rateLimitPresets,
+  getClientIp,
+  getUserAgent,
+} from "@/lib/middleware";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { logUserEvent } from "@/lib/audit";
 
 const userUpdateSchema = z.object({
   email: z.string().email("Email tidak valid").optional(),
@@ -157,6 +163,16 @@ async function handler(req, { params }) {
         },
       });
 
+      // Log audit event
+      await logUserEvent(
+        req.auth.user.id,
+        "UPDATE",
+        id,
+        { before: existingUser, after: user },
+        getClientIp(req),
+        getUserAgent(req)
+      );
+
       return NextResponse.json({
         success: true,
         data: user,
@@ -211,6 +227,16 @@ async function handler(req, { params }) {
       await prisma.user.delete({
         where: { id },
       });
+
+      // Log audit event
+      await logUserEvent(
+        req.auth.user.id,
+        "DELETE",
+        id,
+        { username: existingUser.username, name: existingUser.name },
+        getClientIp(req),
+        getUserAgent(req)
+      );
 
       return NextResponse.json({
         success: true,

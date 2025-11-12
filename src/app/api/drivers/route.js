@@ -2,8 +2,11 @@ import {
   protectedRoute,
   successResponse,
   errorResponse,
+  getClientIp,
+  getUserAgent,
 } from "@/lib/middleware";
 import { prisma } from "@/lib/prisma";
+import { logDriverEvent } from "@/lib/audit";
 
 async function handleGetDrivers(request) {
   try {
@@ -47,6 +50,16 @@ async function handleCreateDriver(request) {
         status,
       },
     });
+
+    // Log audit event
+    await logDriverEvent(
+      request.auth.user.id,
+      "CREATE",
+      newDriver.id,
+      newDriver,
+      getClientIp(request),
+      getUserAgent(request)
+    );
 
     return successResponse(newDriver, 201);
   } catch (error) {

@@ -3,8 +3,11 @@ import {
   successResponse,
   errorResponse,
   permissions,
+  getClientIp,
+  getUserAgent,
 } from "@/lib/middleware";
 import { prisma } from "@/lib/prisma";
+import { logReportAccess } from "@/lib/audit";
 
 async function handleGetRekap(request) {
   try {
@@ -77,6 +80,15 @@ async function handleGetRekap(request) {
         totalCount: months.reduce((sum, m) => sum + m.count, 0),
       };
     });
+
+    // Log report access
+    await logReportAccess(
+      request.auth.user.id,
+      "Rekap Report",
+      { startDate, endDate },
+      getClientIp(request),
+      getUserAgent(request)
+    );
 
     return successResponse({
       rekap: rekapData,

@@ -3,7 +3,10 @@ import {
   protectedRoute,
   successResponse,
   errorResponse,
+  getClientIp,
+  getUserAgent,
 } from "@/lib/middleware";
+import { logArmadaEvent } from "@/lib/audit";
 
 /**
  * GET /api/vehicles/[id]
@@ -95,6 +98,16 @@ async function handleUpdateVehicle(req, context) {
       },
     });
 
+    // Log audit event
+    await logArmadaEvent(
+      req.auth.user.id,
+      "UPDATE",
+      id,
+      { before: existingVehicle, after: updatedVehicle },
+      getClientIp(req),
+      getUserAgent(req)
+    );
+
     return successResponse(updatedVehicle, "Kendaraan berhasil diperbarui");
   } catch (error) {
     console.error("Error updating vehicle:", error);
@@ -135,6 +148,16 @@ async function handleDeleteVehicle(req, context) {
     await prisma.armada.delete({
       where: { id },
     });
+
+    // Log audit event
+    await logArmadaEvent(
+      req.auth.user.id,
+      "DELETE",
+      id,
+      existingVehicle,
+      getClientIp(req),
+      getUserAgent(req)
+    );
 
     return successResponse(null, "Kendaraan berhasil dihapus");
   } catch (error) {

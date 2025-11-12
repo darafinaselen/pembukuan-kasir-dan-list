@@ -2,9 +2,12 @@ import {
   protectedRoute,
   successResponse,
   errorResponse,
+  getClientIp,
+  getUserAgent,
 } from "@/lib/middleware";
 import { prisma } from "@/lib/prisma";
 import { validatePriceRangesForTier } from "@/lib/utils";
+import { logPackageEvent } from "@/lib/audit";
 
 async function handleGetPackages(request) {
   try {
@@ -249,6 +252,16 @@ async function handleCreatePackage(request) {
         itineraries: true,
       },
     });
+
+    // Log audit event
+    await logPackageEvent(
+      request.auth.user.id,
+      "CREATE",
+      newPackage.id,
+      { name: newPackage.name, type: newPackage.type },
+      getClientIp(request),
+      getUserAgent(request)
+    );
 
     return successResponse(newPackage, 201);
   } catch (error) {

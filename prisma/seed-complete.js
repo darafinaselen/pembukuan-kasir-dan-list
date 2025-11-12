@@ -1339,7 +1339,7 @@ async function main() {
   const exp15 = await prisma.expense.create({
     data: {
       date: new Date("2025-10-01"),
-      category: "OPERASIONAL",
+      category: "OPERASIONAL_LAINNYA",
       description: "Sewa kantor bulan Oktober 2025",
       amount: 2000000,
       armadaId: null,
@@ -1349,7 +1349,7 @@ async function main() {
   const exp16 = await prisma.expense.create({
     data: {
       date: new Date("2025-10-15"),
-      category: "OPERASIONAL",
+      category: "LISTRIK",
       description: "Listrik dan air bulan Oktober",
       amount: 500000,
       armadaId: null,

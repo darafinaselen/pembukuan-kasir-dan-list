@@ -3,7 +3,10 @@ import {
   protectedRoute,
   successResponse,
   errorResponse,
+  getClientIp,
+  getUserAgent,
 } from "@/lib/middleware";
+import { logDriverEvent } from "@/lib/audit";
 
 /**
  * GET /api/drivers/[id]
@@ -72,6 +75,16 @@ async function handleUpdateDriver(req, context) {
       },
     });
 
+    // Log audit event
+    await logDriverEvent(
+      req.auth.user.id,
+      "UPDATE",
+      id,
+      { before: existingDriver, after: updatedDriver },
+      getClientIp(req),
+      getUserAgent(req)
+    );
+
     return successResponse(updatedDriver, "Sopir berhasil diperbarui");
   } catch (error) {
     console.error("Error updating driver:", error);
@@ -112,6 +125,16 @@ async function handleDeleteDriver(req, context) {
     await prisma.driver.delete({
       where: { id },
     });
+
+    // Log audit event
+    await logDriverEvent(
+      req.auth.user.id,
+      "DELETE",
+      id,
+      existingDriver,
+      getClientIp(req),
+      getUserAgent(req)
+    );
 
     return successResponse(null, "Sopir berhasil dihapus");
   } catch (error) {

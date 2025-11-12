@@ -2,13 +2,16 @@ import {
   protectedRoute,
   successResponse,
   errorResponse,
+  getClientIp,
+  getUserAgent,
 } from "@/lib/middleware";
 import { prisma } from "@/lib/prisma";
+import { logReportAccess } from "@/lib/audit";
 
 /**
  * GET /api/reports/performance
  * Laporan Kinerja Sopir dan Paket Jasa
- * 
+ *
  * Query params:
  * - from: YYYY-MM-DD (required)
  * - to: YYYY-MM-DD (required)
@@ -159,6 +162,15 @@ async function handleGetPerformanceReport(request) {
       }))
       .sort((a, b) => b.frequency - a.frequency);
 
+    // Log report access
+    await logReportAccess(
+      request.auth.user.id,
+      "Performance Report",
+      { from: fromStr, to: toStr },
+      getClientIp(request),
+      getUserAgent(request)
+    );
+
     return successResponse({
       driverPerformance,
       packagePerformance,
@@ -181,4 +193,3 @@ async function handleGetPerformanceReport(request) {
 export const GET = protectedRoute(handleGetPerformanceReport, {
   roles: ["ADMIN", "MANAGER", "OPERATOR"],
 });
-

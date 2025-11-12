@@ -13,7 +13,12 @@ Indonesian car rental management system with Next.js 16 App Router, Prisma ORM, 
   - `BOOKED`: Reserved for future bookings (checkout date is in the future)
   - `ON_TRIP`: Currently active on a trip (checkout date is today or past)
 - **ServicePackage** supports multiple types: `CAR_RENTAL`, `TOUR_PACKAGE`, `FULL_DAY_TRIP`
+  - Schema fields: `name`, `type`, `price`, `durationHours`, `overtimeRate` (for CAR_RENTAL)
+  - Schema fields: `durationDays`, `durationNights`, `hotelTiers` (for TOUR_PACKAGE)
+  - **IMPORTANT**: Use `name` and `type` (not `package_name` and `package_type`)
 - **Expenses** use ExpenseCategory enum (not string) with values like `BBM`, `GAJI_SOPIR`, `LISTRIK`, etc.
+  - API uses FormData (not JSON) for file uploads
+  - Required fields: `date`, `category`, `description`, `amount`
 
 ### API Route Structure
 
@@ -71,6 +76,8 @@ npx prisma studio       # Visual database browser
 - API tests: `/src/app/api/__tests__/`
 - Integration: `node scripts/test-endpoints.js`
 - Accounting logic: Always test with `AUDIT_LOGIKA_AKUNTANSI.md` test cases
+- Audit logs: `node scripts/test-audit-logs.js` (100% success rate achieved)
+- Approval workflow: `node scripts/test-approval-workflow.js` (98% success rate)
 
 ### Component Architecture
 
@@ -138,6 +145,36 @@ await prisma.$transaction(async (tx) => {
 });
 ```
 
+### Transaction Validation
+
+**Critical**: Transaction data must follow exact schema:
+
+```javascript
+{
+  customer_name: string,
+  customer_phone: string,
+  booking_date: ISO datetime,
+  checkout_datetime: ISO datetime,
+  checkin_datetime: ISO datetime,
+  all_in_rate: integer,
+  overtime_rate_per_hour: integer (optional),
+  dp_amount: integer (optional),
+  payment_status: "UNPAID" | "DOWN_PAYMENT" | "PAID",
+  armadaId: UUID,
+  driverId: UUID,
+  packageId: UUID (optional)
+}
+```
+
+**Transaction Completion**: Use PUT method with minimal data:
+
+```javascript
+{
+  actual_checkin_datetime: ISO datetime,
+  actual_overtime_cost: integer
+}
+```
+
 ### Real-time Availability
 
 Use `/api/availability/vehicles` and `/api/availability/drivers` for scheduling conflicts.
@@ -163,6 +200,24 @@ All CRUD operations logged via `/src/lib/audit.js`:
 ```javascript
 await logTransactionEvent(user, "CREATE", transaction, request);
 ```
+
+**Comprehensive Audit Logging Functions:**
+
+- `logAuthEvent` - LOGIN, LOGOUT actions (100% tested ✅)
+- `logTransactionEvent` - CREATE, UPDATE, DELETE, COMPLETE (tested ✅)
+- `logExpenseEvent` - Expense CRUD operations (tested ✅)
+- `logReportAccess` - Report viewing/exports (tested ✅)
+- `logApprovalEvent` - Transaction approvals (tested ✅)
+- `logArmadaEvent` - Fleet management (not yet tested)
+- `logDriverEvent` - Driver management (not yet tested)
+- `logUserEvent` - User management (not yet tested)
+
+**Audit Log Testing:**
+
+- Run `npm run test:audit-logs` to verify audit logging
+- Current coverage: 5/10 functions tested (50%)
+- Success rate: 100% for tested functions
+- All logs include: userId, timestamp, IP address, metadata
 
 ## 🔧 Common Issues & Solutions
 

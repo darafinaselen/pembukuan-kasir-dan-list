@@ -122,7 +122,7 @@ export async function logTransactionEvent(user, action, transaction, request) {
   const userAgent = request?.headers?.get("user-agent") || "unknown";
 
   return await createAuditLog({
-    userId: user?.id || user?.email,
+    userId: user?.id ? String(user.id) : (user?.email || "unknown"),
     action,
     resource: "Transaction",
     resourceId: transaction?.id,

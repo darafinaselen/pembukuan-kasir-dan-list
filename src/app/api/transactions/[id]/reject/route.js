@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { protectedRoute } from "@/lib/middleware";
-import { successResponse, errorResponse } from "@/lib/utils";
+import { protectedRoute, successResponse, errorResponse } from "@/lib/middleware";
 import { logTransactionEvent } from "@/lib/audit";
 
 /**
@@ -8,10 +7,10 @@ import { logTransactionEvent } from "@/lib/audit";
  * Reject a pending transaction (ADMIN/MANAGER only)
  * Changes status from PENDING to REJECTED with reason
  */
-async function handleRejectTransaction(request, { params }) {
+async function handleRejectTransaction(request, context) {
   try {
-    const { id } = params;
-    const user = request.user;
+    const { id} = await context.params;
+    const user = request.auth.user;
     const body = await request.json();
     const { rejection_reason } = body;
 

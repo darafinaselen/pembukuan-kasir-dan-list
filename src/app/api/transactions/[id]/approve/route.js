@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { protectedRoute } from "@/lib/middleware";
-import { successResponse, errorResponse } from "@/lib/utils";
+import { protectedRoute, successResponse, errorResponse } from "@/lib/middleware";
 import { logTransactionEvent } from "@/lib/audit";
 
 /**
@@ -8,10 +7,10 @@ import { logTransactionEvent } from "@/lib/audit";
  * Approve a pending transaction (ADMIN/MANAGER only)
  * Changes status from PENDING to APPROVED
  */
-async function handleApproveTransaction(request, { params }) {
+async function handleApproveTransaction(request, context) {
   try {
-    const { id } = params;
-    const user = request.user;
+    const { id } = await context.params;
+    const user = request.auth.user;
 
     // Verify transaction exists and is in PENDING status
     const transaction = await prisma.transaction.findUnique({

@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { protectedRoute } from "@/lib/middleware";
-import { successResponse, errorResponse } from "@/lib/utils";
+import { protectedRoute, successResponse, errorResponse } from "@/lib/middleware";
 
 /**
  * GET /api/transactions/pending

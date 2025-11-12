@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { protectedRoute } from "@/lib/middleware";
-import { successResponse, errorResponse } from "@/lib/utils";
+import { protectedRoute, successResponse, errorResponse } from "@/lib/middleware";
 import { logTransactionEvent } from "@/lib/audit";
 
 /**
@@ -8,10 +7,10 @@ import { logTransactionEvent } from "@/lib/audit";
  * Submit transaction for approval (OPERATOR only)
  * Changes status from DRAFT to PENDING
  */
-async function handleSubmitTransaction(request, { params }) {
+async function handleSubmitTransaction(request, context) {
   try {
-    const { id } = params;
-    const user = request.user;
+    const { id } = await context.params;
+    const user = request.auth.user;
 
     // Verify transaction exists and is in DRAFT status
     const transaction = await prisma.transaction.findUnique({

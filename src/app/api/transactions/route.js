@@ -164,12 +164,10 @@ async function handleCreateTransaction(request) {
 
     // Log audit event
     await logTransactionEvent(
-      request.auth.user.id,
+      request.auth.user,
       "CREATE",
-      result.id,
       result,
-      request.auth.ipAddress,
-      request.auth.userAgent
+      request
     );
 
     return successResponse(result, 201);

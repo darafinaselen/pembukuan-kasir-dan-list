@@ -102,36 +102,47 @@ export function requireRole(user, allowedRoles) {
  */
 export const permissions = {
   // Transaction permissions
+  // OPERATOR can view and create transactions (as DRAFT), but must submit for approval
   canViewTransactions: (user) =>
-    ["ADMIN", "MANAGER", "OPERATOR"].includes(user?.role),
+    ["ADMIN", "OPERATOR"].includes(user?.role),
   canCreateTransaction: (user) =>
-    ["ADMIN", "MANAGER", "OPERATOR"].includes(user?.role),
-  canUpdateTransaction: (user) => ["ADMIN", "MANAGER"].includes(user?.role),
+    ["ADMIN", "OPERATOR"].includes(user?.role),
+  // Only ADMIN can update/delete/approve/reject transactions
+  canUpdateTransaction: (user) => ["ADMIN"].includes(user?.role),
   canDeleteTransaction: (user) => ["ADMIN"].includes(user?.role),
 
   // Financial report permissions
-  canViewReports: (user) => ["ADMIN", "MANAGER"].includes(user?.role),
-  canExportReports: (user) => ["ADMIN", "MANAGER"].includes(user?.role),
+  // OPERATOR cannot view financial reports (keuangan)
+  canViewReports: (user) => ["ADMIN"].includes(user?.role),
+  canExportReports: (user) => ["ADMIN"].includes(user?.role),
 
   // Expense permissions
-  canViewExpenses: (user) => ["ADMIN", "MANAGER"].includes(user?.role),
-  canCreateExpense: (user) => ["ADMIN", "MANAGER"].includes(user?.role),
-  canUpdateExpense: (user) => ["ADMIN", "MANAGER"].includes(user?.role),
+  // OPERATOR can view and create expenses (as DRAFT), but must submit for approval
+  canViewExpenses: (user) => ["ADMIN", "OPERATOR"].includes(user?.role),
+  canCreateExpense: (user) => ["ADMIN", "OPERATOR"].includes(user?.role),
+  // Only ADMIN can update/delete/approve/reject expenses
+  canUpdateExpense: (user) => ["ADMIN"].includes(user?.role),
   canDeleteExpense: (user) => ["ADMIN"].includes(user?.role),
 
   // Fleet (Armada) permissions
-  canViewFleet: (user) => ["ADMIN", "MANAGER", "OPERATOR"].includes(user?.role),
-  canManageFleet: (user) => ["ADMIN", "MANAGER"].includes(user?.role),
+  // OPERATOR can view fleet to select for transactions
+  canViewFleet: (user) => ["ADMIN", "OPERATOR"].includes(user?.role),
+  // Only ADMIN can manage (create/update/delete) fleet
+  canManageFleet: (user) => ["ADMIN"].includes(user?.role),
 
   // Driver permissions
+  // OPERATOR can view drivers to select for transactions
   canViewDrivers: (user) =>
-    ["ADMIN", "MANAGER", "OPERATOR"].includes(user?.role),
-  canManageDrivers: (user) => ["ADMIN", "MANAGER"].includes(user?.role),
+    ["ADMIN", "OPERATOR"].includes(user?.role),
+  // Only ADMIN can manage (create/update/delete) drivers
+  canManageDrivers: (user) => ["ADMIN"].includes(user?.role),
 
   // Package permissions
+  // OPERATOR can view packages to select for transactions
   canViewPackages: (user) =>
-    ["ADMIN", "MANAGER", "OPERATOR"].includes(user?.role),
-  canManagePackages: (user) => ["ADMIN", "MANAGER"].includes(user?.role),
+    ["ADMIN", "OPERATOR"].includes(user?.role),
+  // Only ADMIN can manage (create/update/delete) packages
+  canManagePackages: (user) => ["ADMIN"].includes(user?.role),
 
   // User management permissions
   canViewUsers: (user) => ["ADMIN"].includes(user?.role),
@@ -141,7 +152,8 @@ export const permissions = {
   canViewAuditLogs: (user) => ["ADMIN"].includes(user?.role),
 
   // Dashboard permissions
-  canViewDashboard: (user) => ["ADMIN", "MANAGER"].includes(user?.role),
+  // OPERATOR cannot view dashboard (contains financial data)
+  canViewDashboard: (user) => ["ADMIN"].includes(user?.role),
 };
 
 /**

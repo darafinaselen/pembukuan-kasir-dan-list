@@ -76,8 +76,8 @@ async function handleSubmitTransaction(request, context) {
   }
 }
 
+// ADMIN and OPERATOR can submit transactions for approval
 export const POST = protectedRoute(handleSubmitTransaction, [
   "ADMIN",
-  "MANAGER",
   "OPERATOR",
 ]);

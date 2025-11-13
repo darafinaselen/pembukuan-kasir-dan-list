@@ -83,39 +83,34 @@ async function handleCreateTransaction(request) {
     const uniqueSuffix = nanoid(6).toUpperCase();
     const invoice_code = `RLM-${yyyymmdd}-${uniqueSuffix}`;
 
-    // Determine status based on checkout date
-    const isStartingTodayOrPast =
-      new Date(validatedData.checkout_datetime) <= new Date();
-    const armadaStatus = isStartingTodayOrPast ? "ON_TRIP" : "BOOKED";
-    const driverStatus = isStartingTodayOrPast ? "ON_TRIP" : "BOOKED";
-
     // Use atomic transaction with availability verification to prevent race condition
+    // NOTE: Resources are NOT locked here because transaction is in DRAFT status.
+    // Resources will be locked only when transaction is APPROVED (see approve endpoint).
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Lock and verify armada availability
-      const armada = await tx.armada.findFirst({
+      // 1. Verify armada exists (but don't check status - it can be READY, BOOKED, or ON_TRIP)
+      const armada = await tx.armada.findUnique({
         where: {
           id: validatedData.armadaId,
-          status: "READY",
         },
       });
 
       if (!armada) {
-        throw new Error("Armada tidak tersedia atau tidak ditemukan.");
+        throw new Error("Armada tidak ditemukan.");
       }
 
-      // 2. Lock and verify driver availability
-      const driver = await tx.driver.findFirst({
+      // 2. Verify driver exists (but don't check status - it can be READY, BOOKED, or ON_TRIP)
+      const driver = await tx.driver.findUnique({
         where: {
           id: validatedData.driverId,
-          status: "READY",
         },
       });
 
       if (!driver) {
-        throw new Error("Sopir tidak tersedia atau tidak ditemukan.");
+        throw new Error("Sopir tidak ditemukan.");
       }
 
-      // 3. Create transaction
+      // 3. Create transaction (status default: DRAFT)
+      // Resources remain in their current status and will be locked only upon approval
       const newTransaction = await tx.transaction.create({
         data: {
           // Customer data
@@ -147,18 +142,6 @@ async function handleCreateTransaction(request) {
         },
       });
 
-      // 4. Update armada status
-      await tx.armada.update({
-        where: { id: validatedData.armadaId },
-        data: { status: armadaStatus },
-      });
-
-      // 5. Update driver status
-      await tx.driver.update({
-        where: { id: validatedData.driverId },
-        data: { status: driverStatus },
-      });
-
       return newTransaction;
     });
 
@@ -182,11 +165,12 @@ async function handleCreateTransaction(request) {
   }
 }
 
-// All roles can view and create transactions
+// ADMIN and OPERATOR can view and create transactions
+// OPERATOR creates as DRAFT and must submit for approval
 export const GET = protectedRoute(handleGetTransactions, {
-  roles: ["ADMIN", "MANAGER", "OPERATOR"],
+  roles: ["ADMIN", "OPERATOR"],
 });
 
 export const POST = protectedRoute(handleCreateTransaction, {
-  roles: ["ADMIN", "MANAGER", "OPERATOR"],
+  roles: ["ADMIN", "OPERATOR"],
 });

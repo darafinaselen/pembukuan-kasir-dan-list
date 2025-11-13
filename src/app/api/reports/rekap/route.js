@@ -104,7 +104,7 @@ async function handleGetRekap(request) {
   }
 }
 
-// Only ADMIN and MANAGER can view rekap reports
+// Only ADMIN can view rekap reports (financial data)
 export const GET = protectedRoute(handleGetRekap, {
-  roles: ["ADMIN", "MANAGER"],
+  roles: ["ADMIN"],
 });

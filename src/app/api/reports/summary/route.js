@@ -22,7 +22,7 @@ function calculateTxFinancials(tx) {
 
 async function handleGetSummaryReport(request) {
   try {
-    // Check permissions - only ADMIN and MANAGER can view reports
+    // Check permissions - only ADMIN can view reports (financial data)
     if (!permissions.canViewReports(request.auth.user)) {
       return errorResponse("Insufficient permissions", 403);
     }
@@ -125,9 +125,9 @@ async function handleGetSummaryReport(request) {
   }
 }
 
-// Only ADMIN and MANAGER can view reports
+// Only ADMIN can view reports (financial data)
 // Use reports rate limit for flexible data viewing
 export const GET = protectedRoute(handleGetSummaryReport, {
-  roles: ["ADMIN", "MANAGER"],
+  roles: ["ADMIN"],
   rateLimit: rateLimitPresets.reports, // 600 requests per minute
 });

@@ -51,6 +51,7 @@ export default function PengeluaranPage() {
   const { showAlert, showConfirm } = useAlertDialog();
   const [data, setData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [userRole, setUserRole] = useState("OPERATOR");
   const [searchTerm, setSearchTerm] = useState("");
   const [quickFilter, setQuickFilter] = useState("all");
   const [dateRange, setDateRange] = useState({
@@ -78,6 +79,27 @@ export default function PengeluaranPage() {
   const [stafList, setStafList] = useState([]);
   const [existingAttachments, setExistingAttachments] = useState([]);
   const [isLoadingDependencies, setIsLoadingDependencies] = useState(false);
+
+  // Fetch user role on mount
+  useEffect(() => {
+    async function fetchUserRole() {
+      try {
+        const res = await fetch("/api/auth/me", {
+          credentials: "include",
+        });
+        if (res.ok) {
+          const result = await res.json();
+          const userData = result.data?.user || result.data || result.user;
+          if (userData?.role) {
+            setUserRole(userData.role);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user role:", error);
+      }
+    }
+    fetchUserRole();
+  }, []);
 
   // --- Data Fetching ---
   async function fetchData(page = 1) {
@@ -565,6 +587,7 @@ export default function PengeluaranPage() {
           onEdit={openEditDialog}
           onDelete={handleDelete}
           onView={openDetailModal}
+          userRole={userRole}
         />
 
         {/* Pagination - hanya tampil jika tidak ada filter aktif */}

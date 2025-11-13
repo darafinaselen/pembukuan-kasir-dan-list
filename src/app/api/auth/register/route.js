@@ -20,7 +20,7 @@ const registerSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   name: z.string().min(1, "Name is required"),
-  role: z.enum(["ADMIN", "MANAGER", "OPERATOR"]).default("OPERATOR"),
+  role: z.enum(["ADMIN", "OPERATOR"]).default("OPERATOR"),
 });
 
 async function handleRegister(request) {

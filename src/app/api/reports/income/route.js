@@ -15,7 +15,7 @@ import { logReportAccess } from "@/lib/audit";
  */
 async function handleGetIncomeReport(request) {
   try {
-    // Check permissions - only ADMIN and MANAGER can view reports
+    // Check permissions - only ADMIN can view reports (financial data)
     if (!permissions.canViewReports(request.auth.user)) {
       return errorResponse("Insufficient permissions", 403);
     }
@@ -184,8 +184,8 @@ async function handleGetIncomeReport(request) {
   }
 }
 
-// Only ADMIN and MANAGER can view income reports
+// Only ADMIN can view income reports (financial data)
 export const GET = protectedRoute(handleGetIncomeReport, {
-  roles: ["ADMIN", "MANAGER"],
+  roles: ["ADMIN"],
   rateLimit: rateLimitPresets.reports, // 600 requests per minute
 });

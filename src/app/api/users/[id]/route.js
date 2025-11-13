@@ -15,7 +15,7 @@ const userUpdateSchema = z.object({
   username: z.string().min(3, "Username minimal 3 karakter").optional(),
   name: z.string().min(1, "Nama tidak boleh kosong").optional(),
   password: z.string().min(8, "Password minimal 8 karakter").optional(),
-  role: z.enum(["ADMIN", "MANAGER", "OPERATOR"]).optional(),
+  role: z.enum(["ADMIN", "OPERATOR"]).optional(),
   isActive: z.boolean().optional(),
 });
 

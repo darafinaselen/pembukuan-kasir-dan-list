@@ -3,8 +3,6 @@ import {
   successResponse,
   errorResponse,
   permissions,
-  getClientIp,
-  getUserAgent,
 } from "@/lib/middleware";
 import { prisma } from "@/lib/prisma";
 import { validateTransactionData } from "@/lib/validators/transaction-validator";
@@ -124,49 +122,36 @@ async function handleUpdateTransaction(request, { params }) {
       packageId: validatedData.packageId,
     };
 
-    // Determine new status for armada and driver based on checkout date
-    const isStartingTodayOrPast =
-      new Date(validatedData.checkout_datetime) <= new Date();
-    const newArmadaStatus = isStartingTodayOrPast ? "ON_TRIP" : "BOOKED";
-    const newDriverStatus = isStartingTodayOrPast ? "ON_TRIP" : "BOOKED";
-
-    // Use atomic transaction with availability verification to prevent race condition
+    // Use atomic transaction to update transaction data
+    // NOTE: Resources are NOT locked here because transaction is in DRAFT or REJECTED status.
+    // Resources will be locked only when transaction is APPROVED (see approve endpoint).
     const updatedTransaction = await prisma.$transaction(async (tx) => {
-      // If armada changed, verify new armada availability
-      if (
-        existingTransaction.armadaId !== validatedData.armadaId &&
-        validatedData.armadaId
-      ) {
-        const armada = await tx.armada.findFirst({
+      // Verify armada and driver exist (but don't check status - resources aren't locked yet)
+      if (validatedData.armadaId) {
+        const armada = await tx.armada.findUnique({
           where: {
             id: validatedData.armadaId,
-            status: "READY",
           },
         });
 
         if (!armada) {
-          throw new Error("Armada baru tidak tersedia atau tidak ditemukan.");
+          throw new Error("Armada tidak ditemukan.");
         }
       }
 
-      // If driver changed, verify new driver availability
-      if (
-        existingTransaction.driverId !== validatedData.driverId &&
-        validatedData.driverId
-      ) {
-        const driver = await tx.driver.findFirst({
+      if (validatedData.driverId) {
+        const driver = await tx.driver.findUnique({
           where: {
             id: validatedData.driverId,
-            status: "READY",
           },
         });
 
         if (!driver) {
-          throw new Error("Sopir baru tidak tersedia atau tidak ditemukan.");
+          throw new Error("Sopir tidak ditemukan.");
         }
       }
 
-      // Update transaction
+      // Update transaction (resources remain in their current status)
       const updated = await tx.transaction.update({
         where: { id },
         data: updateData,
@@ -177,62 +162,24 @@ async function handleUpdateTransaction(request, { params }) {
         },
       });
 
-      // If armada changed, reset old armada status and set new armada status
-      if (existingTransaction.armadaId !== validatedData.armadaId) {
-        if (existingTransaction.armadaId) {
-          await tx.armada.update({
-            where: { id: existingTransaction.armadaId },
-            data: { status: "READY" },
-          });
-        }
-        if (validatedData.armadaId) {
-          await tx.armada.update({
-            where: { id: validatedData.armadaId },
-            data: { status: newArmadaStatus },
-          });
-        }
-      }
-
-      // If driver changed, reset old driver status and set new driver status
-      if (existingTransaction.driverId !== validatedData.driverId) {
-        if (existingTransaction.driverId) {
-          await tx.driver.update({
-            where: { id: existingTransaction.driverId },
-            data: { status: "READY" },
-          });
-        }
-        if (validatedData.driverId) {
-          await tx.driver.update({
-            where: { id: validatedData.driverId },
-            data: { status: newDriverStatus },
-          });
-        }
-      }
-
       return updated;
     });
 
     // Log audit event
     await logTransactionEvent(
-      request.auth.user.id,
+      request.auth.user,
       "UPDATE",
-      id,
-      {
-        invoice_code: updatedTransaction.invoice_code,
-        before: existingTransaction,
-        after: updatedTransaction,
-      },
-      getClientIp(request),
-      getUserAgent(request)
+      updatedTransaction,
+      request
     );
 
     return successResponse(updatedTransaction);
   } catch (error) {
     console.error("Error updating transaction:", error);
 
-    // Handle availability conflicts
-    if (error.message && error.message.includes("tidak tersedia")) {
-      return errorResponse(error.message, 409);
+    // Handle validation errors
+    if (error.message && error.message.includes("tidak ditemukan")) {
+      return errorResponse(error.message, 404);
     }
 
     return errorResponse("Failed to update transaction", 500);
@@ -307,12 +254,10 @@ async function handleDeleteTransaction(request, { params }) {
 
     // Log audit event
     await logTransactionEvent(
-      request.auth.user.id,
+      request.auth.user,
       "DELETE",
-      id,
-      { invoice_code: existingTransaction.invoice_code },
-      getClientIp(request),
-      getUserAgent(request)
+      existingTransaction,
+      request
     );
 
     return successResponse({ message: "Transaction deleted successfully" });
@@ -323,6 +268,6 @@ async function handleDeleteTransaction(request, { params }) {
 }
 
 export const GET = protectedRoute(handleGetTransaction);
-export const PUT = protectedRoute(handleUpdateTransaction);
-export const PATCH = protectedRoute(handleUpdateTransaction);
+export const PUT = protectedRoute(handleUpdateTransaction, ["ADMIN"]);
+export const PATCH = protectedRoute(handleUpdateTransaction, ["ADMIN"]);
 export const DELETE = protectedRoute(handleDeleteTransaction);

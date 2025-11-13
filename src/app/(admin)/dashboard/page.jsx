@@ -20,7 +20,14 @@ function DashboardPage() {
   const [error, setError] = useState(null);
   const router = useRouter();
   const authFetch = useAuthFetch();
-  const { user } = useUser();
+  const { user, loading: userLoading } = useUser();
+
+  // Redirect OPERATOR away from dashboard (contains financial data)
+  useEffect(() => {
+    if (!userLoading && user && user.role !== "ADMIN") {
+      router.push("/transaksi");
+    }
+  }, [user, userLoading, router]);
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -84,6 +91,23 @@ function DashboardPage() {
       })} - ${now.toLocaleDateString("id-ID", options)}`;
     }
   };
+
+  // Show loading or redirect message for non-admin users
+  if (userLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    );
+  }
+
+  if (user && user.role !== "ADMIN") {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p className="text-muted-foreground">Redirecting...</p>
+      </div>
+    );
+  }
 
   return (
     <>

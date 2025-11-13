@@ -204,11 +204,12 @@ async function handleCreateExpense(request) {
   }
 }
 
-// Only ADMIN and MANAGER can view and create expenses
+// ADMIN and OPERATOR can view and create expenses
+// OPERATOR creates as DRAFT and must submit for approval
 export const GET = protectedRoute(handleGetExpenses, {
-  roles: ["ADMIN", "MANAGER"],
+  roles: ["ADMIN", "OPERATOR"],
 });
 
 export const POST = protectedRoute(handleCreateExpense, {
-  roles: ["ADMIN", "MANAGER"],
+  roles: ["ADMIN", "OPERATOR"],
 });

@@ -238,5 +238,5 @@ async function handleGetDashboardStats(request) {
 }
 
 export const GET = protectedRoute(handleGetDashboardStats, {
-  roles: ["ADMIN", "MANAGER"],
+  roles: ["ADMIN"],
 });

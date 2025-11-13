@@ -7,7 +7,7 @@ import {
 
 /**
  * GET /api/transactions/pending
- * Get all pending transactions for approval (ADMIN/MANAGER only)
+ * Get all pending transactions for approval (ADMIN only)
  */
 async function handleGetPendingTransactions(request) {
   try {
@@ -58,7 +58,4 @@ async function handleGetPendingTransactions(request) {
   }
 }
 
-export const GET = protectedRoute(handleGetPendingTransactions, [
-  "ADMIN",
-  "MANAGER",
-]);
+export const GET = protectedRoute(handleGetPendingTransactions, ["ADMIN"]);

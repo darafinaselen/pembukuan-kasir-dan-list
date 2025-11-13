@@ -114,39 +114,43 @@ export function AppSidebar({ ...props }) {
             });
 
             // Build navigation items based on role
-            const baseNavItems = [
-              {
+            const baseNavItems = [];
+
+            // Dashboard only for ADMIN (contains financial data)
+            if (userData.role === "ADMIN") {
+              baseNavItems.push({
                 title: "Dashboard",
                 icon: GalleryVerticalEnd,
                 url: "/dashboard",
-              },
-              {
-                title: "Master Data",
-                icon: BookOpen,
-                isActive: true,
-                items: [
-                  {
-                    title: "Paket Jasa",
-                    url: "/paket",
-                  },
-                  {
-                    title: "Armada",
-                    url: "/armada",
-                  },
-                  {
-                    title: "Sopir",
-                    url: "/sopir",
-                  },
-                  {
-                    title: "Staff",
-                    url: "/staff",
-                  },
-                ],
-              },
-            ];
+              });
+            }
 
-            // Add "Laporan Keuangan" only for ADMIN and MANAGER
-            if (userData.role === "ADMIN" || userData.role === "MANAGER") {
+            baseNavItems.push({
+              title: "Master Data",
+              icon: BookOpen,
+              isActive: true,
+              items: [
+                {
+                  title: "Paket Jasa",
+                  url: "/paket",
+                },
+                {
+                  title: "Armada",
+                  url: "/armada",
+                },
+                {
+                  title: "Sopir",
+                  url: "/sopir",
+                },
+                {
+                  title: "Staff",
+                  url: "/staff",
+                },
+              ],
+            });
+
+            // Add "Laporan Keuangan" only for ADMIN
+            if (userData.role === "ADMIN") {
               baseNavItems.push({
                 title: "Laporan Keuangan",
                 icon: DollarSign,
@@ -167,11 +171,21 @@ export function AppSidebar({ ...props }) {
                 ],
               });
             } else if (userData.role === "OPERATOR") {
-              // For OPERATOR, show only Transaksi (without Laporan)
+              // For OPERATOR, show Transaksi and Pengeluaran (without Laporan)
               baseNavItems.push({
-                title: "Transaksi",
+                title: "Operasional",
                 icon: DollarSign,
-                url: "/transaksi",
+                isActive: false,
+                items: [
+                  {
+                    title: "Transaksi",
+                    url: "/transaksi",
+                  },
+                  {
+                    title: "Pengeluaran",
+                    url: "/pengeluaran",
+                  },
+                ],
               });
             }
 

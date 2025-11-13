@@ -79,7 +79,9 @@ export default function TransaksiTable({
   onUpdateStatus,
   onPrint,
   onCompleteTransaction,
+  userRole = "OPERATOR", // Default to OPERATOR for safety
 }) {
+  const isAdmin = userRole === "ADMIN";
   const getCalculatedData = (item) => {
     const durasiPaketJam = item.package?.durationHours || 12;
     const start = new Date(item.checkout_datetime);
@@ -363,15 +365,17 @@ export default function TransaksiTable({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => onCompleteTransaction(item)}
-                            disabled={isCompleted}
-                          >
-                            <CheckCircle className="mr-2 h-4 w-4" />
-                            {isCompleted
-                              ? "Sudah Selesai ✓"
-                              : "Selesaikan Transaksi"}
-                          </DropdownMenuItem>
+                          {isAdmin && (
+                            <DropdownMenuItem
+                              onClick={() => onCompleteTransaction(item)}
+                              disabled={isCompleted}
+                            >
+                              <CheckCircle className="mr-2 h-4 w-4" />
+                              {isCompleted
+                                ? "Sudah Selesai ✓"
+                                : "Selesaikan Transaksi"}
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem onClick={() => onPrint(item)}>
                             <Printer className="mr-2 h-4 w-4" />
                             Cetak Invoice
@@ -379,40 +383,46 @@ export default function TransaksiTable({
                           <DropdownMenuItem onClick={() => onViewDetails(item)}>
                             Lihat Detail
                           </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => onEdit(item)}
-                            disabled={isCompleted}
-                          >
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => onDelete(item.id)}
-                            className="text-red-500"
-                            disabled={isCompleted}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Hapus
-                          </DropdownMenuItem>
+                          {isAdmin && (
+                            <>
+                              <DropdownMenuItem
+                                onClick={() => onEdit(item)}
+                                disabled={isCompleted}
+                              >
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => onDelete(item.id)}
+                                className="text-red-500"
+                                disabled={isCompleted}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Hapus
+                              </DropdownMenuItem>
+                            </>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
                     <div className="hidden lg:flex lg:items-center lg:gap-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onCompleteTransaction(item)}
-                        className="text-green-600 hover:text-green-700 whitespace-nowrap"
-                        disabled={isCompleted}
-                        title={
-                          isCompleted
-                            ? "Transaksi sudah selesai"
-                            : "Selesaikan transaksi"
-                        }
-                      >
-                        <CheckCircle className="mr-1 h-3 w-3" />
-                        {isCompleted ? "Selesai ✓" : "Selesai"}
-                      </Button>
+                      {isAdmin && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onCompleteTransaction(item)}
+                          className="text-green-600 hover:text-green-700 whitespace-nowrap"
+                          disabled={isCompleted}
+                          title={
+                            isCompleted
+                              ? "Transaksi sudah selesai"
+                              : "Selesaikan transaksi"
+                          }
+                        >
+                          <CheckCircle className="mr-1 h-3 w-3" />
+                          {isCompleted ? "Selesai ✓" : "Selesai"}
+                        </Button>
+                      )}
                       <Button
                         variant="outline"
                         size="sm"
@@ -431,34 +441,38 @@ export default function TransaksiTable({
                       >
                         Detail
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onEdit(item)}
-                        className="whitespace-nowrap"
-                        disabled={isCompleted}
-                        title={
-                          isCompleted
-                            ? "Transaksi selesai tidak bisa diedit"
-                            : "Edit transaksi"
-                        }
-                      >
-                        <Pencil className="mr-1 h-3 w-3" /> Edit
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onDelete(item.id)}
-                        className="text-red-500 hover:text-red-600 whitespace-nowrap"
-                        disabled={isCompleted}
-                        title={
-                          isCompleted
-                            ? "Transaksi selesai tidak bisa dihapus"
-                            : "Hapus transaksi"
-                        }
-                      >
-                        <Trash2 className="mr-1 h-3 w-3" /> Hapus
-                      </Button>
+                      {isAdmin && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onEdit(item)}
+                            className="whitespace-nowrap"
+                            disabled={isCompleted}
+                            title={
+                              isCompleted
+                                ? "Transaksi selesai tidak bisa diedit"
+                                : "Edit transaksi"
+                            }
+                          >
+                            <Pencil className="mr-1 h-3 w-3" /> Edit
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onDelete(item.id)}
+                            className="text-red-500 hover:text-red-600 whitespace-nowrap"
+                            disabled={isCompleted}
+                            title={
+                              isCompleted
+                                ? "Transaksi selesai tidak bisa dihapus"
+                                : "Hapus transaksi"
+                            }
+                          >
+                            <Trash2 className="mr-1 h-3 w-3" /> Hapus
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>

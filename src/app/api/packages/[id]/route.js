@@ -375,17 +375,17 @@ async function handleDeletePackage(request, { params }) {
   }
 }
 
-// All roles can view packages
+// ADMIN and OPERATOR can view packages
 export const GET = protectedRoute(handleGetPackage, {
-  roles: ["ADMIN", "MANAGER", "OPERATOR"],
+  roles: ["ADMIN", "OPERATOR"],
 });
 
-// Only ADMIN and MANAGER can update packages
+// Only ADMIN can update packages
 export const PUT = protectedRoute(handleUpdatePackage, {
-  roles: ["ADMIN", "MANAGER"],
+  roles: ["ADMIN"],
 });
 
-// Only ADMIN and MANAGER can delete packages
+// Only ADMIN can delete packages
 export const DELETE = protectedRoute(handleDeletePackage, {
-  roles: ["ADMIN", "MANAGER"],
+  roles: ["ADMIN"],
 });

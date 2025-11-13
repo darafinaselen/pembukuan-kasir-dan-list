@@ -85,6 +85,7 @@ export default function TransaksiPage() {
   const { showConfirm } = useAlertDialog();
   const [data, setData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [userRole, setUserRole] = useState("OPERATOR");
   const [searchTerm, setSearchTerm] = useState("");
   const [quickFilter, setQuickFilter] = useState("all");
   const [dateRange, setDateRange] = useState({
@@ -110,6 +111,27 @@ export default function TransaksiPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const itemsPerPage = 10;
+
+  // Fetch user role on mount
+  useEffect(() => {
+    async function fetchUserRole() {
+      try {
+        const res = await fetch("/api/auth/me", {
+          credentials: "include",
+        });
+        if (res.ok) {
+          const result = await res.json();
+          const userData = result.data?.user || result.data || result.user;
+          if (userData?.role) {
+            setUserRole(userData.role);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user role:", error);
+      }
+    }
+    fetchUserRole();
+  }, []);
 
   // --- Data Fetching ---
   async function fetchData(page = 1) {
@@ -773,6 +795,7 @@ export default function TransaksiPage() {
           onUpdateStatus={handleUpdateStatus}
           onPrint={handlePrintInvoice}
           onCompleteTransaction={openCompleteDialog}
+          userRole={userRole}
         />
 
         <div className="mt-4">

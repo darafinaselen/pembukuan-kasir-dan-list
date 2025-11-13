@@ -204,11 +204,11 @@ async function handleDeleteExpense(request, { params }) {
   }
 }
 
-// Only ADMIN and MANAGER can update and delete expenses
+// Only ADMIN can update and delete expenses
 export const PUT = protectedRoute(handleUpdateExpense, {
-  roles: ["ADMIN", "MANAGER"],
+  roles: ["ADMIN"],
 });
 
 export const DELETE = protectedRoute(handleDeleteExpense, {
-  roles: ["ADMIN", "MANAGER"],
+  roles: ["ADMIN"],
 });

@@ -15,7 +15,7 @@ import { logReportAccess } from "@/lib/audit";
  */
 async function handleExportIncomeReport(request) {
   try {
-    // Check permissions - only ADMIN and MANAGER can view reports
+    // Check permissions - only ADMIN can view reports (financial data)
     if (!permissions.canViewReports(request.auth.user)) {
       return errorResponse("Insufficient permissions", 403);
     }
@@ -196,8 +196,8 @@ async function handleExportIncomeReport(request) {
   }
 }
 
-// Only ADMIN and MANAGER can export income reports
+// Only ADMIN can export income reports (financial data)
 export const GET = protectedRoute(handleExportIncomeReport, {
-  roles: ["ADMIN", "MANAGER"],
+  roles: ["ADMIN"],
   rateLimit: rateLimitPresets.exports, // Lower rate limit for exports
 });

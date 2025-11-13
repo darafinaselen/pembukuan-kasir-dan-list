@@ -193,5 +193,5 @@ async function handleGetFuelAnalysis(request) {
 }
 
 export const GET = protectedRoute(handleGetFuelAnalysis, {
-  roles: ["ADMIN", "MANAGER", "OPERATOR"],
+  roles: ["ADMIN"],
 });

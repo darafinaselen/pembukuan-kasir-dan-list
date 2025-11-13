@@ -264,21 +264,47 @@ describe("Approval Workflow - Approve Transaction", () => {
       invoice_code: "RLM-20251112-ABC123",
       approval_status: "PENDING",
       submitted_by: "operator@example.com",
+      checkout_datetime: new Date(),
+      armadaId: "armada-1",
+      driverId: "driver-1",
     };
 
     const mockApprovedTransaction = {
       ...mockTransaction,
       approval_status: "APPROVED",
       approved_at: new Date(),
-      approved_by: "manager@example.com",
+      approved_by: "admin@example.com",
+      armada: { id: "armada-1", status: "READY" },
+      driver: { id: "driver-1", status: "READY" },
     };
 
     prisma.transaction.findUnique.mockResolvedValue(mockTransaction);
-    prisma.transaction.update.mockResolvedValue(mockApprovedTransaction);
+    prisma.armada.findFirst.mockResolvedValue({ id: "armada-1", status: "READY" });
+    prisma.driver.findFirst.mockResolvedValue({ id: "driver-1", status: "READY" });
+    prisma.armada.update.mockResolvedValue({ id: "armada-1", status: "BOOKED" });
+    prisma.driver.update.mockResolvedValue({ id: "driver-1", status: "BOOKED" });
+    
+    // Mock $transaction to return the updated transaction
+    prisma.$transaction.mockImplementation(async (callback) => {
+      const tx = {
+        transaction: {
+          update: jest.fn().mockResolvedValue(mockApprovedTransaction),
+        },
+        armada: {
+          findFirst: prisma.armada.findFirst,
+          update: prisma.armada.update,
+        },
+        driver: {
+          findFirst: prisma.driver.findFirst,
+          update: prisma.driver.update,
+        },
+      };
+      return await callback(tx);
+    });
 
     const request = createMockRequest(
       {},
-      { email: "manager@example.com", role: "MANAGER" }
+      { email: "admin@example.com", role: "ADMIN" }
     );
     const params = createMockParams("trans-1");
 
@@ -341,6 +367,8 @@ describe("Approval Workflow - Reject Transaction", () => {
       id: "trans-1",
       invoice_code: "RLM-20251112-ABC123",
       approval_status: "PENDING",
+      armadaId: "armada-1",
+      driverId: "driver-1",
     };
 
     const rejectionReason = "Data tidak lengkap";
@@ -349,16 +377,35 @@ describe("Approval Workflow - Reject Transaction", () => {
       ...mockTransaction,
       approval_status: "REJECTED",
       rejected_at: new Date(),
-      rejected_by: "manager@example.com",
+      rejected_by: "admin@example.com",
       rejection_reason: rejectionReason,
+      armada: { id: "armada-1", status: "READY" },
+      driver: { id: "driver-1", status: "READY" },
     };
 
     prisma.transaction.findUnique.mockResolvedValue(mockTransaction);
-    prisma.transaction.update.mockResolvedValue(mockRejectedTransaction);
+    prisma.armada.update.mockResolvedValue({ id: "armada-1", status: "READY" });
+    prisma.driver.update.mockResolvedValue({ id: "driver-1", status: "READY" });
+    
+    // Mock $transaction to return the updated transaction
+    prisma.$transaction.mockImplementation(async (callback) => {
+      const tx = {
+        transaction: {
+          update: jest.fn().mockResolvedValue(mockRejectedTransaction),
+        },
+        armada: {
+          update: prisma.armada.update,
+        },
+        driver: {
+          update: prisma.driver.update,
+        },
+      };
+      return await callback(tx);
+    });
 
     const request = createMockRequest(
       { rejection_reason: rejectionReason },
-      { email: "manager@example.com", role: "MANAGER" }
+      { email: "admin@example.com", role: "ADMIN" }
     );
     const params = createMockParams("trans-1");
 
@@ -382,7 +429,7 @@ describe("Approval Workflow - Reject Transaction", () => {
 
     const request = createMockRequest(
       { rejection_reason: "" },
-      { role: "MANAGER" }
+      { role: "ADMIN" }
     );
     const params = createMockParams("trans-1");
 
@@ -422,7 +469,7 @@ describe("Approval Workflow - Reject Transaction", () => {
 
     const request = createMockRequest(
       { rejection_reason: "Test" },
-      { role: "MANAGER" }
+      { role: "ADMIN" }
     );
     const params = createMockParams("trans-1");
 
@@ -761,7 +808,43 @@ describe("Approval Workflow - Status Transitions", () => {
       approval_status: "APPROVED",
     });
 
-    const approveRequest = createMockRequest({}, { role: "MANAGER" });
+    // Setup mocks for approve
+    currentTransaction.checkout_datetime = new Date();
+    currentTransaction.armadaId = "armada-1";
+    currentTransaction.driverId = "driver-1";
+    prisma.transaction.findUnique.mockResolvedValue(currentTransaction);
+    prisma.armada.findFirst.mockResolvedValue({ id: "armada-1", status: "READY" });
+    prisma.driver.findFirst.mockResolvedValue({ id: "driver-1", status: "READY" });
+    prisma.armada.update.mockResolvedValue({ id: "armada-1", status: "BOOKED" });
+    prisma.driver.update.mockResolvedValue({ id: "driver-1", status: "BOOKED" });
+    
+    const mockApprovedTransaction = {
+      ...currentTransaction,
+      approval_status: "APPROVED",
+      approved_at: new Date(),
+      approved_by: "admin@example.com",
+      armada: { id: "armada-1", status: "READY" },
+      driver: { id: "driver-1", status: "READY" },
+    };
+    
+    prisma.$transaction.mockImplementation(async (callback) => {
+      const tx = {
+        transaction: {
+          update: jest.fn().mockResolvedValue(mockApprovedTransaction),
+        },
+        armada: {
+          findFirst: prisma.armada.findFirst,
+          update: prisma.armada.update,
+        },
+        driver: {
+          findFirst: prisma.driver.findFirst,
+          update: prisma.driver.update,
+        },
+      };
+      return await callback(tx);
+    });
+
+    const approveRequest = createMockRequest({}, { role: "ADMIN" });
     const approveResponse = await approveHandler(
       approveRequest,
       createMockParams(transactionId)
@@ -796,16 +879,42 @@ describe("Approval Workflow - Status Transitions", () => {
 
     // Step 2: Reject PENDING to REJECTED
     currentTransaction.approval_status = "PENDING";
+    currentTransaction.armadaId = "armada-1";
+    currentTransaction.driverId = "driver-1";
     prisma.transaction.findUnique.mockResolvedValue(currentTransaction);
-    prisma.transaction.update.mockResolvedValue({
+    prisma.armada.update.mockResolvedValue({ id: "armada-1", status: "READY" });
+    prisma.driver.update.mockResolvedValue({ id: "driver-1", status: "READY" });
+    
+    const mockRejectedTransaction = {
       ...currentTransaction,
       approval_status: "REJECTED",
+      rejected_at: new Date(),
+      rejected_by: "admin@example.com",
       rejection_reason: "Data tidak valid",
+      armada: { id: "armada-1", status: "READY" },
+      driver: { id: "driver-1", status: "READY" },
+    };
+    
+    // Clear previous mock implementation and set new one for reject
+    prisma.$transaction.mockReset();
+    prisma.$transaction.mockImplementation(async (callback) => {
+      const tx = {
+        transaction: {
+          update: jest.fn().mockResolvedValue(mockRejectedTransaction),
+        },
+        armada: {
+          update: prisma.armada.update,
+        },
+        driver: {
+          update: prisma.driver.update,
+        },
+      };
+      return await callback(tx);
     });
 
     const rejectRequest = createMockRequest(
       { rejection_reason: "Data tidak valid" },
-      { role: "MANAGER" }
+      { role: "ADMIN" }
     );
     const rejectResponse = await rejectHandler(
       rejectRequest,

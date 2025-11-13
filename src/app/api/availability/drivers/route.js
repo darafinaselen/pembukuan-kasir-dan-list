@@ -109,7 +109,8 @@ async function handleCheckDriverAvailability(request) {
   }
 }
 
+// ADMIN and OPERATOR can check driver availability
 export const GET = protectedRoute(handleCheckDriverAvailability, {
-  roles: ["ADMIN", "MANAGER", "OPERATOR"],
+  roles: ["ADMIN", "OPERATOR"],
 });
 

@@ -69,7 +69,9 @@ export default function PengeluaranTable({
   onEdit,
   onDelete,
   onView,
+  userRole = "OPERATOR", // Default to OPERATOR for safety
 }) {
+  const isAdmin = userRole === "ADMIN";
   if (isLoading) {
     return (
       <div className="rounded-md border">
@@ -159,15 +161,19 @@ export default function PengeluaranTable({
                       <DropdownMenuItem onClick={() => onView(item)}>
                         Lihat Detail
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onEdit(item)}>
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => onDelete(item.id)}
-                        className="text-red-500"
-                      >
-                        Hapus
-                      </DropdownMenuItem>
+                      {isAdmin && (
+                        <>
+                          <DropdownMenuItem onClick={() => onEdit(item)}>
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => onDelete(item.id)}
+                            className="text-red-500"
+                          >
+                            Hapus
+                          </DropdownMenuItem>
+                        </>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -179,21 +185,25 @@ export default function PengeluaranTable({
                   >
                     <Eye className="mr-1 h-3 w-3" /> Lihat
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onEdit(item)}
-                  >
-                    <Pencil className="mr-1 h-3 w-3" /> Edit
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onDelete(item.id)}
-                    className="text-red-500 hover:text-red-600 hover:border-red-400"
-                  >
-                    <Trash2 className="mr-1 h-3 w-3" /> Hapus
-                  </Button>
+                  {isAdmin && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onEdit(item)}
+                      >
+                        <Pencil className="mr-1 h-3 w-3" /> Edit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onDelete(item.id)}
+                        className="text-red-500 hover:text-red-600 hover:border-red-400"
+                      >
+                        <Trash2 className="mr-1 h-3 w-3" /> Hapus
+                      </Button>
+                    </>
+                  )}
                 </div>
               </TableCell>
             </TableRow>

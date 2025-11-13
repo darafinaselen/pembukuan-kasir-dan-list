@@ -143,9 +143,9 @@ async function handleDeleteFile(request, { params }) {
 }
 
 export const GET = protectedRoute(handleDownloadFile, {
-  roles: ["ADMIN", "MANAGER"],
+  roles: ["ADMIN", "OPERATOR"],
 });
 
 export const DELETE = protectedRoute(handleDeleteFile, {
-  roles: ["ADMIN", "MANAGER"],
+  roles: ["ADMIN", "OPERATOR"],
 });

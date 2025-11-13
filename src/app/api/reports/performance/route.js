@@ -191,5 +191,5 @@ async function handleGetPerformanceReport(request) {
 }
 
 export const GET = protectedRoute(handleGetPerformanceReport, {
-  roles: ["ADMIN", "MANAGER", "OPERATOR"],
+  roles: ["ADMIN"],
 });

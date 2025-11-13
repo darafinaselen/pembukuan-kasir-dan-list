@@ -105,16 +105,10 @@ async function handleCompleteTransaction(request, { params }) {
 
     // Log audit event
     await logTransactionEvent(
-      request.auth.user.id,
+      request.auth.user,
       "COMPLETE",
-      updatedTransaction.id,
-      {
-        ...updatedTransaction,
-        actual_checkin_datetime: updatedTransaction.actual_checkin_datetime,
-        actual_overtime_cost: updatedTransaction.actual_overtime_cost,
-      },
-      request.auth.ipAddress,
-      request.auth.userAgent
+      updatedTransaction,
+      request
     );
 
     return successResponse(updatedTransaction, 200);
@@ -136,4 +130,5 @@ async function handleCompleteTransaction(request, { params }) {
   }
 }
 
-export const PUT = protectedRoute(handleCompleteTransaction);
+// Only ADMIN can complete transactions
+export const PUT = protectedRoute(handleCompleteTransaction, ["ADMIN"]);

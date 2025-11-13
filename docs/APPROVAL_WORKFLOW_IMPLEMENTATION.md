@@ -43,7 +43,7 @@ rejection_reason  String?
 #### A. Submit for Approval
 
 **Endpoint**: `POST /api/transactions/[id]/submit`  
-**Access**: ADMIN, MANAGER, OPERATOR  
+**Access**: ADMIN, OPERATOR  
 **Function**: Submit transaction from DRAFT to PENDING
 
 **Request**: No body required  
@@ -73,7 +73,7 @@ rejection_reason  String?
 #### B. Approve Transaction
 
 **Endpoint**: `POST /api/transactions/[id]/approve`  
-**Access**: ADMIN, MANAGER only  
+**Access**: ADMIN only  
 **Function**: Approve transaction from PENDING to APPROVED
 
 **Request**: No body required  
@@ -103,7 +103,7 @@ rejection_reason  String?
 #### C. Reject Transaction
 
 **Endpoint**: `POST /api/transactions/[id]/reject`  
-**Access**: ADMIN, MANAGER only  
+**Access**: ADMIN only  
 **Function**: Reject transaction from PENDING to REJECTED
 
 **Request Body**:
@@ -141,7 +141,7 @@ rejection_reason  String?
 #### D. Get Pending Transactions
 
 **Endpoint**: `GET /api/transactions/pending`  
-**Access**: ADMIN, MANAGER only  
+**Access**: ADMIN only  
 **Function**: List all transactions awaiting approval
 
 **Query Parameters**:
@@ -293,13 +293,13 @@ Reusable badge component for displaying approval status:
 │ PENDING  │ ◄─── Waiting for approval
 └─┬──────┬─┘
   │      │
-  │      │ Approve (ADMIN/MANAGER)
+  │      │ Approve (ADMIN)
   │      ▼
   │  ┌──────────┐
   │  │ APPROVED │ ◄─── Final state (locked)
   │  └──────────┘
   │
-  │ Reject (ADMIN/MANAGER)
+  │ Reject (ADMIN)
   ▼
 ┌──────────┐
 │ REJECTED │ ◄─── Can be edited back to DRAFT
@@ -310,17 +310,19 @@ Reusable badge component for displaying approval status:
 
 ## 🔐 Permission Matrix
 
-| Action                     | OPERATOR | MANAGER | ADMIN |
-| -------------------------- | -------- | ------- | ----- |
-| Create Transaction (DRAFT) | ✅       | ✅      | ✅    |
-| Submit for Approval        | ✅       | ✅      | ✅    |
-| Approve Transaction        | ❌       | ✅      | ✅    |
-| Reject Transaction         | ❌       | ✅      | ✅    |
-| View Pending List          | ❌       | ✅      | ✅    |
-| Edit DRAFT/REJECTED        | ✅       | ✅      | ✅    |
-| Edit PENDING/APPROVED      | ❌       | ❌      | ❌    |
-| Delete DRAFT/REJECTED      | ✅       | ✅      | ✅    |
-| Delete PENDING/APPROVED    | ❌       | ❌      | ❌    |
+| Action                     | OPERATOR | ADMIN |
+| -------------------------- | -------- | ----- |
+| Create Transaction (DRAFT) | ✅       | ✅    |
+| Submit for Approval        | ✅       | ✅    |
+| Approve Transaction        | ❌       | ✅    |
+| Reject Transaction         | ❌       | ✅    |
+| View Pending List          | ❌       | ✅    |
+| Edit DRAFT/REJECTED        | ❌       | ✅    |
+| Edit PENDING/APPROVED      | ❌       | ❌    |
+| Delete DRAFT/REJECTED      | ❌       | ✅    |
+| Delete PENDING/APPROVED    | ❌       | ❌    |
+
+**Note**: OPERATOR dapat membuat transaksi sebagai DRAFT, tetapi hanya ADMIN yang dapat mengedit atau menghapus transaksi. OPERATOR harus submit untuk approval, dan hanya ADMIN yang dapat approve/reject.
 
 ---
 
@@ -617,10 +619,11 @@ import ApprovalStatusBadge from "./ApprovalStatusBadge";
 
 - [ ] OPERATOR can submit transactions
 - [ ] OPERATOR cannot approve/reject
-- [ ] MANAGER can approve/reject
+- [ ] OPERATOR cannot edit/delete transactions
 - [ ] ADMIN can approve/reject
-- [ ] Only DRAFT/REJECTED can be edited
-- [ ] Only DRAFT/REJECTED can be deleted
+- [ ] ADMIN can edit/delete DRAFT/REJECTED transactions
+- [ ] Only DRAFT/REJECTED can be edited (by ADMIN)
+- [ ] Only DRAFT/REJECTED can be deleted (by ADMIN)
 
 ### Audit Logs
 

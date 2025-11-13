@@ -64,7 +64,7 @@ export const viewport = {
 export default function RootLayout({ children }) {
   return (
     <html lang="id">
-      <body suppressHydrationWarning className="antialiased">
+      <body suppressHydrationWarning className="antialiased min-h-screen">
         <AlertDialogProvider>
           {children}
           <Toaster />

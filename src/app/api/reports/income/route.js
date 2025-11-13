@@ -41,6 +41,7 @@ async function handleGetIncomeReport(request) {
       booking_date: { gte: fromDate, lte: toDate },
       // Only include transactions that have a package (paid services)
       packageId: { not: null },
+      approval_status: "APPROVED",
     };
 
     // Add package type filter if specified

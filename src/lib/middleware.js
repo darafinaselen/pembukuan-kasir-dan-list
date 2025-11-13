@@ -103,12 +103,10 @@ export function requireRole(user, allowedRoles) {
 export const permissions = {
   // Transaction permissions
   // OPERATOR can view and create transactions (as DRAFT), but must submit for approval
-  canViewTransactions: (user) =>
-    ["ADMIN", "OPERATOR"].includes(user?.role),
-  canCreateTransaction: (user) =>
-    ["ADMIN", "OPERATOR"].includes(user?.role),
-  // Only ADMIN can update/delete/approve/reject transactions
-  canUpdateTransaction: (user) => ["ADMIN"].includes(user?.role),
+  canViewTransactions: (user) => ["ADMIN", "OPERATOR"].includes(user?.role),
+  canCreateTransaction: (user) => ["ADMIN", "OPERATOR"].includes(user?.role),
+  // OPERATOR can update DRAFT transactions, ADMIN can update any
+  canUpdateTransaction: (user) => ["ADMIN", "OPERATOR"].includes(user?.role),
   canDeleteTransaction: (user) => ["ADMIN"].includes(user?.role),
 
   // Financial report permissions
@@ -132,15 +130,13 @@ export const permissions = {
 
   // Driver permissions
   // OPERATOR can view drivers to select for transactions
-  canViewDrivers: (user) =>
-    ["ADMIN", "OPERATOR"].includes(user?.role),
+  canViewDrivers: (user) => ["ADMIN", "OPERATOR"].includes(user?.role),
   // Only ADMIN can manage (create/update/delete) drivers
   canManageDrivers: (user) => ["ADMIN"].includes(user?.role),
 
   // Package permissions
   // OPERATOR can view packages to select for transactions
-  canViewPackages: (user) =>
-    ["ADMIN", "OPERATOR"].includes(user?.role),
+  canViewPackages: (user) => ["ADMIN", "OPERATOR"].includes(user?.role),
   // Only ADMIN can manage (create/update/delete) packages
   canManagePackages: (user) => ["ADMIN"].includes(user?.role),
 

@@ -24,7 +24,8 @@ async function handleCompleteTransaction(request, { params }) {
       return errorResponse("Transaction ID is required", 400);
     }
 
-    const { actual_checkin_datetime, actual_overtime_cost } = body;
+    const { actual_checkin_datetime, actual_overtime_cost, remaining_payment } =
+      body;
 
     if (!actual_checkin_datetime) {
       const errMsg = "Waktu mobil kembali aktual harus diisi";
@@ -74,6 +75,10 @@ async function handleCompleteTransaction(request, { params }) {
       return errorResponse(errMsg, 400);
     }
 
+    // Determine final payment status
+    // If transaction is completed, payment should be PAID (lunas)
+    const finalPaymentStatus = "PAID";
+
     // Update transaction with completion data and reset armada/driver status
     const [updatedTransaction] = await prisma.$transaction([
       // Update transaction
@@ -82,6 +87,7 @@ async function handleCompleteTransaction(request, { params }) {
         data: {
           actual_checkin_datetime: new Date(actual_checkin_datetime),
           actual_overtime_cost: actual_overtime_cost || 0,
+          payment_status: finalPaymentStatus, // Set to PAID when completed
         },
         include: {
           package: true,

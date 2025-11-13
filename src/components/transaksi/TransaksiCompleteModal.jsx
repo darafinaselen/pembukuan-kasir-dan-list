@@ -34,6 +34,7 @@ export default function TransaksiCompleteModal({
   const [actualCheckinTime, setActualCheckinTime] = useState("");
   const [overtimeCost, setOvertimeCost] = useState(0);
   const [calculatedOvertimeHours, setCalculatedOvertimeHours] = useState(0);
+  const [remainingPayment, setRemainingPayment] = useState(0);
 
   const calculateOvertimeLocal = useCallback(
     (checkinTime) => {
@@ -72,6 +73,17 @@ export default function TransaksiCompleteModal({
     }
   }, [transaction, calculateOvertimeLocal]);
 
+  // Update remaining payment when overtime cost changes manually
+  useEffect(() => {
+    if (transaction) {
+      const baseRate = transaction.all_in_rate || 0;
+      const dpAmount = transaction.dp_amount || 0;
+      const newTotalAmount = baseRate + overtimeCost;
+      const newSisaTagihan = newTotalAmount - dpAmount;
+      setRemainingPayment(newSisaTagihan > 0 ? newSisaTagihan : 0);
+    }
+  }, [overtimeCost, transaction]);
+
   const handleCheckinTimeChange = (e) => {
     const newTime = e.target.value;
     setActualCheckinTime(newTime);
@@ -109,6 +121,7 @@ export default function TransaksiCompleteModal({
     onComplete({
       actual_checkin_datetime: checkinDateTime,
       actual_overtime_cost: overtimeCost,
+      remaining_payment: remainingPayment,
     });
   };
 
@@ -118,6 +131,10 @@ export default function TransaksiCompleteModal({
   const totalDuration = calculatedOvertimeHours + packageDuration;
   const baseRate = transaction.all_in_rate || 0;
   const totalAmount = baseRate + overtimeCost;
+
+  // Calculate remaining payment (sisa tagihan)
+  const dpAmount = transaction.dp_amount || 0;
+  const sisaTagihan = totalAmount - dpAmount;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -301,6 +318,34 @@ export default function TransaksiCompleteModal({
                   {formatCurrency(totalAmount)}
                 </span>
               </div>
+
+              {dpAmount > 0 && (
+                <>
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>DP Sudah Dibayar:</span>
+                    <span>-{formatCurrency(dpAmount)}</span>
+                  </div>
+                  <hr className="my-2" />
+                  <div className="flex justify-between items-center">
+                    <Label
+                      htmlFor="remainingPayment"
+                      className="text-sm font-medium"
+                    >
+                      Sisa Tagihan (Dibayar Sekarang):
+                    </Label>
+                    <div className="w-48">
+                      <CurrencyInput
+                        id="remainingPayment"
+                        value={remainingPayment}
+                        onChange={(value) =>
+                          setRemainingPayment(Number(value) || 0)
+                        }
+                        className="text-right font-bold"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>

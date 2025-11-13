@@ -37,6 +37,7 @@ async function handleGetPerformanceReport(request) {
           gte: fromDate,
           lte: toDate,
         },
+        approval_status: "APPROVED",
       },
       select: {
         id: true,

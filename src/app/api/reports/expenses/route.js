@@ -3,6 +3,7 @@ import {
   successResponse,
   errorResponse,
   permissions,
+  rateLimitPresets,
   getClientIp,
   getUserAgent,
 } from "@/lib/middleware";
@@ -13,41 +14,56 @@ import { logReportAccess } from "@/lib/audit";
  * GET /api/reports/expenses
  * Get expense reports with pivot/grouping functionality
  * Query parameters:
- * - startDate: Start date filter (YYYY-MM-DD)
- * - endDate: End date filter (YYYY-MM-DD)
+ * - from: Start date filter (YYYY-MM-DD)
+ * - to: End date filter (YYYY-MM-DD)
  * - paymentMonth: Filter by payment month (YYYY-MM-DD)
  * - category: Filter by specific category
  * - groupBy: 'category' (default) or 'month' for different grouping
  */
-export async function GET(request) {
+async function handleGetExpenseReport(request) {
   try {
-    // Check permissions
-    if (!permissions.canViewExpenses(request.auth?.user)) {
+    // Check permissions - only ADMIN can view reports (financial data)
+    if (!permissions.canViewReports(request.auth.user)) {
       return errorResponse("Insufficient permissions", 403);
     }
 
     const { searchParams } = new URL(request.url);
-    const startDate = searchParams.get("startDate");
-    const endDate = searchParams.get("endDate");
+    const from = searchParams.get("from");
+    const to = searchParams.get("to");
     const paymentMonth = searchParams.get("paymentMonth");
     const category = searchParams.get("category");
     const groupBy = searchParams.get("groupBy") || "category"; // 'category' or 'month'
 
     // Build where clause
-    const where = {};
+    const where = {
+      approval_status: "APPROVED",
+    };
 
-    if (startDate && endDate) {
+    if (from && to) {
+      // Parse date dan set waktu dengan benar
+      // from: start of day (00:00:00)
+      // to: end of day (23:59:59)
+      const fromDate = new Date(from);
+      fromDate.setHours(0, 0, 0, 0);
+
+      const toDate = new Date(to);
+      toDate.setHours(23, 59, 59, 999);
+
       where.date = {
-        gte: new Date(startDate),
-        lte: new Date(endDate),
+        gte: fromDate,
+        lte: toDate,
       };
-    } else if (startDate) {
+    } else if (from) {
+      const fromDate = new Date(from);
+      fromDate.setHours(0, 0, 0, 0);
       where.date = {
-        gte: new Date(startDate),
+        gte: fromDate,
       };
-    } else if (endDate) {
+    } else if (to) {
+      const toDate = new Date(to);
+      toDate.setHours(23, 59, 59, 999);
       where.date = {
-        lte: new Date(endDate),
+        lte: toDate,
       };
     }
 
@@ -70,7 +86,7 @@ export async function GET(request) {
           select: { id: true, driver_name: true, nik: true },
         },
         staff: {
-          select: { id: true, name: true, position: true },
+          select: { id: true, staff_name: true, position: true },
         },
         attachments: {
           select: {
@@ -155,8 +171,8 @@ export async function GET(request) {
           ? groupedArray.length
           : Object.keys(groupedArray[0]?.categories || {}).length,
       dateRange: {
-        startDate: startDate || null,
-        endDate: endDate || null,
+        from: from || null,
+        to: to || null,
       },
       filters: {
         paymentMonth: paymentMonth || null,
@@ -169,7 +185,7 @@ export async function GET(request) {
     await logReportAccess(
       request.auth.user.id,
       "Expenses Report",
-      { startDate, endDate, category, groupBy },
+      { from, to, category, groupBy },
       getClientIp(request),
       getUserAgent(request)
     );
@@ -184,3 +200,10 @@ export async function GET(request) {
     return errorResponse("Gagal membuat laporan pengeluaran", 500);
   }
 }
+
+// Only ADMIN can view reports (financial data)
+// Use reports rate limit for flexible data viewing
+export const GET = protectedRoute(handleGetExpenseReport, {
+  roles: ["ADMIN"],
+  rateLimit: rateLimitPresets.reports, // 600 requests per minute
+});

@@ -1328,7 +1328,7 @@ export function PackageForm({
                       <FormField>
                         <FormItem>
                           <FormLabel htmlFor="hargaDefault">
-                            Harga Default (per PAX){" "}
+                            Harga Default{" "}
                             <span className="text-red-500">*</span>
                           </FormLabel>
                           <FormControl>

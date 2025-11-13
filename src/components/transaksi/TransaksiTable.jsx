@@ -139,6 +139,7 @@ export default function TransaksiTable({
               <TableHead>Invoice</TableHead>
               <TableHead>Pelanggan</TableHead>
               <TableHead>Jasa</TableHead>
+              <TableHead>Armada</TableHead>
               <TableHead className="text-right">Total Tagihan</TableHead>
               <TableHead className="text-right">Sisa Tagihan</TableHead>
               <TableHead className="w-[180px]">Status Pembayaran</TableHead>
@@ -160,6 +161,12 @@ export default function TransaksiTable({
                 </TableCell>
                 <TableCell>
                   <Skeleton className="h-4 w-20" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-4 w-20" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-4 w-16" />
                 </TableCell>
                 <TableCell className="text-right">
                   <Skeleton className="h-4 w-20 ml-auto" />
@@ -202,6 +209,7 @@ export default function TransaksiTable({
               <TableHead className="whitespace-nowrap">Invoice</TableHead>
               <TableHead className="whitespace-nowrap">Pelanggan</TableHead>
               <TableHead className="whitespace-nowrap">Jasa</TableHead>
+              <TableHead className="whitespace-nowrap">Armada</TableHead>
               <TableHead className="text-right whitespace-nowrap">
                 Total Tagihan
               </TableHead>
@@ -231,12 +239,27 @@ export default function TransaksiTable({
 
               const isCompleted = !!item.actual_checkin_datetime;
               const approvalStatus = item.approval_status || "DRAFT";
+
+              // Check if armada is currently booked or on trip (preventing modifications)
+              const isArmadaInUse =
+                item.armada?.status === "BOOKED" ||
+                item.armada?.status === "ON_TRIP";
+              const armadaStatusMessage = isArmadaInUse
+                ? `Armada sedang ${item.armada?.status === "BOOKED" ? "dipesan" : "on trip"}`
+                : null;
+
               const canEdit =
-                isAdmin || (isOperator && approvalStatus === "DRAFT");
-              const canDelete = isAdmin && !isCompleted;
+                !isCompleted &&
+                !isArmadaInUse &&
+                (isAdmin || (isOperator && approvalStatus === "DRAFT"));
+              const canDelete = isAdmin && !isCompleted && !isArmadaInUse;
               const canSubmitForApproval =
-                isOperator && approvalStatus === "DRAFT" && !isCompleted;
-              const canApproveReject = isAdmin && approvalStatus === "PENDING";
+                isOperator &&
+                approvalStatus === "DRAFT" &&
+                !isCompleted &&
+                !isArmadaInUse;
+              const canApproveReject =
+                isAdmin && approvalStatus === "PENDING" && !isArmadaInUse;
 
               return (
                 <TableRow
@@ -330,6 +353,47 @@ export default function TransaksiTable({
                       </TooltipContent>
                     </Tooltip>
                   </TableCell>
+                  <TableCell className="max-w-[120px]">
+                    <div className="flex flex-col gap-1">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="truncate cursor-help font-medium">
+                            {item.armada?.license_plate || "N/A"}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">
+                          <div className="space-y-1">
+                            <p className="font-medium">
+                              {item.armada?.license_plate || "Tidak ada armada"}
+                            </p>
+                            {item.armada && (
+                              <>
+                                <p className="text-sm">
+                                  {item.armada.brand} {item.armada.model}
+                                </p>
+                              </>
+                            )}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                      {isArmadaInUse && (
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "text-xs w-fit",
+                            item.armada?.status === "BOOKED" &&
+                              "bg-yellow-50 text-yellow-700 border-yellow-300",
+                            item.armada?.status === "ON_TRIP" &&
+                              "bg-blue-50 text-blue-700 border-blue-300"
+                          )}
+                        >
+                          {item.armada?.status === "BOOKED"
+                            ? "Dipesan"
+                            : "On Trip"}
+                        </Badge>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell className="text-right whitespace-nowrap">
                     {formatCurrency(totalTagihan)}
                   </TableCell>
@@ -414,6 +478,20 @@ export default function TransaksiTable({
                               Ajukan Approval
                             </DropdownMenuItem>
                           )}
+                          {!canSubmitForApproval &&
+                            isOperator &&
+                            approvalStatus === "DRAFT" &&
+                            !isCompleted &&
+                            isArmadaInUse && (
+                              <DropdownMenuItem
+                                disabled
+                                className="opacity-50 cursor-not-allowed"
+                                title={armadaStatusMessage}
+                              >
+                                <Send className="mr-2 h-4 w-4" />
+                                Ajukan Approval (Disabled)
+                              </DropdownMenuItem>
+                            )}
                           <DropdownMenuItem onClick={() => onPrint(item)}>
                             <Printer className="mr-2 h-4 w-4" />
                             Cetak Invoice
@@ -430,6 +508,22 @@ export default function TransaksiTable({
                               Edit
                             </DropdownMenuItem>
                           )}
+                          {!canEdit && !isCompleted && (
+                            <DropdownMenuItem
+                              disabled
+                              className="opacity-50 cursor-not-allowed"
+                              title={
+                                isArmadaInUse
+                                  ? armadaStatusMessage
+                                  : isOperator && approvalStatus !== "DRAFT"
+                                    ? "Hanya draft yang bisa diedit"
+                                    : "Tidak dapat diedit"
+                              }
+                            >
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Edit (Disabled)
+                            </DropdownMenuItem>
+                          )}
                           {canDelete && (
                             <DropdownMenuItem
                               onClick={() => onDelete(item.id)}
@@ -439,6 +533,19 @@ export default function TransaksiTable({
                               Hapus
                             </DropdownMenuItem>
                           )}
+                          {!canDelete &&
+                            isAdmin &&
+                            !isCompleted &&
+                            isArmadaInUse && (
+                              <DropdownMenuItem
+                                disabled
+                                className="opacity-50 cursor-not-allowed text-red-500"
+                                title={armadaStatusMessage}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Hapus (Disabled)
+                              </DropdownMenuItem>
+                            )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -470,6 +577,20 @@ export default function TransaksiTable({
                           <CheckSquare className="h-3 w-3" />
                         </Button>
                       )}
+                      {!canApproveReject &&
+                        isAdmin &&
+                        approvalStatus === "PENDING" &&
+                        isArmadaInUse && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled
+                            className="text-blue-600 opacity-50 cursor-not-allowed"
+                            title={`${armadaStatusMessage} - Tidak dapat review approval`}
+                          >
+                            <CheckSquare className="h-3 w-3" />
+                          </Button>
+                        )}
                       {canSubmitForApproval && (
                         <Button
                           variant="outline"
@@ -481,6 +602,21 @@ export default function TransaksiTable({
                           <Send className="h-3 w-3" />
                         </Button>
                       )}
+                      {!canSubmitForApproval &&
+                        isOperator &&
+                        approvalStatus === "DRAFT" &&
+                        !isCompleted &&
+                        isArmadaInUse && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled
+                            className="text-blue-600 opacity-50 cursor-not-allowed"
+                            title={`${armadaStatusMessage} - Tidak dapat ajukan approval`}
+                          >
+                            <Send className="h-3 w-3" />
+                          </Button>
+                        )}
                       <Button
                         variant="outline"
                         size="sm"
@@ -517,6 +653,22 @@ export default function TransaksiTable({
                           <Pencil className="h-3 w-3" />
                         </Button>
                       )}
+                      {!canEdit && !isCompleted && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled
+                          title={
+                            isArmadaInUse
+                              ? armadaStatusMessage
+                              : isOperator && approvalStatus !== "DRAFT"
+                                ? "Hanya draft yang bisa diedit"
+                                : "Tidak dapat diedit"
+                          }
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                      )}
                       {canDelete && (
                         <Button
                           variant="outline"
@@ -528,6 +680,20 @@ export default function TransaksiTable({
                           <Trash2 className="h-3 w-3" />
                         </Button>
                       )}
+                      {!canDelete &&
+                        isAdmin &&
+                        !isCompleted &&
+                        isArmadaInUse && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled
+                            className="text-red-500 opacity-50 cursor-not-allowed"
+                            title={armadaStatusMessage}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        )}
                     </div>
                   </TableCell>
                 </TableRow>

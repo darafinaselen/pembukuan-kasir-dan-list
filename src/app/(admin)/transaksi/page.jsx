@@ -42,6 +42,7 @@ const INITIAL_FORM_STATE = {
   all_in_rate: 0,
   overtime_rate_per_hour: 0,
   dp_amount: 0,
+  payment_status: "UNPAID", // Default status
   hotel_name: "",
   pax_count: "",
   hotel_tier_id: "",
@@ -293,6 +294,11 @@ export default function TransaksiPage() {
 
     setFormData((prev) => {
       const updatedData = { ...prev, [id]: newValue };
+
+      // Auto-update payment_status based on dp_amount
+      if (id === "dp_amount") {
+        updatedData.payment_status = newValue > 0 ? "DOWN_PAYMENT" : "UNPAID";
+      }
 
       // For TOUR_PACKAGE, recalculate pricing when pax_count changes
       if (id === "pax_count") {
@@ -574,6 +580,7 @@ export default function TransaksiPage() {
       all_in_rate: item.all_in_rate || 0,
       overtime_rate_per_hour: item.overtime_rate_per_hour || 0,
       dp_amount: item.dp_amount != null ? item.dp_amount : 0,
+      payment_status: item.payment_status || "UNPAID", // Ensure payment_status is set
       hotel_name: item.hotel_name || "",
       pax_count: item.pax_count || "",
       hotel_tier_id: item.hotel_tier_id || "",
@@ -726,6 +733,12 @@ export default function TransaksiPage() {
           formData.dp_amount && Number(formData.dp_amount) > 0
             ? Number(formData.dp_amount)
             : null,
+
+        // Status Pembayaran (otomatis berdasarkan DP)
+        payment_status:
+          formData.dp_amount && Number(formData.dp_amount) > 0
+            ? "DOWN_PAYMENT"
+            : "UNPAID",
 
         // Data Tambahan untuk Paket Wisata (opsional)
         hotel_name: formData.hotel_name || null,

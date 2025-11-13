@@ -113,11 +113,11 @@ format(date, "dd MMM yyyy", { locale: id });
 
 ### Invoice Code Generation
 
-Use nanoid for collision-resistant invoice codes:
+Use nanoid for collision-resistant invoice codes (alphanumeric only):
 
 ```javascript
 import { nanoid } from "nanoid";
-const uniqueSuffix = nanoid(6).toUpperCase();
+const uniqueSuffix = nanoid(6, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ");
 const invoice_code = `RLM-${yyyymmdd}-${uniqueSuffix}`;
 ```
 

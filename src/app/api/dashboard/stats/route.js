@@ -46,6 +46,7 @@ async function handleGetDashboardStats(request) {
           gte: startDate,
           lte: now,
         },
+        approval_status: "APPROVED",
       },
       select: {
         id: true,

@@ -34,16 +34,18 @@ async function handleGetFuelAnalysis(request) {
     const fuelExpenses = await prisma.expense.findMany({
       where: {
         category: "BBM",
-        expense_date: {
+        date: {
           gte: fromDate,
           lte: toDate,
         },
+        approval_status: "APPROVED",
       },
       include: {
         armada: {
           select: {
             id: true,
-            car_name: true,
+            brand: true,
+            model: true,
             license_plate: true,
           },
         },
@@ -56,12 +58,12 @@ async function handleGetFuelAnalysis(request) {
         staff: {
           select: {
             id: true,
-            nama: true,
+            staff_name: true,
           },
         },
       },
       orderBy: {
-        expense_date: "asc",
+        date: "asc",
       },
     });
 
@@ -100,7 +102,7 @@ async function handleGetFuelAnalysis(request) {
       if (!armadaFuelMap.has(armadaId)) {
         armadaFuelMap.set(armadaId, {
           armadaId,
-          armadaName: expense.armada.car_name,
+          armadaName: `${expense.armada.brand} ${expense.armada.model}`,
           licensePlate: expense.armada.license_plate,
           totalAmount: 0,
           totalFuelCost: 0,
@@ -115,7 +117,7 @@ async function handleGetFuelAnalysis(request) {
       armada.totalFuelCost += expense.amount || 0;
       armada.refuelCount += 1;
       armada.expenses.push({
-        date: expense.expense_date,
+        date: expense.date,
         amount: expense.amount,
         description: expense.description,
       });

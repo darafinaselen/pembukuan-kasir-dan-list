@@ -77,19 +77,40 @@ async function handleUpdateTransaction(request, { params }) {
       return errorResponse("Transaction not found", 404);
     }
 
-    // Prevent editing if status is PENDING or APPROVED
-    if (existingTransaction.approval_status === "PENDING") {
+    // Prevent editing completed transactions
+    if (existingTransaction.actual_checkin_datetime) {
       return errorResponse(
-        "Transaksi tidak dapat diedit karena sedang menunggu persetujuan",
+        "Transaksi yang sudah selesai tidak dapat diedit",
         403
       );
     }
 
-    if (existingTransaction.approval_status === "APPROVED") {
+    const userRole = request.auth.user.role;
+    const approvalStatus = existingTransaction.approval_status;
+
+    // OPERATOR can only edit DRAFT transactions
+    if (userRole === "OPERATOR" && approvalStatus !== "DRAFT") {
       return errorResponse(
-        "Transaksi yang sudah disetujui tidak dapat diedit",
+        "Operator hanya dapat mengedit transaksi dengan status DRAFT",
         403
       );
+    }
+
+    // ADMIN cannot edit PENDING or APPROVED transactions
+    if (userRole === "ADMIN") {
+      if (approvalStatus === "PENDING") {
+        return errorResponse(
+          "Transaksi tidak dapat diedit karena sedang menunggu persetujuan",
+          403
+        );
+      }
+
+      if (approvalStatus === "APPROVED") {
+        return errorResponse(
+          "Transaksi yang sudah disetujui tidak dapat diedit",
+          403
+        );
+      }
     }
 
     // Validate input data

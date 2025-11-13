@@ -177,23 +177,13 @@ export default function TransaksiDetailModal({
         </div>
 
         <div className="rounded-md border bg-muted p-4">
-          <div className="grid grid-cols-2 gap-4 text-center">
-            <div>
-              <Label className="text-sm text-muted-foreground">
-                Total Pendapatan
-              </Label>
-              <p className="text-xl font-semibold text-blue-600">
-                {formatCurrency(calculatedData.totalPendapatan)}
-              </p>
-            </div>
-            <div>
-              <Label className="text-sm text-muted-foreground">
-                Laba Kotor
-              </Label>
-              <p className="text-xl font-semibold text-green-600">
-                {formatCurrency(calculatedData.labaKotor)}
-              </p>
-            </div>
+          <div className="text-center">
+            <Label className="text-sm text-muted-foreground">
+              Total Pendapatan
+            </Label>
+            <p className="text-2xl font-semibold text-blue-600 mt-2">
+              {formatCurrency(calculatedData.totalPendapatan)}
+            </p>
           </div>
         </div>
 

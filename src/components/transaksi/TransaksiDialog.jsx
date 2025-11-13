@@ -22,7 +22,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DateTimePicker, DatePicker } from "@/components/ui/datetime-picker";
-import { Loader2 } from "lucide-react";
 
 function formatCurrency(amount) {
   if (typeof amount !== "number" || isNaN(amount)) {

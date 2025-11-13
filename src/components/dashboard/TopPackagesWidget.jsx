@@ -3,6 +3,17 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Package, TrendingUp, Loader2, PieChart } from "lucide-react";
+import {
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+} from "recharts";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
 
 const PACKAGE_TYPE_LABELS = {
   CAR_RENTAL: "Sewa Mobil",
@@ -80,35 +91,33 @@ export function TopPackagesWidget({ incomeData, loading }) {
     0
   );
 
-  // Colors for pie chart
+  // Colors for pie chart - using consistent color palette
   const chartColors = [
-    "bg-blue-500",
-    "bg-green-500",
-    "bg-yellow-500",
-    "bg-purple-500",
-    "bg-pink-500",
+    "hsl(var(--chart-1))",
+    "hsl(var(--chart-2))",
+    "hsl(var(--chart-3))",
+    "hsl(var(--chart-4))",
+    "hsl(var(--chart-5))",
   ];
 
-  // Calculate pie chart angles
-  const calculateAngle = (value, total) => {
-    return (value / total) * 360;
-  };
+  // Prepare data for recharts
+  const chartData = topPackages.map((pkg, index) => ({
+    name: pkg.packageName,
+    value: pkg.totalRevenue,
+    percentage: ((pkg.totalRevenue / totalRevenue) * 100).toFixed(1),
+    packageType: pkg.packageType,
+    transactionCount: pkg.transactionCount,
+    color: chartColors[index % chartColors.length],
+  }));
 
-  // Build pie chart segments
-  let currentAngle = 0;
-  const pieSegments = topPackages.map((pkg, index) => {
-    const angle = calculateAngle(pkg.totalRevenue, totalRevenue);
-    const segment = {
-      ...pkg,
-      angle,
-      startAngle: currentAngle,
-      endAngle: currentAngle + angle,
-      color: chartColors[index % chartColors.length],
-      percentage: ((pkg.totalRevenue / totalRevenue) * 100).toFixed(1),
+  // Chart config for shadcn
+  const chartConfig = chartData.reduce((config, item, index) => {
+    config[`segment${index}`] = {
+      label: item.name,
+      color: item.color,
     };
-    currentAngle += angle;
-    return segment;
-  });
+    return config;
+  }, {});
 
   return (
     <Card>
@@ -122,35 +131,40 @@ export function TopPackagesWidget({ incomeData, loading }) {
         <div className="grid gap-6 md:grid-cols-2">
           {/* Pie Chart */}
           <div className="flex flex-col items-center justify-center">
-            <div className="relative w-48 h-48">
-              <svg
-                viewBox="0 0 100 100"
-                className="transform -rotate-90"
-                style={{ width: "100%", height: "100%" }}
+            <div className="relative">
+              <ChartContainer
+                config={chartConfig}
+                className="mx-auto aspect-square max-h-[200px]"
               >
-                {pieSegments.map((segment, index) => {
-                  const largeArcFlag = segment.angle > 180 ? 1 : 0;
-                  const x1 =
-                    50 + 50 * Math.cos((segment.startAngle * Math.PI) / 180);
-                  const y1 =
-                    50 + 50 * Math.sin((segment.startAngle * Math.PI) / 180);
-                  const x2 =
-                    50 + 50 * Math.cos((segment.endAngle * Math.PI) / 180);
-                  const y2 =
-                    50 + 50 * Math.sin((segment.endAngle * Math.PI) / 180);
+                <RechartsPieChart>
+                  <ChartTooltip
+                    cursor={false}
+                    content={
+                      <ChartTooltipContent
+                        hideLabel
+                        formatter={(value, name, props) => [
+                          `${formatCurrency(value)} (${props.payload.percentage}%)`,
+                          props.payload.name,
+                        ]}
+                      />
+                    }
+                  />
+                  <Pie
+                    data={chartData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={2}
+                    dataKey="value"
+                  >
+                    {chartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                </RechartsPieChart>
+              </ChartContainer>
 
-                  return (
-                    <path
-                      key={segment.packageId}
-                      d={`M 50 50 L ${x1} ${y1} A 50 50 0 ${largeArcFlag} 1 ${x2} ${y2} Z`}
-                      className={segment.color}
-                      style={{
-                        filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.1))",
-                      }}
-                    />
-                  );
-                })}
-              </svg>
               {/* Center text */}
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-center">
@@ -161,21 +175,23 @@ export function TopPackagesWidget({ incomeData, loading }) {
                 </div>
               </div>
             </div>
+
             {/* Legend */}
             <div className="mt-4 space-y-2 w-full">
-              {pieSegments.map((segment, index) => (
+              {chartData.map((item, index) => (
                 <div
-                  key={segment.packageId}
+                  key={item.name}
                   className="flex items-center gap-2 text-xs"
                 >
                   <div
-                    className={`w-3 h-3 rounded-full ${segment.color}`}
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: item.color }}
                   />
                   <span className="font-medium flex-1 truncate">
-                    {segment.packageName}
+                    {item.name}
                   </span>
                   <span className="text-muted-foreground">
-                    {segment.percentage}%
+                    {item.percentage}%
                   </span>
                 </div>
               ))}
@@ -191,7 +207,10 @@ export function TopPackagesWidget({ incomeData, loading }) {
               >
                 <div className="flex items-center gap-3">
                   <div
-                    className={`w-4 h-4 rounded-full ${chartColors[index % chartColors.length]}`}
+                    className="w-4 h-4 rounded-full"
+                    style={{
+                      backgroundColor: chartColors[index % chartColors.length],
+                    }}
                   />
                   <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-semibold">
                     {index + 1}

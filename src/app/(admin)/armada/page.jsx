@@ -190,15 +190,20 @@ export default function ArmadaPage() {
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredArmadas.map((a) => (
-              <ArmadaCard
-                key={a.id}
-                armada={a}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                onMaintenance={handleMaintenance}
-              />
-            ))}
+            {filteredArmadas.map((a) => {
+              const isArmadaInUse =
+                a.status === "BOOKED" || a.status === "ON_TRIP";
+              return (
+                <ArmadaCard
+                  key={a.id}
+                  armada={a}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onMaintenance={handleMaintenance}
+                  isDisabled={isArmadaInUse}
+                />
+              );
+            })}
           </div>
         )}
       </div>

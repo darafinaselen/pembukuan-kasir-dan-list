@@ -50,7 +50,10 @@ async function handleGetSummaryReport(request) {
     const dateFilterEx = { date: { gte: fromDate, lte: toDate } };
 
     const transactions = await prisma.transaction.findMany({
-      where: dateFilterTx,
+      where: {
+        ...dateFilterTx,
+        approval_status: "APPROVED",
+      },
       include: {
         package: true,
         armada: true,
@@ -72,7 +75,10 @@ async function handleGetSummaryReport(request) {
     }
 
     const expenseAggregation = await prisma.expense.aggregate({
-      where: dateFilterEx,
+      where: {
+        ...dateFilterEx,
+        approval_status: "APPROVED",
+      },
       _sum: {
         amount: true,
       },

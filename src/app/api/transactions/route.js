@@ -85,10 +85,11 @@ async function handleCreateTransaction(request) {
 
     const validatedData = validation.data;
 
-    // Generate collision-resistant invoice code
+    // Generate collision-resistant invoice code (alphanumeric only, uppercase)
     const { nanoid } = await import("nanoid");
     const date = new Date();
     const yyyymmdd = date.toISOString().slice(0, 10).replace(/-/g, "");
+    // Use only uppercase alphanumeric characters (no symbols)
     const uniqueSuffix = nanoid(6).toUpperCase();
     const invoice_code = `RLM-${yyyymmdd}-${uniqueSuffix}`;
 

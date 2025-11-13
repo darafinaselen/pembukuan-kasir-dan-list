@@ -111,7 +111,7 @@ async function handleDeleteDriver(req, context) {
 
     // Check if driver is assigned to any transactions
     const transactionCount = await prisma.transaction.count({
-      where: { driver_id: id },
+      where: { driverId: id },
     });
 
     if (transactionCount > 0) {

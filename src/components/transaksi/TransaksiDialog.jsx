@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DateTimePicker, DatePicker } from "@/components/ui/datetime-picker";
 import { Loader2 } from "lucide-react";
 
 function formatCurrency(amount) {
@@ -53,7 +54,18 @@ export default function TransaksiDialog({
   const selectedPackage = paketList.find(
     (pkg) => pkg.id === formData.packageId
   );
+
+  // Debug log
+  React.useEffect(() => {
+    console.log("📋 TransaksiDialog - paketList updated:", {
+      count: paketList.length,
+      items: paketList.map((p) => ({ id: p.id, name: p.name })),
+    });
+  }, [paketList]);
+
   const isTourPackage = selectedPackage?.type === "TOUR_PACKAGE";
+  const isFullDayTrip = selectedPackage?.type === "FULL_DAY_TRIP";
+  const showOvertimeField = !isTourPackage && !isFullDayTrip;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -310,38 +322,60 @@ export default function TransaksiDialog({
                 <div className="grid gap-3">
                   <div className="grid gap-1.5">
                     <Label htmlFor="booking_date">Tanggal Booking</Label>
-                    <Input
-                      id="booking_date"
-                      type="date"
-                      value={formData.booking_date}
-                      onChange={(e) =>
-                        handleDateChange("booking_date", e.target.value)
+                    <DatePicker
+                      date={
+                        formData.booking_date
+                          ? new Date(formData.booking_date)
+                          : undefined
                       }
-                      required
+                      setDate={(date) => {
+                        if (date) {
+                          const dateString = date.toISOString().split("T")[0];
+                          handleDateChange("booking_date", dateString);
+                        }
+                      }}
                     />
                   </div>
                   <div className="grid gap-1.5">
                     <Label htmlFor="checkout_datetime">Mobil Out (Jalan)</Label>
-                    <Input
-                      id="checkout_datetime"
-                      type="datetime-local"
-                      value={formData.checkout_datetime}
-                      onChange={(e) =>
-                        handleDateChange("checkout_datetime", e.target.value)
+                    <DateTimePicker
+                      date={
+                        formData.checkout_datetime
+                          ? new Date(formData.checkout_datetime)
+                          : undefined
                       }
-                      required
+                      setDate={(date) => {
+                        if (date) {
+                          const tzOffset = date.getTimezoneOffset() * 60000;
+                          const localISOTime = new Date(
+                            date.getTime() - tzOffset
+                          )
+                            .toISOString()
+                            .slice(0, 16);
+                          handleDateChange("checkout_datetime", localISOTime);
+                        }
+                      }}
                     />
                   </div>
                   <div className="grid gap-1.5">
                     <Label htmlFor="checkin_datetime">Mobil In (Selesai)</Label>
-                    <Input
-                      id="checkin_datetime"
-                      type="datetime-local"
-                      value={formData.checkin_datetime}
-                      onChange={(e) =>
-                        handleDateChange("checkin_datetime", e.target.value)
+                    <DateTimePicker
+                      date={
+                        formData.checkin_datetime
+                          ? new Date(formData.checkin_datetime)
+                          : undefined
                       }
-                      required
+                      setDate={(date) => {
+                        if (date) {
+                          const tzOffset = date.getTimezoneOffset() * 60000;
+                          const localISOTime = new Date(
+                            date.getTime() - tzOffset
+                          )
+                            .toISOString()
+                            .slice(0, 16);
+                          handleDateChange("checkin_datetime", localISOTime);
+                        }
+                      }}
                     />
                   </div>
                 </div>
@@ -361,7 +395,7 @@ export default function TransaksiDialog({
                       required
                     />
                   </div>
-                  {!isTourPackage && (
+                  {showOvertimeField && (
                     <div className="grid gap-1.5">
                       <Label htmlFor="overtime_rate_per_hour">
                         Overtime/Jam

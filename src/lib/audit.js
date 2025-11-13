@@ -167,6 +167,69 @@ export async function logExpenseEvent(
 }
 
 /**
+ * Log expense approval event
+ * @param {object} user - User object performing action
+ * @param {string} action - REQUEST_EDIT, REQUEST_DELETE, APPROVE_EDIT, APPROVE_DELETE, REJECT
+ * @param {object} expense - Expense object
+ * @param {object} request - Request object for IP/UA
+ * @param {object} metadata - Additional metadata (reason, changes, etc.)
+ */
+export async function logExpenseApprovalEvent(
+  user,
+  action,
+  expense,
+  request,
+  metadata = {}
+) {
+  let description = "";
+  const expenseInfo = expense?.description || expense?.id || "N/A";
+  const category = expense?.category || "";
+
+  switch (action) {
+    case "REQUEST_EDIT":
+      description = `Requested edit approval for expense: ${category} - ${expenseInfo}`;
+      break;
+    case "REQUEST_DELETE":
+      description = `Requested delete approval for expense: ${category} - ${expenseInfo}`;
+      break;
+    case "APPROVE_EDIT":
+      description = `Approved edit request for expense: ${category} - ${expenseInfo}`;
+      break;
+    case "APPROVE_DELETE":
+      description = `Approved delete request for expense: ${category} - ${expenseInfo}`;
+      break;
+    case "REJECT":
+      description = `Rejected approval request for expense: ${category} - ${expenseInfo}`;
+      break;
+    default:
+      description = `${action} expense approval: ${category} - ${expenseInfo}`;
+  }
+
+  const ipAddress =
+    request?.headers?.get("x-forwarded-for") ||
+    request?.headers?.get("x-real-ip") ||
+    "unknown";
+  const userAgent = request?.headers?.get("user-agent") || "unknown";
+
+  return await createAuditLog({
+    userId: user?.id ? String(user.id) : user?.email || "unknown",
+    action,
+    resource: "Expense",
+    resourceId: expense?.id,
+    description,
+    metadata: {
+      category: expense?.category,
+      amount: expense?.amount,
+      date: expense?.date,
+      approval_status: expense?.approval_status,
+      ...metadata,
+    },
+    ipAddress,
+    userAgent,
+  });
+}
+
+/**
  * Log report access
  * @param {string} userId - User ID
  * @param {string} reportType - Type of report accessed

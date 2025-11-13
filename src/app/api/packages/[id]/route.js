@@ -121,17 +121,18 @@ async function handleUpdatePackage(request, { params }) {
       );
     } else if (type === "FULL_DAY_TRIP") {
       // Full day trips use durationHours, price, and overtimeRate
+      // Convert from thousands to full rupiah (CurrencyInput sends in thousands)
       updateData.price =
         typeof hargaDefault === "number"
-          ? hargaDefault
+          ? hargaDefault * 1000
           : hargaDefault
-            ? Number(hargaDefault)
+            ? Number(hargaDefault) * 1000
             : null;
       updateData.overtimeRate =
         typeof tarifOvertime === "number"
-          ? tarifOvertime
+          ? tarifOvertime * 1000
           : tarifOvertime
-            ? Number(tarifOvertime)
+            ? Number(tarifOvertime) * 1000
             : null;
       updateData.durationHours = durasiHari ? Number(durasiHari) : null;
       updateData.durationDays = null;
@@ -144,17 +145,18 @@ async function handleUpdatePackage(request, { params }) {
       );
     } else if (type === "CAR_RENTAL") {
       // Car rentals use durationHours, price, and overtimeRate
+      // Convert from thousands to full rupiah (CurrencyInput sends in thousands)
       updateData.price =
         typeof hargaDefault === "number"
-          ? hargaDefault
+          ? hargaDefault * 1000
           : hargaDefault
-            ? Number(hargaDefault)
+            ? Number(hargaDefault) * 1000
             : null;
       updateData.overtimeRate =
         typeof tarifOvertime === "number"
-          ? tarifOvertime
+          ? tarifOvertime * 1000
           : tarifOvertime
-            ? Number(tarifOvertime)
+            ? Number(tarifOvertime) * 1000
             : null;
       updateData.durationHours = durasiHari ? Number(durasiHari) : null;
       updateData.durationDays = null;
@@ -254,7 +256,6 @@ async function handleUpdatePackage(request, { params }) {
                 const m = String(tier.tingkat || "").match(/\d+/);
                 return m ? Number(m[0]) : tier.starRating || 0;
               })(),
-              pricePerPax: tier.tarifPerPax ? Number(tier.tarifPerPax) : 0,
               hotels:
                 tier.daftarHotel && Array.isArray(tier.daftarHotel)
                   ? {
@@ -269,7 +270,8 @@ async function handleUpdatePackage(request, { params }) {
                       create: tier.priceRanges.map((r) => ({
                         minPax: Number(r.minPax || 0),
                         maxPax: Number(r.maxPax || 0),
-                        price: Number(r.price || 0),
+                        // Convert from thousands to full rupiah
+                        price: Number(r.price || 0) * 1000,
                       })),
                     }
                   : undefined,

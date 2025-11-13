@@ -6,7 +6,10 @@ import PengeluaranFilters from "@/components/pengeluaran/PengeluaranFilters";
 import PengeluaranTable from "@/components/pengeluaran/PengeluaranTable";
 import PengeluaranDialog from "@/components/pengeluaran/PengeluaranDialog";
 import PengeluaranDetailModal from "@/components/pengeluaran/PengeluaranDetailModal";
+import ExpenseApprovalDialog from "@/components/pengeluaran/ExpenseApprovalDialog";
+import ExpenseRequestDialog from "@/components/pengeluaran/ExpenseRequestDialog";
 import { useAlertDialog } from "@/components/ui/alert-dialog-provider";
+import { toast } from "sonner";
 import { startOfMonth, startOfYear, endOfToday } from "date-fns";
 import { Pagination } from "@/components/ui/pagination";
 
@@ -73,6 +76,17 @@ export default function PengeluaranPage() {
   // State untuk Detail Modal
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedDetailData, setSelectedDetailData] = useState(null);
+
+  // State untuk Approval Dialog (Admin)
+  const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
+  const [approvingExpense, setApprovingExpense] = useState(null);
+  const [isSubmittingApproval, setIsSubmittingApproval] = useState(false);
+
+  // State untuk Request Dialog (Operator)
+  const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
+  const [requestingExpense, setRequestingExpense] = useState(null);
+  const [requestType, setRequestType] = useState("edit"); // "edit" or "delete"
+  const [isSubmittingRequest, setIsSubmittingRequest] = useState(false);
 
   const [armadaList, setArmadaList] = useState([]);
   const [driverList, setDriverList] = useState([]);
@@ -441,8 +455,171 @@ export default function PengeluaranPage() {
 
       // Optimistic UI: Hapus dari state
       setData((prev) => prev.filter((item) => item.id !== id));
+      toast.success("Pengeluaran berhasil dihapus");
     } catch (err) {
       console.error("Failed to delete", err);
+      toast.error("Gagal menghapus pengeluaran");
+    }
+  };
+
+  // === APPROVAL WORKFLOW HANDLERS ===
+
+  // Handler: Operator request edit
+  const handleRequestEdit = (expense) => {
+    setRequestingExpense(expense);
+    setRequestType("edit");
+    setIsRequestDialogOpen(true);
+  };
+
+  // Handler: Operator request delete
+  const handleRequestDelete = (expense) => {
+    setRequestingExpense(expense);
+    setRequestType("delete");
+    setIsRequestDialogOpen(true);
+  };
+
+  // Handler: Submit request (edit atau delete)
+  const handleSubmitRequest = async (expenseId, reason) => {
+    setIsSubmittingRequest(true);
+    try {
+      const endpoint =
+        requestType === "edit"
+          ? `/api/expenses/${expenseId}/request-edit`
+          : `/api/expenses/${expenseId}/request-delete`;
+
+      const body =
+        requestType === "edit"
+          ? { reason, updatedData: {} } // TODO: Include updated data for edit
+          : { reason };
+
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Gagal mengajukan request");
+      }
+
+      await fetchData(currentPage); // Refresh data
+      toast.success(
+        `Request ${requestType === "edit" ? "edit" : "delete"} berhasil diajukan`,
+        {
+          description: "Menunggu persetujuan dari admin",
+        }
+      );
+      setIsRequestDialogOpen(false);
+    } catch (err) {
+      console.error("Failed to submit request:", err);
+      toast.error("Gagal Mengajukan Request", {
+        description: err.message,
+      });
+      throw err;
+    } finally {
+      setIsSubmittingRequest(false);
+    }
+  };
+
+  // Handler: Admin review approval
+  const handleReviewApproval = (expense) => {
+    setApprovingExpense(expense);
+    setIsApprovalDialogOpen(true);
+  };
+
+  // Handler: Admin approve edit
+  const handleApproveEdit = async (expenseId) => {
+    setIsSubmittingApproval(true);
+    try {
+      const res = await fetch(`/api/expenses/${expenseId}/approve-edit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ updatedData: {} }), // TODO: Get updated data
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Gagal menyetujui edit");
+      }
+
+      await fetchData(currentPage);
+      setIsApprovalDialogOpen(false);
+      toast.success("Request Edit Disetujui", {
+        description: "Perubahan telah diterapkan",
+      });
+    } catch (err) {
+      console.error("Failed to approve edit:", err);
+      toast.error("Gagal Menyetujui Edit", {
+        description: err.message,
+      });
+      throw err;
+    } finally {
+      setIsSubmittingApproval(false);
+    }
+  };
+
+  // Handler: Admin approve delete
+  const handleApproveDelete = async (expenseId) => {
+    setIsSubmittingApproval(true);
+    try {
+      const res = await fetch(`/api/expenses/${expenseId}/approve-delete`, {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Gagal menyetujui delete");
+      }
+
+      await fetchData(1); // Reset to first page
+      setIsApprovalDialogOpen(false);
+      toast.success("Request Delete Disetujui", {
+        description: "Pengeluaran telah dihapus",
+      });
+    } catch (err) {
+      console.error("Failed to approve delete:", err);
+      toast.error("Gagal Menyetujui Delete", {
+        description: err.message,
+      });
+      throw err;
+    } finally {
+      setIsSubmittingApproval(false);
+    }
+  };
+
+  // Handler: Admin reject request
+  const handleReject = async (expenseId, reason) => {
+    setIsSubmittingApproval(true);
+    try {
+      const res = await fetch(`/api/expenses/${expenseId}/reject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ reason }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Gagal menolak request");
+      }
+
+      await fetchData(currentPage);
+      setIsApprovalDialogOpen(false);
+      toast.success("Request Ditolak", {
+        description: "Pengeluaran dikembalikan ke status approved",
+      });
+    } catch (err) {
+      console.error("Failed to reject:", err);
+      toast.error("Gagal Menolak Request", {
+        description: err.message,
+      });
+      throw err;
+    } finally {
+      setIsSubmittingApproval(false);
     }
   };
 
@@ -587,6 +764,9 @@ export default function PengeluaranPage() {
           onEdit={openEditDialog}
           onDelete={handleDelete}
           onView={openDetailModal}
+          onRequestEdit={handleRequestEdit}
+          onRequestDelete={handleRequestDelete}
+          onReviewApproval={handleReviewApproval}
           userRole={userRole}
         />
 
@@ -632,6 +812,27 @@ export default function PengeluaranPage() {
         open={isDetailModalOpen}
         onOpenChange={setIsDetailModalOpen}
         data={selectedDetailData}
+      />
+
+      {/* Approval Dialog (Admin) */}
+      <ExpenseApprovalDialog
+        isOpen={isApprovalDialogOpen}
+        onClose={() => setIsApprovalDialogOpen(false)}
+        expense={approvingExpense}
+        onApproveEdit={handleApproveEdit}
+        onApproveDelete={handleApproveDelete}
+        onReject={handleReject}
+        isSubmitting={isSubmittingApproval}
+      />
+
+      {/* Request Dialog (Operator) */}
+      <ExpenseRequestDialog
+        isOpen={isRequestDialogOpen}
+        onClose={() => setIsRequestDialogOpen(false)}
+        expense={requestingExpense}
+        requestType={requestType}
+        onSubmit={handleSubmitRequest}
+        isSubmitting={isSubmittingRequest}
       />
     </div>
   );

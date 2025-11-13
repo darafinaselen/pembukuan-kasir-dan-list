@@ -9,6 +9,7 @@ import TransaksiTable from "@/components/transaksi/TransaksiTable";
 import TransaksiDialog from "@/components/transaksi/TransaksiDialog";
 import TransaksiCompleteModal from "@/components/transaksi/TransaksiCompleteModal";
 import TransaksiDetailModal from "@/components/transaksi/TransaksiDetailModal";
+import ApprovalDialog from "@/components/transaksi/ApprovalDialog";
 import { Pagination } from "@/components/ui/pagination";
 
 import { startOfMonth, startOfYear, endOfToday } from "date-fns";
@@ -95,9 +96,12 @@ export default function TransaksiPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isCompleteOpen, setIsCompleteOpen] = useState(false);
+  const [isApprovalOpen, setIsApprovalOpen] = useState(false);
   const [completingData, setCompletingData] = useState(null);
   const [editingData, setEditingData] = useState(null);
   const [viewingData, setViewingData] = useState(null);
+  const [approvingTransaction, setApprovingTransaction] = useState(null);
+  const [isSubmittingApproval, setIsSubmittingApproval] = useState(false);
 
   const [formData, setFormData] = useState(INITIAL_FORM_STATE);
   const [calculatedData, setCalculatedData] = useState({});
@@ -322,14 +326,36 @@ export default function TransaksiPage() {
     checkinDatetime,
     excludeTransactionId = null
   ) => {
-    if (!checkoutDatetime || !checkinDatetime) {
-      // If dates are not set, fetch all READY vehicles/drivers
-      await fetchDependencies();
-      return;
-    }
-
     try {
       setIsLoadingDependencies(true);
+
+      // Always fetch packages first (not dependent on dates)
+      const packagesRes = await fetch("/api/packages", {
+        credentials: "include",
+      });
+      const packagesResult = await packagesRes.json();
+      const packagesData = packagesResult.data || packagesResult;
+      console.log("📦 Fetched packages:", packagesData?.length || 0, "items");
+      setPaketList(Array.isArray(packagesData) ? packagesData : []);
+
+      if (!checkoutDatetime || !checkinDatetime) {
+        // If dates are not set, fetch all READY vehicles/drivers
+        const [armadaRes, sopirRes] = await Promise.all([
+          fetch("/api/vehicles?status=READY", { credentials: "include" }),
+          fetch("/api/drivers?status=READY", { credentials: "include" }),
+        ]);
+
+        const armadaResult = await armadaRes.json();
+        const sopirResult = await sopirRes.json();
+
+        const armadaData = armadaResult.data || armadaResult;
+        const sopirData = sopirResult.data || sopirResult;
+
+        setArmadaList(Array.isArray(armadaData) ? armadaData : []);
+        setSopirList(Array.isArray(sopirData) ? sopirData : []);
+        return;
+      }
+
       const params = new URLSearchParams({
         checkout_datetime: checkoutDatetime,
         checkin_datetime: checkinDatetime,
@@ -358,7 +384,7 @@ export default function TransaksiPage() {
       setSopirList(driversData.available || []);
     } catch (err) {
       console.error("Failed to fetch available vehicles/drivers:", err);
-      // Fallback to fetching all READY items
+      // Fallback to fetching all items
       await fetchDependencies();
     } finally {
       setIsLoadingDependencies(false);
@@ -377,6 +403,30 @@ export default function TransaksiPage() {
   const handleFormDateChange = (id, value) => {
     setFormData((prev) => {
       const updated = { ...prev, [id]: value };
+
+      // Auto-update checkin_datetime when checkout_datetime changes and package is selected
+      if (id === "checkout_datetime" && prev.packageId) {
+        const selectedPackage = paketList.find((p) => p.id === prev.packageId);
+        if (selectedPackage) {
+          if (selectedPackage.durationHours) {
+            // For packages with hours duration
+            const checkoutDate = new Date(value);
+            const checkinDate = new Date(
+              checkoutDate.getTime() +
+                selectedPackage.durationHours * 60 * 60 * 1000
+            );
+            updated.checkin_datetime = getLocalDateTimeString(checkinDate);
+          } else if (selectedPackage.durationDays) {
+            // For packages with days duration
+            const checkoutDate = new Date(value);
+            const checkinDate = new Date(
+              checkoutDate.getTime() +
+                selectedPackage.durationDays * 24 * 60 * 60 * 1000
+            );
+            updated.checkin_datetime = getLocalDateTimeString(checkinDate);
+          }
+        }
+      }
 
       // Clear previous timeout
       if (availabilityCheckTimeoutRef.current) {
@@ -406,25 +456,49 @@ export default function TransaksiPage() {
   const handleFormSelectChange = (id, value) => {
     setFormData((prev) => ({ ...prev, [id]: value }));
 
-    // Logika Otomatis: Jika pilih paket, isi data keuangan
+    // Logika Otomatis: Jika pilih paket, isi data keuangan dan set checkin time
     if (id === "packageId" && value) {
       const selectedPackage = paketList.find((p) => p.id === value);
       if (selectedPackage) {
-        // For TOUR_PACKAGE, don't auto-set pricing - it will be calculated from tier selection
-        if (selectedPackage.type !== "TOUR_PACKAGE") {
-          setFormData((prev) => ({
-            ...prev,
-            all_in_rate: selectedPackage.price || 0,
-            overtime_rate_per_hour: selectedPackage.overtimeRate || 0,
-          }));
-        } else {
-          // For TOUR_PACKAGE, reset pricing fields to be calculated from tier/pax
-          setFormData((prev) => ({
-            ...prev,
-            all_in_rate: 0,
-            overtime_rate_per_hour: 0,
-          }));
-        }
+        setFormData((prev) => {
+          let updates = {};
+
+          // Calculate checkin_datetime based on package duration
+          if (selectedPackage.durationHours) {
+            // For packages with hours duration (CAR_RENTAL, FULL_DAY_TRIP)
+            const checkoutDate = new Date(prev.checkout_datetime);
+            const checkinDate = new Date(
+              checkoutDate.getTime() +
+                selectedPackage.durationHours * 60 * 60 * 1000
+            );
+            updates.checkin_datetime = getLocalDateTimeString(checkinDate);
+          } else if (selectedPackage.durationDays) {
+            // For packages with days duration (TOUR_PACKAGE)
+            const checkoutDate = new Date(prev.checkout_datetime);
+            const checkinDate = new Date(
+              checkoutDate.getTime() +
+                selectedPackage.durationDays * 24 * 60 * 60 * 1000
+            );
+            updates.checkin_datetime = getLocalDateTimeString(checkinDate);
+          }
+
+          // Set pricing based on package type
+          if (selectedPackage.type === "TOUR_PACKAGE") {
+            // For TOUR_PACKAGE, reset pricing fields to be calculated from tier/pax
+            updates.all_in_rate = 0;
+            updates.overtime_rate_per_hour = 0;
+          } else if (selectedPackage.type === "FULL_DAY_TRIP") {
+            // For FULL_DAY_TRIP, flat rate with no overtime
+            updates.all_in_rate = selectedPackage.price || 0;
+            updates.overtime_rate_per_hour = 0; // No overtime for full day trip
+          } else {
+            // For CAR_RENTAL, include overtime rate
+            updates.all_in_rate = selectedPackage.price || 0;
+            updates.overtime_rate_per_hour = selectedPackage.overtimeRate || 0;
+          }
+
+          return { ...prev, ...updates };
+        });
       }
     }
 
@@ -551,6 +625,7 @@ export default function TransaksiPage() {
     });
 
     if (!confirmed) return;
+
     try {
       const res = await fetch(`/api/transactions/${id}`, {
         method: "DELETE",
@@ -655,6 +730,7 @@ export default function TransaksiPage() {
         // Data Tambahan untuk Paket Wisata (opsional)
         hotel_name: formData.hotel_name || null,
         pax_count: formData.pax_count ? Number(formData.pax_count) : null,
+        hotel_tier_id: formData.hotel_tier_id || null,
 
         // Relasi (ID)
         packageId: formData.packageId || null,
@@ -697,6 +773,109 @@ export default function TransaksiPage() {
 
   const handlePrintInvoice = (item) => {
     window.open(`/transaksi/cetak/${item.id}`, "_blank");
+  };
+
+  const handleSubmitForApproval = async (id) => {
+    const confirmed = await showConfirm({
+      message: "Ajukan transaksi ini untuk approval admin?",
+      title: "Konfirmasi Pengajuan",
+      confirmText: "Ajukan",
+      cancelText: "Batal",
+    });
+
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`/api/transactions/${id}/submit`, {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Gagal mengajukan approval");
+      }
+
+      await fetchData(currentPage);
+      toast.success("Transaksi Berhasil Diajukan", {
+        description: "Menunggu persetujuan dari admin",
+      });
+    } catch (err) {
+      console.error("Failed to submit for approval:", err);
+      toast.error("Gagal Mengajukan Approval", {
+        description: err.message,
+      });
+    }
+  };
+
+  const handleApprove = async (transactionId) => {
+    setIsSubmittingApproval(true);
+    try {
+      const res = await fetch(`/api/transactions/${transactionId}/approve`, {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Gagal menyetujui transaksi");
+      }
+
+      await fetchData(currentPage);
+      setIsApprovalOpen(false);
+      setApprovingTransaction(null);
+      toast.success("Transaksi Disetujui", {
+        description: "Transaksi telah disetujui dan armada/driver dikunci",
+      });
+    } catch (err) {
+      console.error("Failed to approve:", err);
+      toast.error("Gagal Menyetujui", {
+        description: err.message,
+      });
+      throw err;
+    } finally {
+      setIsSubmittingApproval(false);
+    }
+  };
+
+  const handleReject = async (transactionId, reason) => {
+    setIsSubmittingApproval(true);
+    try {
+      const res = await fetch(`/api/transactions/${transactionId}/reject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ rejection_reason: reason }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Gagal menolak transaksi");
+      }
+
+      await fetchData(currentPage);
+      setIsApprovalOpen(false);
+      setApprovingTransaction(null);
+      toast.success("Transaksi Ditolak", {
+        description: "Transaksi dikembalikan ke operator untuk revisi",
+      });
+    } catch (err) {
+      console.error("Failed to reject:", err);
+      toast.error("Gagal Menolak", {
+        description: err.message,
+      });
+      throw err;
+    } finally {
+      setIsSubmittingApproval(false);
+    }
+  };
+
+  const openApprovalDialog = (transactionId) => {
+    const transaction = data.find((t) => t.id === transactionId);
+    if (transaction) {
+      setApprovingTransaction(transaction);
+      setIsApprovalOpen(true);
+    }
   };
 
   const handleCompleteTransaction = async (completionData) => {
@@ -795,6 +974,9 @@ export default function TransaksiPage() {
           onUpdateStatus={handleUpdateStatus}
           onPrint={handlePrintInvoice}
           onCompleteTransaction={openCompleteDialog}
+          onSubmitForApproval={handleSubmitForApproval}
+          onApprove={openApprovalDialog}
+          onReject={openApprovalDialog}
           userRole={userRole}
         />
 
@@ -837,6 +1019,15 @@ export default function TransaksiPage() {
         transaction={completingData}
         onComplete={handleCompleteTransaction}
         isLoading={false}
+      />
+
+      <ApprovalDialog
+        isOpen={isApprovalOpen}
+        onClose={() => setIsApprovalOpen(false)}
+        transaction={approvingTransaction}
+        onApprove={handleApprove}
+        onReject={handleReject}
+        isSubmitting={isSubmittingApproval}
       />
     </div>
   );

@@ -41,11 +41,11 @@ async function handleUpdateVehicle(req, context) {
     const body = await req.json();
 
     // Validate required fields
-    const { license_plate, brand, model, vehicle_type } = body;
+    const { license_plate, brand, model } = body;
 
-    if (!license_plate || !brand || !model || !vehicle_type) {
+    if (!license_plate || !brand || !model) {
       return errorResponse(
-        "Field license_plate, brand, model, dan vehicle_type harus diisi",
+        "Field license_plate, brand, dan model harus diisi",
         400
       );
     }
@@ -90,11 +90,11 @@ async function handleUpdateVehicle(req, context) {
         license_plate: license_plate.toUpperCase(),
         brand,
         model,
-        vehicle_type,
+        vehicle_type: body.vehicle_type || null,
         year: body.year || null,
         color: body.color || null,
         capacity: body.capacity || null,
-        status: body.status || "AVAILABLE",
+        status: body.status || "READY",
       },
     });
 
@@ -134,7 +134,7 @@ async function handleDeleteVehicle(req, context) {
 
     // Check if vehicle is assigned to any transactions
     const transactionCount = await prisma.transaction.count({
-      where: { armada_id: id },
+      where: { armadaId: id },
     });
 
     if (transactionCount > 0) {

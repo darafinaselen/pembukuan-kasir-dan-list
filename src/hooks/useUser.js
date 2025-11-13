@@ -30,7 +30,8 @@ export function useUser() {
         }
 
         const data = await res.json();
-        setUser(data.user || data.data);
+        // API returns { success: true, data: { user: {...} } }
+        setUser(data.data?.user || data.user || data.data);
       } catch (err) {
         console.error("Error fetching user:", err);
         setError(err.message);

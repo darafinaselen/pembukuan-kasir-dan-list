@@ -210,7 +210,13 @@ npx prisma generate
 # Run migrations
 npx prisma migrate dev
 
-# Seed initial data (optional)
+# Seed master data only (recommended for development)
+npm run db:seed-master
+
+# Or seed complete data with transactions & expenses
+npm run db:seed-complete
+
+# Seed initial data (optional - uses default seed.js)
 npx prisma db seed
 ```
 

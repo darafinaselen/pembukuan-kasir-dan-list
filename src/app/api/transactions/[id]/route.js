@@ -27,7 +27,16 @@ async function handleGetTransaction(request, { params }) {
         id: id,
       },
       include: {
-        package: true,
+        package: {
+          include: {
+            hotelTiers: {
+              include: {
+                hotels: true,
+                priceRanges: true,
+              },
+            },
+          },
+        },
         armada: true,
         driver: true,
       },
@@ -115,6 +124,7 @@ async function handleUpdateTransaction(request, { params }) {
       // Optional tour package data
       hotel_name: validatedData.hotel_name,
       pax_count: validatedData.pax_count,
+      hotel_tier_id: validatedData.hotel_tier_id,
 
       // Relations
       armadaId: validatedData.armadaId,
@@ -156,7 +166,16 @@ async function handleUpdateTransaction(request, { params }) {
         where: { id },
         data: updateData,
         include: {
-          package: true,
+          package: {
+            include: {
+              hotelTiers: {
+                include: {
+                  hotels: true,
+                  priceRanges: true,
+                },
+              },
+            },
+          },
           armada: true,
           driver: true,
         },

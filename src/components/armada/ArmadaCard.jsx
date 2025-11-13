@@ -69,7 +69,9 @@ export default function ArmadaCard({
                       ? "Sedang Jalan"
                       : status === "MAINTENANCE"
                         ? "Perawatan"
-                        : status}
+                        : status === "BOOKED"
+                          ? "Dipesan"
+                          : status}
                 </Badge>
               </div>
             </div>

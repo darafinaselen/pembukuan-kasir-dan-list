@@ -63,8 +63,8 @@ export function PackageForm({
       tarifHotel: [
         {
           tingkat: "Bintang 3",
-          tarifPerPax: 0,
           daftarHotel: [],
+          priceRanges: [],
         },
       ],
       itinerary: [{ hari: 1, aktivitas: "" }],
@@ -172,7 +172,6 @@ export function PackageForm({
         if (Array.isArray(dbHotelTiers) && dbHotelTiers.length > 0) {
           tarifHotelVal = dbHotelTiers.map((tier) => ({
             tingkat: `Bintang ${tier.starRating}`,
-            tarifPerPax: tier.pricePerPax ?? 0,
             daftarHotel: Array.isArray(tier.hotels)
               ? tier.hotels.map((h) => h.name)
               : [],
@@ -180,7 +179,7 @@ export function PackageForm({
               ? tier.priceRanges.map((pr) => ({
                   minPax: pr.minPax,
                   maxPax: pr.maxPax,
-                  price: pr.price,
+                  price: pr.price / 1000, // Convert from full rupiah to thousands for CurrencyInput
                 }))
               : [],
           }));
@@ -228,8 +227,8 @@ export function PackageForm({
               : [
                   {
                     tingkat: "Bintang 3",
-                    tarifPerPax: 0,
                     daftarHotel: [],
+                    priceRanges: [],
                   },
                 ],
           itinerary:
@@ -293,7 +292,7 @@ export function PackageForm({
       const currentHotel = getValues("tarifHotel");
       if (!Array.isArray(currentHotel) || currentHotel.length === 0) {
         setValue("tarifHotel", [
-          { tingkat: "Bintang 3", tarifPerPax: 0, daftarHotel: [] },
+          { tingkat: "Bintang 3", daftarHotel: [], priceRanges: [] },
         ]);
       }
       const it = getValues("itinerary");
@@ -1063,29 +1062,6 @@ export function PackageForm({
                                     </FormControl>
                                   </FormItem>
                                 </FormField>
-
-                                <FormField>
-                                  <FormItem>
-                                    <FormLabel>Tarif per PAX</FormLabel>
-                                    <FormControl>
-                                      <CurrencyInput
-                                        placeholder="1.500.000"
-                                        {...register(
-                                          `tarifHotel.${index}.tarifPerPax`,
-                                          {
-                                            required:
-                                              "Tarif per PAX harus diisi",
-                                            min: {
-                                              value: 0,
-                                              message: "Tarif minimal 0",
-                                            },
-                                            valueAsNumber: true,
-                                          }
-                                        )}
-                                      />
-                                    </FormControl>
-                                  </FormItem>
-                                </FormField>
                               </div>
                               {hotelFields.length > 1 && (
                                 <Button
@@ -1253,7 +1229,6 @@ export function PackageForm({
                           onClick={() =>
                             appendHotel({
                               tingkat: "Bintang 3",
-                              tarifPerPax: 0,
                               daftarHotel: [],
                               priceRanges: [],
                             })

@@ -28,9 +28,13 @@ import {
   Trash2,
   Printer,
   CheckCircle,
+  Send,
+  CheckSquare,
+  XSquare,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import ApprovalStatusBadge from "./ApprovalStatusBadge";
 import {
   Select,
   SelectContent,
@@ -79,9 +83,13 @@ export default function TransaksiTable({
   onUpdateStatus,
   onPrint,
   onCompleteTransaction,
+  onSubmitForApproval,
+  onApprove,
+  onReject,
   userRole = "OPERATOR", // Default to OPERATOR for safety
 }) {
   const isAdmin = userRole === "ADMIN";
+  const isOperator = userRole === "OPERATOR";
   const getCalculatedData = (item) => {
     const durasiPaketJam = item.package?.durationHours || 12;
     const start = new Date(item.checkout_datetime);
@@ -123,7 +131,7 @@ export default function TransaksiTable({
 
   if (isLoading) {
     return (
-      <div className="rounded-md border overflow-x-auto">
+      <div className="rounded-md border">
         <Table className="min-w-full">
           <TableHeader>
             <TableRow>
@@ -134,6 +142,7 @@ export default function TransaksiTable({
               <TableHead className="text-right">Total Tagihan</TableHead>
               <TableHead className="text-right">Sisa Tagihan</TableHead>
               <TableHead className="w-[180px]">Status Pembayaran</TableHead>
+              <TableHead className="w-[150px]">Status Approval</TableHead>
               <TableHead className="w-[180px]">Aksi</TableHead>
             </TableRow>
           </TableHeader>
@@ -186,7 +195,7 @@ export default function TransaksiTable({
   return (
     <TooltipProvider>
       <div className="rounded-md border overflow-x-auto">
-        <Table className="min-w-full">
+        <Table className="min-w-full w-full">
           <TableHeader>
             <TableRow>
               <TableHead className="whitespace-nowrap">Tanggal</TableHead>
@@ -204,6 +213,9 @@ export default function TransaksiTable({
               <TableHead className="min-w-[160px] whitespace-nowrap">
                 Status Pembayaran
               </TableHead>
+              <TableHead className="min-w-[180px] whitespace-nowrap">
+                Status Approval
+              </TableHead>
               <TableHead className="min-w-[200px] whitespace-nowrap">
                 Aksi
               </TableHead>
@@ -218,6 +230,13 @@ export default function TransaksiTable({
                 item.dp_amount > 0;
 
               const isCompleted = !!item.actual_checkin_datetime;
+              const approvalStatus = item.approval_status || "DRAFT";
+              const canEdit =
+                isAdmin || (isOperator && approvalStatus === "DRAFT");
+              const canDelete = isAdmin && !isCompleted;
+              const canSubmitForApproval =
+                isOperator && approvalStatus === "DRAFT" && !isCompleted;
+              const canApproveReject = isAdmin && approvalStatus === "PENDING";
 
               return (
                 <TableRow
@@ -353,6 +372,9 @@ export default function TransaksiTable({
                     </Select>
                   </TableCell>
                   <TableCell>
+                    <ApprovalStatusBadge status={approvalStatus} />
+                  </TableCell>
+                  <TableCell>
                     <div className="lg:hidden">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -376,6 +398,22 @@ export default function TransaksiTable({
                                 : "Selesaikan Transaksi"}
                             </DropdownMenuItem>
                           )}
+                          {canApproveReject && (
+                            <DropdownMenuItem
+                              onClick={() => onApprove(item.id)}
+                            >
+                              <CheckSquare className="mr-2 h-4 w-4 text-green-600" />
+                              Review Approval
+                            </DropdownMenuItem>
+                          )}
+                          {canSubmitForApproval && (
+                            <DropdownMenuItem
+                              onClick={() => onSubmitForApproval(item.id)}
+                            >
+                              <Send className="mr-2 h-4 w-4" />
+                              Ajukan Approval
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem onClick={() => onPrint(item)}>
                             <Printer className="mr-2 h-4 w-4" />
                             Cetak Invoice
@@ -383,35 +421,34 @@ export default function TransaksiTable({
                           <DropdownMenuItem onClick={() => onViewDetails(item)}>
                             Lihat Detail
                           </DropdownMenuItem>
-                          {isAdmin && (
-                            <>
-                              <DropdownMenuItem
-                                onClick={() => onEdit(item)}
-                                disabled={isCompleted}
-                              >
-                                <Pencil className="mr-2 h-4 w-4" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => onDelete(item.id)}
-                                className="text-red-500"
-                                disabled={isCompleted}
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Hapus
-                              </DropdownMenuItem>
-                            </>
+                          {canEdit && (
+                            <DropdownMenuItem
+                              onClick={() => onEdit(item)}
+                              disabled={isCompleted}
+                            >
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                          )}
+                          {canDelete && (
+                            <DropdownMenuItem
+                              onClick={() => onDelete(item.id)}
+                              className="text-red-500"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Hapus
+                            </DropdownMenuItem>
                           )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
-                    <div className="hidden lg:flex lg:items-center lg:gap-1">
+                    <div className="hidden lg:flex lg:items-center lg:gap-1 lg:flex-wrap">
                       {isAdmin && (
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => onCompleteTransaction(item)}
-                          className="text-green-600 hover:text-green-700 whitespace-nowrap"
+                          className="text-green-600 hover:text-green-700"
                           disabled={isCompleted}
                           title={
                             isCompleted
@@ -419,59 +456,77 @@ export default function TransaksiTable({
                               : "Selesaikan transaksi"
                           }
                         >
-                          <CheckCircle className="mr-1 h-3 w-3" />
-                          {isCompleted ? "Selesai ✓" : "Selesai"}
+                          <CheckCircle className="h-3 w-3" />
+                        </Button>
+                      )}
+                      {canApproveReject && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onApprove(item.id)}
+                          className="text-blue-600 hover:text-blue-700"
+                          title="Review dan approve/reject transaksi"
+                        >
+                          <CheckSquare className="h-3 w-3" />
+                        </Button>
+                      )}
+                      {canSubmitForApproval && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onSubmitForApproval(item.id)}
+                          className="text-blue-600 hover:text-blue-700"
+                          title="Ajukan untuk approval"
+                        >
+                          <Send className="h-3 w-3" />
                         </Button>
                       )}
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => onPrint(item)}
-                        className="whitespace-nowrap"
                         title="Cetak invoice"
                       >
-                        <Printer className="mr-1 h-3 w-3" /> Cetak
+                        <Printer className="h-3 w-3" />
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => onViewDetails(item)}
-                        className="whitespace-nowrap"
                         title="Lihat detail transaksi"
                       >
                         Detail
                       </Button>
-                      {isAdmin && (
-                        <>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onEdit(item)}
-                            className="whitespace-nowrap"
-                            disabled={isCompleted}
-                            title={
-                              isCompleted
-                                ? "Transaksi selesai tidak bisa diedit"
+                      {canEdit && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onEdit(item)}
+                          disabled={
+                            isCompleted ||
+                            (isOperator && approvalStatus !== "DRAFT")
+                          }
+                          title={
+                            isCompleted
+                              ? "Transaksi selesai tidak bisa diedit"
+                              : isOperator && approvalStatus !== "DRAFT"
+                                ? "Hanya draft yang bisa diedit"
                                 : "Edit transaksi"
-                            }
-                          >
-                            <Pencil className="mr-1 h-3 w-3" /> Edit
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onDelete(item.id)}
-                            className="text-red-500 hover:text-red-600 whitespace-nowrap"
-                            disabled={isCompleted}
-                            title={
-                              isCompleted
-                                ? "Transaksi selesai tidak bisa dihapus"
-                                : "Hapus transaksi"
-                            }
-                          >
-                            <Trash2 className="mr-1 h-3 w-3" /> Hapus
-                          </Button>
-                        </>
+                          }
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                      )}
+                      {canDelete && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onDelete(item.id)}
+                          className="text-red-500 hover:text-red-600"
+                          title="Hapus transaksi"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
                       )}
                     </div>
                   </TableCell>

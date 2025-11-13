@@ -36,7 +36,6 @@ async function handleGetPackages(request) {
           select: {
             id: true,
             starRating: true,
-            pricePerPax: true,
             createdAt: true,
             updatedAt: true,
             hotels: {
@@ -159,17 +158,18 @@ async function handleCreatePackage(request) {
     };
 
     if (type === "CAR_RENTAL" || type === "FULL_DAY_TRIP") {
+      // Convert from thousands to full rupiah (CurrencyInput sends in thousands)
       prismaData.price =
         typeof hargaDefault === "number"
-          ? hargaDefault
+          ? hargaDefault * 1000
           : hargaDefault
-            ? Number(hargaDefault)
+            ? Number(hargaDefault) * 1000
             : null;
       prismaData.overtimeRate =
         typeof tarifOvertime === "number"
-          ? tarifOvertime
+          ? tarifOvertime * 1000
           : tarifOvertime
-            ? Number(tarifOvertime)
+            ? Number(tarifOvertime) * 1000
             : null;
       // For CAR_RENTAL and FULL_DAY_TRIP, durasiHari represents hours
       const hours = nestedDurasiHari ?? durasiHari;
@@ -204,7 +204,6 @@ async function handleCreatePackage(request) {
               const m = String(tier.tingkat || "").match(/\d+/);
               return m ? Number(m[0]) : tier.starRating || 0;
             })(),
-            pricePerPax: tier.tarifPerPax ? Number(tier.tarifPerPax) : 0,
             hotels:
               tier.daftarHotel && Array.isArray(tier.daftarHotel)
                 ? {
@@ -219,7 +218,8 @@ async function handleCreatePackage(request) {
                     create: tier.priceRanges.map((r) => ({
                       minPax: Number(r.minPax || 0),
                       maxPax: Number(r.maxPax || 0),
-                      price: Number(r.price || 0),
+                      // Convert from thousands to full rupiah
+                      price: Number(r.price || 0) * 1000,
                     })),
                   }
                 : undefined,

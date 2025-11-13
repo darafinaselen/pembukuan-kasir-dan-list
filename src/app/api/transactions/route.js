@@ -30,7 +30,16 @@ async function handleGetTransactions(request) {
         booking_date: "desc",
       },
       include: {
-        package: true,
+        package: {
+          include: {
+            hotelTiers: {
+              include: {
+                hotels: true,
+                priceRanges: true,
+              },
+            },
+          },
+        },
         armada: true,
         driver: true,
       },
@@ -131,6 +140,7 @@ async function handleCreateTransaction(request) {
           // Optional tour package data
           hotel_name: validatedData.hotel_name,
           pax_count: validatedData.pax_count,
+          hotel_tier_id: validatedData.hotel_tier_id,
 
           // Generated
           invoice_code: invoice_code,

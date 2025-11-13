@@ -49,6 +49,11 @@ export const createTransactionSchema = z
       .int("Jumlah pax harus angka bulat")
       .optional()
       .nullable(),
+    hotel_tier_id: z
+      .string()
+      .uuid("ID Hotel Tier tidak valid")
+      .optional()
+      .nullable(),
 
     // Relations
     armadaId: z.string().uuid("ID Armada tidak valid"),

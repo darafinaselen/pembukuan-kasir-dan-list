@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CurrencyInput } from "@/components/ui/currency-input";
+import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Car, User, Calculator } from "lucide-react";
@@ -197,13 +198,22 @@ export default function TransaksiCompleteModal({
                 >
                   Jam Pulang Aktual *
                 </Label>
-                <Input
-                  id="actualCheckinTime"
-                  type="datetime-local"
-                  value={actualCheckinTime}
-                  onChange={handleCheckinTimeChange}
+                <DateTimePicker
+                  date={
+                    actualCheckinTime ? new Date(actualCheckinTime) : undefined
+                  }
+                  setDate={(date) => {
+                    if (date) {
+                      const tzOffset = date.getTimezoneOffset() * 60000;
+                      const localISOTime = new Date(date.getTime() - tzOffset)
+                        .toISOString()
+                        .slice(0, 16);
+                      handleCheckinTimeChange({
+                        target: { value: localISOTime },
+                      });
+                    }
+                  }}
                   className="mt-1"
-                  required
                 />
               </div>
             </CardContent>

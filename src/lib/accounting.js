@@ -41,7 +41,8 @@ function calculateTourPackagePrice(transaction) {
   }
 
   // Calculate total price: price per pax * number of pax
-  return applicableRange.pricePerPax * paxCount;
+  // Note: 'price' field in DB represents price per pax
+  return applicableRange.price * paxCount;
 }
 
 /**
@@ -85,21 +86,25 @@ export function calculateTransactionFinancials(transaction) {
   const diffMs = end.getTime() - start.getTime();
   const lamaSewaJam = Math.round(diffMs / (1000 * 60 * 60));
 
-  // For TOUR_PACKAGE, no overtime calculation
-  const isTourPackage = transaction.package?.type === "TOUR_PACKAGE";
-  const lamaOvertimeJam = isTourPackage
+  // For TOUR_PACKAGE and FULL_DAY_TRIP, no overtime calculation (flat rate)
+  const packageType = transaction.package?.type;
+  const hasNoOvertime =
+    packageType === "TOUR_PACKAGE" || packageType === "FULL_DAY_TRIP";
+
+  const lamaOvertimeJam = hasNoOvertime
     ? 0
     : Math.max(0, lamaSewaJam - durasiPaketJam);
 
-  // Calculate overtime fee (0 for TOUR_PACKAGE)
-  const totalOvertimeFee = isTourPackage
+  // Calculate overtime fee (0 for TOUR_PACKAGE and FULL_DAY_TRIP)
+  const totalOvertimeFee = hasNoOvertime
     ? 0
     : lamaOvertimeJam * (transaction.overtime_rate_per_hour || 0);
 
   // Calculate base revenue (use TOUR_PACKAGE pricing if applicable)
-  const baseRevenue = isTourPackage
-    ? calculateTourPackagePrice(transaction)
-    : transaction.all_in_rate || 0;
+  const baseRevenue =
+    packageType === "TOUR_PACKAGE"
+      ? calculateTourPackagePrice(transaction)
+      : transaction.all_in_rate || 0;
 
   // Calculate total revenue (base rate + overtime)
   const totalPendapatan = baseRevenue + totalOvertimeFee;

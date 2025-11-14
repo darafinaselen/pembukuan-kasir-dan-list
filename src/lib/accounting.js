@@ -120,8 +120,8 @@ export function calculateTransactionFinancials(transaction) {
     packageType === "TOUR_PACKAGE"
       ? calculateTourPackagePrice(transaction)
       : packageType === "CUSTOM_PRICING"
-      ? calculateCustomPackagePrice(transaction)
-      : transaction.all_in_rate || 0;
+        ? calculateCustomPackagePrice(transaction)
+        : transaction.all_in_rate || 0;
 
   // Calculate total revenue (base rate + overtime)
   const totalPendapatan = baseRevenue + totalOvertimeFee;

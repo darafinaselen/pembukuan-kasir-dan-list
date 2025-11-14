@@ -236,7 +236,7 @@ async function main() {
           // Hotel Tier 3 Bintang
           {
             starRating: 3,
-            
+
             hotels: {
               create: [
                 { name: "Hotel Puri Bali" },
@@ -258,7 +258,7 @@ async function main() {
           // Hotel Tier 4 Bintang
           {
             starRating: 4,
-            
+
             hotels: {
               create: [
                 { name: "Ayodya Resort Bali" },
@@ -281,7 +281,7 @@ async function main() {
           // Hotel Tier 5 Bintang
           {
             starRating: 5,
-            
+
             hotels: {
               create: [
                 { name: "St. Regis Bali Resort" },
@@ -368,7 +368,7 @@ async function main() {
           // Hotel Tier 3 Bintang
           {
             starRating: 3,
-            
+
             hotels: {
               create: [
                 { name: "Hotel Ibis Styles Yogyakarta" },
@@ -390,7 +390,7 @@ async function main() {
           // Hotel Tier 4 Bintang
           {
             starRating: 4,
-            
+
             hotels: {
               create: [
                 { name: "The Phoenix Hotel Yogyakarta" },
@@ -412,7 +412,7 @@ async function main() {
           // Hotel Tier 5 Bintang
           {
             starRating: 5,
-            
+
             hotels: {
               create: [
                 { name: "Platinum Yogyakarta" },
@@ -502,7 +502,7 @@ async function main() {
           // Hotel Tier 3 Bintang
           {
             starRating: 3,
-            
+
             hotels: {
               create: [
                 { name: "Hotel Ibis Bandung" },
@@ -524,7 +524,7 @@ async function main() {
           // Hotel Tier 4 Bintang
           {
             starRating: 4,
-            
+
             hotels: {
               create: [
                 { name: "Hotel Padma Bandung" },
@@ -546,7 +546,7 @@ async function main() {
           // Hotel Tier 5 Bintang
           {
             starRating: 5,
-            
+
             hotels: {
               create: [
                 { name: "The Trans Luxury Hotel" },
@@ -635,12 +635,7 @@ async function main() {
       name: "Paket Wisata Custom",
       type: "CUSTOM_PRICING",
       description: "Paket wisata dengan harga fleksibel berdasarkan request",
-      includes: [
-        "Sopir lokal",
-        "BBM",
-        "Parkir",
-        "Air minum",
-      ],
+      includes: ["Sopir lokal", "BBM", "Parkir", "Air minum"],
       excludes: ["Tiket masuk objek wisata", "Makanan", "Penginapan"],
       isCustomizable: true,
       customizableItems: [

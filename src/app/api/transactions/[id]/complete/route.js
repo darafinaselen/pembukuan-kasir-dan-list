@@ -9,9 +9,9 @@ import { logTransactionEvent } from "@/lib/audit";
 
 async function handleCompleteTransaction(request, { params }) {
   try {
-    // Check permissions
-    if (!permissions.canUpdateTransaction(request.auth.user)) {
-      return errorResponse("Insufficient permissions", 403);
+    // Check permissions - only ADMIN can complete transactions
+    if (!permissions.canCompleteTransaction(request.auth.user)) {
+      return errorResponse("Insufficient permissions to complete transaction", 403);
     }
 
     const { id } = await params;
@@ -26,6 +26,9 @@ async function handleCompleteTransaction(request, { params }) {
 
     const { actual_checkin_datetime, actual_overtime_cost, remaining_payment } =
       body;
+
+    // Note: remaining_payment is ignored for completion - when transaction is completed,
+    // payment status is always set to PAID (lunas) as all payments should be settled
 
     if (!actual_checkin_datetime) {
       const errMsg = "Waktu mobil kembali aktual harus diisi";

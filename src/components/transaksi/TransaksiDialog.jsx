@@ -62,6 +62,7 @@ export default function TransaksiDialog({
     });
   }, [paketList]);
 
+  const isCustomPricing = selectedPackage?.type === "CUSTOM_PRICING";
   const isTourPackage = selectedPackage?.type === "TOUR_PACKAGE";
   const isFullDayTrip = selectedPackage?.type === "FULL_DAY_TRIP";
   const showOvertimeField = !isTourPackage && !isFullDayTrip;
@@ -386,14 +387,40 @@ export default function TransaksiDialog({
                 </legend>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="grid gap-1.5">
-                    <Label htmlFor="all_in_rate">Tarif Sewa</Label>
+                    <Label htmlFor="all_in_rate">
+                      {isCustomPricing ? "Tarif Dasar" : "Tarif Sewa"}
+                      {!isCustomPricing && (
+                        <span className="text-xs text-muted-foreground ml-1">
+                          (dari paket)
+                        </span>
+                      )}
+                    </Label>
                     <CurrencyInput
                       id="all_in_rate"
                       value={formData.all_in_rate}
                       onChange={handleInputChange}
-                      required
+                      required={!isCustomPricing}
+                      disabled={isCustomPricing}
+                      placeholder={isCustomPricing ? "Otomatis dari harga custom" : ""}
                     />
                   </div>
+                  {isCustomPricing && (
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="custom_price">
+                        Harga Custom{" "}
+                        <span className="text-xs text-muted-foreground">
+                          (Wajib untuk paket custom)
+                        </span>
+                      </Label>
+                      <CurrencyInput
+                        id="custom_price"
+                        value={formData.custom_price}
+                        onChange={handleInputChange}
+                        required
+                        placeholder="Masukkan harga yang disepakati"
+                      />
+                    </div>
+                  )}
                   {showOvertimeField && (
                     <div className="grid gap-1.5">
                       <Label htmlFor="overtime_rate_per_hour">

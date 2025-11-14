@@ -124,7 +124,7 @@ describe("Package API - /api/packages", () => {
 
     POST.mockImplementation(async (req) => {
       try {
-        if (!["ADMIN", "MANAGER"].includes(req.auth.user.role)) {
+        if (!["ADMIN"].includes(req.auth.user.role)) {
           return errorResponse("Insufficient permissions", 403);
         }
 
@@ -410,7 +410,7 @@ describe("Package API - /api/packages", () => {
     it("should allow all roles to view packages", async () => {
       prisma.servicePackage.findMany.mockResolvedValue([]);
 
-      const roles = ["ADMIN", "MANAGER", "OPERATOR"];
+      const roles = ["ADMIN", "OPERATOR"];
 
       for (const role of roles) {
         const { req } = createMocks({

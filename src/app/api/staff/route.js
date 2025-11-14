@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { protectedRoute, getClientIp, getUserAgent } from "@/lib/middleware";
+import { protectedRoute, getClientIp, getUserAgent, errorResponse, permissions } from "@/lib/middleware";
 import { logStaffEvent } from "@/lib/audit";
 
 /**
@@ -15,6 +15,11 @@ import { logStaffEvent } from "@/lib/audit";
  */
 async function handleGetStaff(request) {
   try {
+    // Check permissions - both ADMIN and OPERATOR can view staff
+    if (!permissions.canViewStaff(request.auth.user)) {
+      return errorResponse("Insufficient permissions to view staff", 403);
+    }
+    
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const search = searchParams.get("search");
@@ -91,6 +96,11 @@ async function handleGetStaff(request) {
  */
 async function handleCreateStaff(request) {
   try {
+    // Check permissions - only ADMIN can create staff
+    if (!permissions.canManageStaff(request.auth.user)) {
+      return errorResponse("Insufficient permissions to manage staff", 403);
+    }
+
     const body = await request.json();
 
     // Validasi field required
@@ -209,9 +219,9 @@ async function handleCreateStaff(request) {
 
 // Export with protected route middleware
 export const GET = protectedRoute(handleGetStaff, {
-  requiredPermissions: ["view_staff"],
+  roles: ["ADMIN", "OPERATOR"],
 });
 
 export const POST = protectedRoute(handleCreateStaff, {
-  requiredPermissions: ["edit_staff"],
+  roles: ["ADMIN"],
 });

@@ -45,17 +45,6 @@ async function main() {
       },
     });
 
-    const manager = await prisma.user.create({
-      data: {
-        username: "manager",
-        email: "manager@pembukuan.com",
-        password: hashedPassword,
-        name: "Manager Operasional",
-        role: "MANAGER",
-        isActive: true,
-      },
-    });
-
     const operator = await prisma.user.create({
       data: {
         username: "operator",
@@ -68,7 +57,6 @@ async function main() {
     });
 
     console.log(`✅ Created ${admin.name} (ADMIN)`);
-    console.log(`✅ Created ${manager.name} (MANAGER)`);
     console.log(`✅ Created ${operator.name} (OPERATOR)\n`);
 
     // ========================================
@@ -550,7 +538,7 @@ async function main() {
     // ========================================
     console.log("🎉 Master data seeding completed!");
     console.log("📊 Summary:");
-    console.log(`   👥 Users: 3 (Admin, Manager, Operator)`);
+    console.log(`   👥 Users: 2 (Admin, Operator)`);
     console.log(`   📦 Service Packages: 9 (7 CAR_RENTAL + 2 TOUR_PACKAGE)`);
     console.log(`   🚗 Vehicles: 4`);
     console.log(`   👨‍✈️ Drivers: 4`);

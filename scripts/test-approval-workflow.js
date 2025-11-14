@@ -200,11 +200,8 @@ async function runTests() {
   try {
     // Test 1: Login as different roles
     log("📝 Test 1: Login as different users", "blue");
-    const operatorToken = await login("operator@example.com", "password123");
+    const operatorToken = await login("operator@pembukuan.com", "password123");
     log("✅ Operator logged in", "green");
-
-    const managerToken = await login("manager@example.com", "password123");
-    log("✅ Manager logged in", "green");
 
     const adminToken = await login("admin@example.com", "password123");
     log("✅ Admin logged in", "green");
@@ -264,20 +261,20 @@ async function runTests() {
 
     // Test 6: Get pending transactions list
     log("\n📝 Test 6: Get pending transactions list", "blue");
-    const pendingData = await getPendingTransactions(managerToken);
+    const pendingData = await getPendingTransactions(adminToken);
     log(
       `✅ Found ${pendingData.transactions.length} pending transactions`,
       "green"
     );
     log(`   Total: ${pendingData.pagination.total}`, "yellow");
 
-    // Test 7: Approve transaction as MANAGER (PENDING → APPROVED)
+    // Test 7: Approve transaction as ADMIN (PENDING → APPROVED)
     log(
-      "\n📝 Test 7: Approve transaction as MANAGER (PENDING → APPROVED)",
+      "\n📝 Test 7: Approve transaction as ADMIN (PENDING → APPROVED)",
       "blue"
     );
     const approvedTransaction = await approveTransaction(
-      managerToken,
+      adminToken,
       transaction.id
     );
     log(
@@ -313,7 +310,7 @@ async function runTests() {
     log(`✅ Transaction 2 submitted: ${submitted2.approval_status}`, "green");
 
     const rejectedTransaction = await rejectTransaction(
-      managerToken,
+      adminToken,
       transaction2.id,
       "Data tidak lengkap, mohon dilengkapi"
     );

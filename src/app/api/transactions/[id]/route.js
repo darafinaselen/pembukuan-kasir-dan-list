@@ -88,12 +88,18 @@ async function handleUpdateTransaction(request, { params }) {
     const userRole = request.auth.user.role;
     const approvalStatus = existingTransaction.approval_status;
 
-    // OPERATOR can only edit DRAFT transactions
-    if (userRole === "OPERATOR" && approvalStatus !== "DRAFT") {
-      return errorResponse(
-        "Operator hanya dapat mengedit transaksi dengan status DRAFT",
-        403
-      );
+    if (userRole === "OPERATOR") {
+      if (approvalStatus === "PENDING") {
+        return errorResponse("Transaksi sedang menunggu persetujuan", 403);
+      }
+
+      if (approvalStatus === "APPROVED") {
+        return errorResponse(
+          "Transaksi yang sudah disetujui tidak dapat diedit",
+          403
+        );
+      }
+      // OPERATOR can edit DRAFT and REJECTED
     }
 
     // ADMIN cannot edit PENDING or APPROVED transactions
@@ -153,11 +159,11 @@ async function handleUpdateTransaction(request, { params }) {
       packageId: validatedData.packageId,
     };
 
-    // Use atomic transaction to update transaction data
+    // Use atomic transaction to update transaction data with race condition protection
     // NOTE: Resources are NOT locked here because transaction is in DRAFT or REJECTED status.
     // Resources will be locked only when transaction is APPROVED (see approve endpoint).
     const updatedTransaction = await prisma.$transaction(async (tx) => {
-      // Verify armada and driver exist (but don't check status - resources aren't locked yet)
+      // Verify armada exists and is available (not preventing concurrent updates to same resources)
       if (validatedData.armadaId) {
         const armada = await tx.armada.findUnique({
           where: {
@@ -168,8 +174,10 @@ async function handleUpdateTransaction(request, { params }) {
         if (!armada) {
           throw new Error("Armada tidak ditemukan.");
         }
+        // Note: We don't check status here since resources aren't locked until approval
       }
 
+      // Verify driver exists and is available (not preventing concurrent updates to same resources)
       if (validatedData.driverId) {
         const driver = await tx.driver.findUnique({
           where: {
@@ -180,6 +188,7 @@ async function handleUpdateTransaction(request, { params }) {
         if (!driver) {
           throw new Error("Sopir tidak ditemukan.");
         }
+        // Note: We don't check status here since resources aren't locked until approval
       }
 
       // Update transaction (resources remain in their current status)
@@ -308,6 +317,6 @@ async function handleDeleteTransaction(request, { params }) {
 }
 
 export const GET = protectedRoute(handleGetTransaction);
-export const PUT = protectedRoute(handleUpdateTransaction, ["ADMIN"]);
-export const PATCH = protectedRoute(handleUpdateTransaction, ["ADMIN"]);
+export const PUT = protectedRoute(handleUpdateTransaction, ["ADMIN", "OPERATOR"]);
+export const PATCH = protectedRoute(handleUpdateTransaction, ["ADMIN", "OPERATOR"]);
 export const DELETE = protectedRoute(handleDeleteTransaction);

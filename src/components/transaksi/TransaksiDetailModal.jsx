@@ -166,7 +166,7 @@ export default function TransaksiDetailModal({
                   value={
                     <span className="font-semibold text-orange-600">
                       {formatCurrency(
-                        calculatedData.totalTagihan - data.dp_amount
+                        calculatedData.totalPendapatan - data.dp_amount
                       )}
                     </span>
                   }

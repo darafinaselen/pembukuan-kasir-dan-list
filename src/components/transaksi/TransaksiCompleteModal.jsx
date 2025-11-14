@@ -11,7 +11,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CurrencyInput } from "@/components/ui/currency-input";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -34,7 +33,6 @@ export default function TransaksiCompleteModal({
   const [actualCheckinTime, setActualCheckinTime] = useState("");
   const [overtimeCost, setOvertimeCost] = useState(0);
   const [calculatedOvertimeHours, setCalculatedOvertimeHours] = useState(0);
-  const [remainingPayment, setRemainingPayment] = useState(0);
 
   const calculateOvertimeLocal = useCallback(
     (checkinTime) => {
@@ -73,17 +71,6 @@ export default function TransaksiCompleteModal({
     }
   }, [transaction, calculateOvertimeLocal]);
 
-  // Update remaining payment when overtime cost changes manually
-  useEffect(() => {
-    if (transaction) {
-      const baseRate = transaction.all_in_rate || 0;
-      const dpAmount = transaction.dp_amount || 0;
-      const newTotalAmount = baseRate + overtimeCost;
-      const newSisaTagihan = newTotalAmount - dpAmount;
-      setRemainingPayment(newSisaTagihan > 0 ? newSisaTagihan : 0);
-    }
-  }, [overtimeCost, transaction]);
-
   const handleCheckinTimeChange = (e) => {
     const newTime = e.target.value;
     setActualCheckinTime(newTime);
@@ -118,10 +105,12 @@ export default function TransaksiCompleteModal({
       return;
     }
 
+    // When completing transaction, all payments are considered settled (lunas)
+    // remaining_payment is always 0 for completed transactions
     onComplete({
       actual_checkin_datetime: checkinDateTime,
       actual_overtime_cost: overtimeCost,
-      remaining_payment: remainingPayment,
+      remaining_payment: 0, // Always 0 when completing transaction
     });
   };
 
@@ -327,22 +316,12 @@ export default function TransaksiCompleteModal({
                   </div>
                   <hr className="my-2" />
                   <div className="flex justify-between items-center">
-                    <Label
-                      htmlFor="remainingPayment"
-                      className="text-sm font-medium"
-                    >
-                      Sisa Tagihan (Dibayar Sekarang):
-                    </Label>
-                    <div className="w-48">
-                      <CurrencyInput
-                        id="remainingPayment"
-                        value={remainingPayment}
-                        onChange={(value) =>
-                          setRemainingPayment(Number(value) || 0)
-                        }
-                        className="text-right font-bold"
-                      />
-                    </div>
+                    <span className="text-sm font-medium">
+                      Sisa Tagihan:
+                    </span>
+                    <span className="font-bold text-green-600">
+                      {formatCurrency(0)} (LUNAS)
+                    </span>
                   </div>
                 </>
               )}

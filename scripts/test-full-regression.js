@@ -47,7 +47,7 @@ function logTestPhase(phase, description) {
   log("▓".repeat(60) + "\n", "blue");
 }
 
-async function runScript(scriptPath, scriptName) {
+async function runScript(command, scriptName) {
   log(`\n${"─".repeat(60)}`, "yellow");
   log(`🚀 Running: ${scriptName}`, "blue");
   log("─".repeat(60), "yellow");
@@ -55,7 +55,7 @@ async function runScript(scriptPath, scriptName) {
   const startTime = Date.now();
 
   try {
-    const { stdout, stderr } = await execPromise(`node ${scriptPath}`);
+    const { stdout, stderr } = await execPromise(command);
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
 
     if (stderr) {
@@ -118,6 +118,33 @@ async function runFullRegression() {
 
   log("✅ Development server is running", "green");
 
+  const operatorSeed = await runScript(
+    "node scripts/create-operator-user.js",
+    "Seed Test Operator"
+  );
+  if (!operatorSeed.success) {
+    log("Failed to seed operator user. Aborting regression.", "red");
+    process.exit(1);
+  }
+
+  const managerSeed = await runScript(
+    "echo 'Manager role removed - skipping manager seed'",
+    "Skip Manager Seed"
+  );
+  if (!managerSeed.success) {
+    log("Failed to seed manager user. Aborting regression.", "red");
+    process.exit(1);
+  }
+
+  const adminSeed = await runScript(
+    "node scripts/create-admin-user.js",
+    "Seed Test Admin"
+  );
+  if (!adminSeed.success) {
+    log("Failed to seed admin user. Aborting regression.", "red");
+    process.exit(1);
+  }
+
   // PHASE 1: Unit Testing (5 hours equivalent)
   logTestPhase(
     "PHASE 1: UNIT TESTING",
@@ -125,7 +152,7 @@ async function runFullRegression() {
   );
 
   const unitTest = await runScript(
-    "src/app/api/__tests__/approval-workflow.test.js",
+    "npm run test:approval",
     "Unit Tests - Approval Workflow"
   );
   results.total++;
@@ -156,7 +183,7 @@ async function runFullRegression() {
   log("   • Buat Pengeluaran → Upload Bukti\n", "cyan");
 
   const operatorTest = await runScript(
-    "scripts/test-operator-scenario.js",
+    "node scripts/test-operator-scenario.js",
     "Integration Test - Operator Scenario"
   );
   results.total++;
@@ -173,7 +200,7 @@ async function runFullRegression() {
   log("   • Cek Laporan Kinerja\n", "cyan");
 
   const adminTest = await runScript(
-    "scripts/test-admin-scenario.js",
+    "node scripts/test-admin-scenario.js",
     "Integration Test - Admin Scenario"
   );
   results.total++;
@@ -188,7 +215,7 @@ async function runFullRegression() {
   log("   • Edit/Delete protection\n", "cyan");
 
   const approvalTest = await runScript(
-    "scripts/test-approval-workflow.js",
+    "node scripts/test-approval-workflow.js",
     "Integration Test - Approval Workflow"
   );
   results.total++;
@@ -208,7 +235,7 @@ async function runFullRegression() {
   log("   ✓ W3: Laporan Kinerja Armada", "green");
   log("   ✓ W4: Laporan Kinerja Driver", "green");
   log("   ✓ W5: Approval Workflow (Submit, Approve, Reject)", "green");
-  log("   ✓ Hak Akses & Role-based UI (OPERATOR, MANAGER, ADMIN)", "green");
+  log("   ✓ Hak Akses & Role-based UI (OPERATOR, ADMIN)", "green");
   log("   ✓ Audit Logging (semua aktivitas tercatat)", "green");
 
   // Calculate total time
@@ -243,38 +270,35 @@ async function runFullRegression() {
   logHeader("TEST COVERAGE MATRIX");
 
   const testMatrix = [
-    { workflow: "W1: Transaksi", operator: "✓", manager: "✓", admin: "✓" },
-    { workflow: "W2: Pengeluaran", operator: "✓", manager: "✓", admin: "✓" },
-    { workflow: "W3: Laporan Armada", operator: "✗", manager: "✓", admin: "✓" },
-    { workflow: "W4: Laporan Driver", operator: "✗", manager: "✓", admin: "✓" },
+    { workflow: "W1: Transaksi", operator: "✓", admin: "✓" },
+    { workflow: "W2: Pengeluaran", operator: "✓", admin: "✓" },
+    { workflow: "W3: Laporan Armada", operator: "✗", admin: "✓" },
+    { workflow: "W4: Laporan Driver", operator: "✗", admin: "✓" },
     {
       workflow: "W5: Approval",
       operator: "Submit",
-      manager: "Approve",
       admin: "Approve",
     },
     {
       workflow: "Hak Akses UI",
       operator: "Limited",
-      manager: "Extended",
       admin: "Full",
     },
-    { workflow: "Audit Log", operator: "✗", manager: "✗", admin: "✓" },
+    { workflow: "Audit Log", operator: "✗", admin: "✓" },
   ];
 
-  log("┌─────────────────────────┬──────────┬─────────┬─────────┐", "cyan");
-  log("│ Workflow                │ OPERATOR │ MANAGER │  ADMIN  │", "cyan");
-  log("├─────────────────────────┼──────────┼─────────┼─────────┤", "cyan");
+  log("┌─────────────────────────┬──────────┬─────────┐", "cyan");
+  log("│ Workflow                │ OPERATOR │  ADMIN  │", "cyan");
+  log("├─────────────────────────┼──────────┼─────────┤", "cyan");
 
   testMatrix.forEach((row) => {
     const wf = row.workflow.padEnd(23);
     const op = row.operator.padEnd(8);
-    const mg = row.manager.padEnd(7);
     const ad = row.admin.padEnd(7);
-    log(`│ ${wf} │ ${op} │ ${mg} │ ${ad} │`, "white");
+    log(`│ ${wf} │ ${op} │ ${ad} │`, "white");
   });
 
-  log("└─────────────────────────┴──────────┴─────────┴─────────┘\n", "cyan");
+  log("└─────────────────────────┴──────────┴─────────┘\n", "cyan");
 
   // Feature Coverage
   logHeader("FEATURE COVERAGE");

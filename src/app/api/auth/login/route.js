@@ -155,6 +155,11 @@ async function handleLogin(request) {
       path: "/",
     };
 
+    // Use different cookie names for different roles to allow multiple sessions
+    const cookieName = `session_${user.role.toLowerCase()}`;
+    response.cookies.set(cookieName, session.token, cookieOptions);
+
+    // Also set a general "session" cookie for backward compatibility
     response.cookies.set("session", session.token, cookieOptions);
 
     // Debug log

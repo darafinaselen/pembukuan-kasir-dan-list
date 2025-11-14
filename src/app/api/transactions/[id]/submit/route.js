@@ -3,6 +3,7 @@ import {
   protectedRoute,
   successResponse,
   errorResponse,
+  permissions,
 } from "@/lib/middleware";
 import { logTransactionEvent } from "@/lib/audit";
 
@@ -13,6 +14,11 @@ import { logTransactionEvent } from "@/lib/audit";
  */
 async function handleSubmitTransaction(request, context) {
   try {
+    // Check permissions
+    if (!permissions.canSubmitTransaction(request.auth.user)) {
+      return errorResponse("Insufficient permissions to submit transaction", 403);
+    }
+    
     const { id } = await context.params;
     const user = request.auth.user;
 

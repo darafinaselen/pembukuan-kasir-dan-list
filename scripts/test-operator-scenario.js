@@ -253,7 +253,7 @@ async function runOperatorScenario() {
   try {
     // STEP 1: Login as Operator
     logStep(1, "Login sebagai Operator");
-    const operatorToken = await login("operator@example.com", "password123");
+    const operatorToken = await login("operator@pembukuan.com", "Operator123!");
     log("✅ Operator berhasil login", "green");
 
     // STEP 2: Get available resources
@@ -354,7 +354,7 @@ async function runOperatorScenario() {
       "⏭️  SKIPPED: Operator tidak memiliki izin untuk membuat pengeluaran",
       "yellow"
     );
-    log("   (Requires ADMIN atau MANAGER role)", "dim");
+    log("   (Requires ADMIN role)", "dim");
 
     // STEP 9: Re-fetch expense - SKIPPED
     logStep(9, "Re-fetch Pengeluaran - SKIPPED");

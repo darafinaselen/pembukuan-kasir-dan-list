@@ -8,13 +8,16 @@ async function createOperatorUser() {
 
   try {
     // Check if operator already exists
-    const existingOperator = await prisma.user.findUnique({
-      where: { email: "operator@example.com" },
+    const existingOperator = await prisma.user.findFirst({
+      where: {
+        OR: [{ email: "operator@example.com" }, { username: "operator" }],
+      },
     });
 
     if (existingOperator) {
       console.log("✅ Operator user already exists");
       console.log(`   Email: ${existingOperator.email}`);
+      console.log(`   Username: ${existingOperator.username}`);
       console.log(`   Role: ${existingOperator.role}`);
       console.log(`   Name: ${existingOperator.name}\n`);
       return;

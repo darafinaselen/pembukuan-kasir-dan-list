@@ -12,20 +12,21 @@ Indonesian car rental management system with Next.js 16 App Router, Prisma ORM, 
 - **Armada/Drivers** have status tracking (`READY`, `BOOKED`, `ON_TRIP`, `MAINTENANCE`, `OFF_DUTY`)
   - `BOOKED`: Reserved for future bookings (checkout date is in the future)
   - `ON_TRIP`: Currently active on a trip (checkout date is today or past)
-- **ServicePackage** supports multiple types: `CAR_RENTAL`, `TOUR_PACKAGE`, `FULL_DAY_TRIP`
+- **ServicePackage** supports multiple types: `CAR_RENTAL`, `TOUR_PACKAGE`, `FULL_DAY_TRIP`, `CUSTOM_PRICING`
   - Schema fields: `name`, `type`, `price`, `durationHours`, `overtimeRate` (for CAR_RENTAL)
   - Schema fields: `durationDays`, `durationNights`, `hotelTiers` (for TOUR_PACKAGE)
   - **IMPORTANT**: Use `name` and `type` (not `package_name` and `package_type`)
 - **Expenses** use ExpenseCategory enum (not string) with values like `BBM`, `GAJI_SOPIR`, `LISTRIK`, etc.
   - API uses FormData (not JSON) for file uploads
   - Required fields: `date`, `category`, `description`, `amount`
+- **User Roles**: Only `ADMIN` and `OPERATOR` (MANAGER role removed)
 
 ### API Route Structure
 
 All routes use `/src/app/api/[module]/route.js` pattern with **protectedRoute** middleware:
 
 ```javascript
-export const GET = protectedRoute(handleGetData, ["ADMIN", "MANAGER"]);
+export const GET = protectedRoute(handleGetData, ["ADMIN", "OPERATOR"]);
 export const POST = protectedRoute(handleCreateData, ["ADMIN"]);
 ```
 
@@ -55,10 +56,11 @@ import { calculateTransactionFinancials } from "@/lib/accounting";
 
 ### Authentication & Authorization
 
-- JWT-based auth with role hierarchy: `ADMIN` > `MANAGER` > `OPERATOR`
+- JWT-based auth with role hierarchy: `ADMIN` > `OPERATOR`
 - Protected routes use `(admin)` folder with middleware at `/src/proxy.js`
-- API middleware in `/src/lib/middleware.js` handles auth/RBAC
+- API middleware in `/src/lib/middleware.js` handles auth/RBAC with role-specific cookies
 - Session management with audit logging in `/src/lib/audit.js`
+- **Cookie Strategy**: Uses `session_admin` and `session_operator` cookies (MANAGER removed)
 
 ## 🛠️ Development Workflows
 
@@ -78,13 +80,17 @@ npx prisma studio       # Visual database browser
 - Accounting logic: Always test with `AUDIT_LOGIKA_AKUNTANSI.md` test cases
 - Audit logs: `node scripts/test-audit-logs.js` (100% success rate achieved)
 - Approval workflow: `node scripts/test-approval-workflow.js` (98% success rate)
+- Regression testing: `npm run test:regression` (comprehensive end-to-end tests)
+- Available test scripts: `npm run test:all` (runs comprehensive test suite)
 
 ### Component Architecture
 
 - UI components: `/src/components/ui/` (Shadcn/ui with data-slot pattern)
 - Feature components: `/src/components/[module]/` (dashboard, transaksi, etc.)
 - Forms use React Hook Form with Zod validation
-- Sidebar navigation with collapsible icon state
+- Sidebar navigation with **persistent collapsible state** (localStorage-based)
+- State persistence: Menu expansion state saved to `localStorage` with key `'sidebar-expanded-items'`
+- Hydration-safe: Uses lazy initial state to prevent SSR hydration mismatches
 
 ## 🚨 Critical Conventions
 
@@ -166,6 +172,22 @@ await prisma.$transaction(async (tx) => {
 }
 ```
 
+### Transaction Completion (Critical)
+
+**When completing transactions, payment status is ALWAYS set to "PAID"** - no remaining payment allowed:
+
+```javascript
+// API always sets payment_status to "PAID" when completing
+const finalPaymentStatus = "PAID";
+
+// Frontend sends remaining_payment: 0 for completed transactions
+onComplete({
+  actual_checkin_datetime: checkinDateTime,
+  actual_overtime_cost: overtimeCost,
+  remaining_payment: 0, // Always 0 when completing transaction
+});
+```
+
 **Transaction Completion**: Use PUT method with minimal data:
 
 ```javascript
@@ -175,10 +197,25 @@ await prisma.$transaction(async (tx) => {
 }
 ```
 
-### Real-time Availability
+### Permission System
 
-Use `/api/availability/vehicles` and `/api/availability/drivers` for scheduling conflicts.
-Form integration includes debounced availability checking.
+Use granular permission checks from `/src/lib/middleware.js`:
+
+```javascript
+import { permissions } from "@/lib/middleware";
+
+// Check specific permissions
+if (!permissions.canViewReports(request.auth.user)) {
+  return errorResponse("Insufficient permissions", 403);
+}
+```
+
+**Permission Hierarchy:**
+- `ADMIN`: Full access to all features
+- `OPERATOR`: Can create/view transactions & expenses (as DRAFT), submit for approval
+- **Financial reports**: Only ADMIN can view/export
+- **User management**: Only ADMIN
+- **Audit logs**: Only ADMIN
 
 ## 📊 Key Integrations
 
@@ -218,13 +255,18 @@ await logTransactionEvent(user, "CREATE", transaction, request);
 - Current coverage: 5/10 functions tested (50%)
 - Success rate: 100% for tested functions
 - All logs include: userId, timestamp, IP address, metadata
+- **Note**: MANAGER role references removed from audit functions
 
 ## 🔧 Common Issues & Solutions
 
+**Next.js 16 Configuration**: Uses Turbopack with standalone output for production deployment
+**Build Output**: `output: "standalone"` for containerized deployments
+**React Compiler**: Enabled for performance optimization
 **Deployment**: Use Railway/Vercel with proper DATABASE_URL and JWT_SECRET
 **Testing**: Run `npm run test` before commits; accounting tests are critical
 **Performance**: Use Prisma query optimization with `include` statements
 **Security**: All protected routes must use `protectedRoute` wrapper
+**State Persistence**: Sidebar state uses localStorage with SSR-safe lazy initialization
 
 ## 📁 File Conventions
 

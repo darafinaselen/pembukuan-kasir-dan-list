@@ -363,7 +363,7 @@ async function runAuditLogTests() {
 
     // Login as operator for transaction tests
     log("🔐 Logging in as operator...", "cyan");
-    operatorToken = await login("operator@example.com", "password123");
+    operatorToken = await login("operator@pembukuan.com", "password123");
     log("✅ Operator logged in", "green");
 
     logStep(3, "Test Transaction CREATE Audit Log");

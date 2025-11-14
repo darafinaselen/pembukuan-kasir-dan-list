@@ -47,6 +47,17 @@ async function handleGetDashboardStats(request) {
           lte: now,
         },
         approval_status: "APPROVED",
+        OR: [
+          // Include completed transactions (have actual_checkin_datetime)
+          { actual_checkin_datetime: { not: null } },
+          // Include transactions with down payment
+          {
+            AND: [
+              { payment_status: "DOWN_PAYMENT" },
+              { dp_amount: { gt: 0 } }
+            ]
+          }
+        ]
       },
       select: {
         id: true,

@@ -4,6 +4,7 @@
  */
 
 import { prisma } from "./prisma";
+import { formatCurrency } from "./accounting";
 
 /**
  * Create audit log entry
@@ -57,9 +58,16 @@ export async function logAuthEvent(
   userAgent,
   success = true
 ) {
-  const description = success
-    ? `User ${action.toLowerCase()} successful`
-    : `User ${action.toLowerCase()} failed`;
+  let description = "";
+  if (action === "LOGIN") {
+    description = success ? "Login berhasil" : "Login gagal";
+  } else if (action === "LOGOUT") {
+    description = "Logout";
+  } else {
+    description = success
+      ? `Autentikasi ${action.toLowerCase()} berhasil`
+      : `Autentikasi ${action.toLowerCase()} gagal`;
+  }
 
   return await createAuditLog({
     userId,
@@ -85,34 +93,38 @@ export async function logAuthEvent(
 export async function logTransactionEvent(user, action, transaction, request) {
   let description = "";
   const invoice_code = transaction?.invoice_code || transaction?.id || "N/A";
+  const customer_name = transaction?.customer_name || "N/A";
+  const package_type = transaction?.package?.type || "N/A";
+  const amount = transaction?.all_in_rate || 0;
+  const formattedAmount = formatCurrency(amount);
 
   switch (action) {
     case "CREATE":
-      description = `Created transaction ${invoice_code}`;
+      description = `Membuat transaksi ${invoice_code} - ${customer_name}, ${formattedAmount}, ${package_type}`;
       break;
     case "UPDATE":
-      description = `Updated transaction ${invoice_code}`;
+      description = `Mengubah transaksi ${invoice_code} - ${customer_name}, ${formattedAmount}, ${package_type}`;
       break;
     case "DELETE":
-      description = `Deleted transaction ${invoice_code}`;
+      description = `Menghapus transaksi ${invoice_code} - ${customer_name}, ${formattedAmount}, ${package_type}`;
       break;
     case "VIEW":
-      description = `Viewed transaction ${invoice_code}`;
+      description = `Melihat transaksi ${invoice_code} - ${customer_name}, ${formattedAmount}, ${package_type}`;
       break;
     case "COMPLETE":
-      description = `Completed transaction ${invoice_code}`;
+      description = `Menyelesaikan transaksi ${invoice_code} - ${customer_name}, ${formattedAmount}, ${package_type}`;
       break;
     case "SUBMIT_APPROVAL":
-      description = `Submitted transaction ${invoice_code} for approval`;
+      description = `Mengajukan persetujuan transaksi ${invoice_code} - ${customer_name}, ${formattedAmount}, ${package_type}`;
       break;
     case "APPROVE":
-      description = `Approved transaction ${invoice_code}`;
+      description = `Menyetujui transaksi ${invoice_code} - ${customer_name}, ${formattedAmount}, ${package_type}`;
       break;
     case "REJECT":
-      description = `Rejected transaction ${invoice_code}`;
+      description = `Menolak transaksi ${invoice_code} - ${customer_name}, ${formattedAmount}, ${package_type}`;
       break;
     default:
-      description = `${action} transaction ${invoice_code}`;
+      description = `${action} transaksi ${invoice_code} - ${customer_name}, ${formattedAmount}, ${package_type}`;
   }
 
   const ipAddress =
@@ -150,9 +162,25 @@ export async function logExpenseEvent(
   ipAddress,
   userAgent
 ) {
-  const description = changes
-    ? `${action} expense: ${changes.category} - ${changes.description}`
-    : `${action} expense ID: ${expenseId}`;
+  let description = "";
+  const category = changes?.category || "N/A";
+  const expenseDescription = changes?.description || "N/A";
+  const amount = changes?.amount || 0;
+  const formattedAmount = formatCurrency(amount);
+
+  switch (action) {
+    case "CREATE":
+      description = `Membuat pengeluaran: ${category} - ${expenseDescription}, ${formattedAmount}`;
+      break;
+    case "UPDATE":
+      description = `Mengubah pengeluaran: ${category} - ${expenseDescription}, ${formattedAmount}`;
+      break;
+    case "DELETE":
+      description = `Menghapus pengeluaran: ${category} - ${expenseDescription}, ${formattedAmount}`;
+      break;
+    default:
+      description = `${action} pengeluaran: ${category} - ${expenseDescription}, ${formattedAmount}`;
+  }
 
   return await createAuditLog({
     userId,
@@ -183,26 +211,28 @@ export async function logExpenseApprovalEvent(
 ) {
   let description = "";
   const expenseInfo = expense?.description || expense?.id || "N/A";
-  const category = expense?.category || "";
+  const category = expense?.category || "N/A";
+  const amount = expense?.amount || 0;
+  const formattedAmount = formatCurrency(amount);
 
   switch (action) {
     case "REQUEST_EDIT":
-      description = `Requested edit approval for expense: ${category} - ${expenseInfo}`;
+      description = `Meminta persetujuan edit pengeluaran: ${category} - ${expenseInfo}, ${formattedAmount}`;
       break;
     case "REQUEST_DELETE":
-      description = `Requested delete approval for expense: ${category} - ${expenseInfo}`;
+      description = `Meminta persetujuan hapus pengeluaran: ${category} - ${expenseInfo}, ${formattedAmount}`;
       break;
     case "APPROVE_EDIT":
-      description = `Approved edit request for expense: ${category} - ${expenseInfo}`;
+      description = `Menyetujui edit pengeluaran: ${category} - ${expenseInfo}, ${formattedAmount}`;
       break;
     case "APPROVE_DELETE":
-      description = `Approved delete request for expense: ${category} - ${expenseInfo}`;
+      description = `Menyetujui hapus pengeluaran: ${category} - ${expenseInfo}, ${formattedAmount}`;
       break;
     case "REJECT":
-      description = `Rejected approval request for expense: ${category} - ${expenseInfo}`;
+      description = `Menolak permintaan persetujuan pengeluaran: ${category} - ${expenseInfo}, ${formattedAmount}`;
       break;
     default:
-      description = `${action} expense approval: ${category} - ${expenseInfo}`;
+      description = `${action} persetujuan pengeluaran: ${category} - ${expenseInfo}, ${formattedAmount}`;
   }
 
   const ipAddress =
@@ -249,7 +279,7 @@ export async function logReportAccess(
     action: "VIEW",
     resource: "Report",
     resourceId: null,
-    description: `Accessed ${reportType} report`,
+    description: `Mengakses laporan ${reportType}`,
     metadata: { reportType, filters },
     ipAddress,
     userAgent,
@@ -276,7 +306,7 @@ export async function logDataExport(
     action: "EXPORT",
     resource: dataType,
     resourceId: null,
-    description: `Exported ${dataType} data`,
+    description: `Mengekspor data ${dataType}`,
     metadata: { filters, exportedAt: new Date().toISOString() },
     ipAddress,
     userAgent,
@@ -300,9 +330,24 @@ export async function logArmadaEvent(
   ipAddress,
   userAgent
 ) {
-  const description = changes?.license_plate
-    ? `${action} armada: ${changes.license_plate} (${changes.brand} ${changes.model})`
-    : `${action} armada ID: ${armadaId}`;
+  let description = "";
+  const licensePlate = changes?.license_plate || "N/A";
+  const brand = changes?.brand || "";
+  const model = changes?.model || "";
+
+  switch (action) {
+    case "CREATE":
+      description = `Membuat armada: ${licensePlate} (${brand} ${model})`;
+      break;
+    case "UPDATE":
+      description = `Mengubah armada: ${licensePlate} (${brand} ${model})`;
+      break;
+    case "DELETE":
+      description = `Menghapus armada: ${licensePlate} (${brand} ${model})`;
+      break;
+    default:
+      description = `${action} armada: ${licensePlate} (${brand} ${model})`;
+  }
 
   return await createAuditLog({
     userId,
@@ -333,9 +378,22 @@ export async function logDriverEvent(
   ipAddress,
   userAgent
 ) {
-  const description = changes?.name
-    ? `${action} driver: ${changes.name}`
-    : `${action} driver ID: ${driverId}`;
+  let description = "";
+  const name = changes?.name || "N/A";
+
+  switch (action) {
+    case "CREATE":
+      description = `Membuat sopir: ${name}`;
+      break;
+    case "UPDATE":
+      description = `Mengubah sopir: ${name}`;
+      break;
+    case "DELETE":
+      description = `Menghapus sopir: ${name}`;
+      break;
+    default:
+      description = `${action} sopir: ${name}`;
+  }
 
   return await createAuditLog({
     userId,
@@ -366,9 +424,23 @@ export async function logUserEvent(
   ipAddress,
   userAgent
 ) {
-  const description = changes?.username
-    ? `${action} user: ${changes.username} (${changes.name})`
-    : `${action} user ID: ${targetUserId}`;
+  let description = "";
+  const username = changes?.username || "N/A";
+  const name = changes?.name || "";
+
+  switch (action) {
+    case "CREATE":
+      description = `Membuat pengguna: ${username} (${name})`;
+      break;
+    case "UPDATE":
+      description = `Mengubah pengguna: ${username} (${name})`;
+      break;
+    case "DELETE":
+      description = `Menghapus pengguna: ${username} (${name})`;
+      break;
+    default:
+      description = `${action} pengguna: ${username} (${name})`;
+  }
 
   return await createAuditLog({
     userId,
@@ -399,9 +471,23 @@ export async function logStaffEvent(
   ipAddress,
   userAgent
 ) {
-  const description = changes?.staff_name
-    ? `${action} staff: ${changes.staff_name} (${changes.position})`
-    : `${action} staff ID: ${staffId}`;
+  let description = "";
+  const staffName = changes?.staff_name || "N/A";
+  const position = changes?.position || "";
+
+  switch (action) {
+    case "CREATE":
+      description = `Membuat staf: ${staffName} (${position})`;
+      break;
+    case "UPDATE":
+      description = `Mengubah staf: ${staffName} (${position})`;
+      break;
+    case "DELETE":
+      description = `Menghapus staf: ${staffName} (${position})`;
+      break;
+    default:
+      description = `${action} staf: ${staffName} (${position})`;
+  }
 
   return await createAuditLog({
     userId,
@@ -432,9 +518,23 @@ export async function logPackageEvent(
   ipAddress,
   userAgent
 ) {
-  const description = changes?.name
-    ? `${action} package: ${changes.name} (${changes.type})`
-    : `${action} package ID: ${packageId}`;
+  let description = "";
+  const name = changes?.name || "N/A";
+  const type = changes?.type || "";
+
+  switch (action) {
+    case "CREATE":
+      description = `Membuat paket: ${name} (${type})`;
+      break;
+    case "UPDATE":
+      description = `Mengubah paket: ${name} (${type})`;
+      break;
+    case "DELETE":
+      description = `Menghapus paket: ${name} (${type})`;
+      break;
+    default:
+      description = `${action} paket: ${name} (${type})`;
+  }
 
   return await createAuditLog({
     userId,

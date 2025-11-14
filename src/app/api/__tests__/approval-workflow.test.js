@@ -325,7 +325,7 @@ describe("Approval Workflow - Approve Transaction", () => {
 
     prisma.transaction.findUnique.mockResolvedValue(mockTransaction);
 
-    const request = createMockRequest({}, { role: "MANAGER" });
+    const request = createMockRequest({}, { role: "ADMIN" });
     const params = createMockParams("trans-1");
 
     const response = await approveHandler(request, params);
@@ -449,7 +449,7 @@ describe("Approval Workflow - Reject Transaction", () => {
 
     prisma.transaction.findUnique.mockResolvedValue(mockTransaction);
 
-    const request = createMockRequest({}, { role: "MANAGER" });
+    const request = createMockRequest({}, { role: "ADMIN" });
     const params = createMockParams("trans-1");
 
     const response = await rejectHandler(request, params);
@@ -510,7 +510,7 @@ describe("Approval Workflow - Get Pending Transactions", () => {
     prisma.transaction.findMany.mockResolvedValue(mockTransactions);
     prisma.transaction.count.mockResolvedValue(2);
 
-    const request = createMockRequest({}, { role: "MANAGER" });
+    const request = createMockRequest({}, { role: "ADMIN" });
     request.url =
       "http://localhost:3000/api/transactions/pending?page=1&limit=10";
 
@@ -544,7 +544,7 @@ describe("Approval Workflow - Get Pending Transactions", () => {
     prisma.transaction.findMany.mockResolvedValue([]);
     prisma.transaction.count.mockResolvedValue(25);
 
-    const request = createMockRequest({}, { role: "MANAGER" });
+    const request = createMockRequest({}, { role: "ADMIN" });
     request.url =
       "http://localhost:3000/api/transactions/pending?page=2&limit=10";
 

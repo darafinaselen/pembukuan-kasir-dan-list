@@ -85,6 +85,16 @@ async function handleCreateTransaction(request) {
 
     const validatedData = validation.data;
 
+    // Determine if admin created this transaction for auto-approval
+    const isAdmin = request.auth.user?.role === "ADMIN";
+    const approvalMeta = isAdmin
+      ? {
+          approval_status: "APPROVED",
+          approved_at: new Date(),
+          approved_by: request.auth.user.id,
+        }
+      : {};
+
     // Generate collision-resistant invoice code (alphanumeric only, uppercase)
     const { nanoid } = await import("nanoid");
     const date = new Date();
@@ -151,6 +161,7 @@ async function handleCreateTransaction(request) {
           armadaId: validatedData.armadaId,
           driverId: validatedData.driverId,
           packageId: validatedData.packageId || null,
+          ...approvalMeta,
         },
       });
 

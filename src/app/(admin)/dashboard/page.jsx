@@ -9,6 +9,7 @@ import { TransactionChart } from "@/components/dashboard/TransactionChart";
 import { FleetStatusChart } from "@/components/dashboard/FleetStatusChart";
 import { FleetRevenueChart } from "@/components/dashboard/FleetRevenueChart";
 import { TopPackagesWidget } from "@/components/dashboard/TopPackagesWidget";
+import { AdminOnly } from "@/components/PermissionGuard";
 import { Calendar, Clock, TrendingUp } from "lucide-react";
 import { useAuthFetch } from "@/lib/useAuthFetch";
 import { useUser } from "@/hooks/useUser";
@@ -177,8 +178,8 @@ function DashboardPage() {
 
             {/* Charts Row 1 */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-              {/* Hide Transaction Chart (Analisis Tren) from OPERATOR */}
-              {user?.role !== "OPERATOR" && (
+              {/* Transaction Chart (Analisis Tren) - Admin Only */}
+              <AdminOnly>
                 <div className="lg:col-span-4">
                   <TransactionChart
                     data={stats?.transactionTrend}
@@ -186,27 +187,27 @@ function DashboardPage() {
                     loading={loading}
                   />
                 </div>
-              )}
-              <div
-                className={
-                  user?.role === "OPERATOR" ? "lg:col-span-7" : "lg:col-span-3"
-                }
-              >
+              </AdminOnly>
+              <div className="lg:col-span-3">
                 <FleetStatusChart data={stats?.fleetStatus} loading={loading} />
               </div>
             </div>
 
-            {/* Fleet Revenue Chart */}
-            <FleetRevenueChart data={stats?.fleetRevenue} loading={loading} />
+            {/* Fleet Revenue Chart - Admin Only */}
+            <AdminOnly>
+              <FleetRevenueChart data={stats?.fleetRevenue} loading={loading} />
+            </AdminOnly>
 
-            {/* Top Packages Widget */}
-            <TopPackagesWidget
-              incomeData={{
-                incomeByPackage: stats?.topPackages || [],
-                summary: stats?.packageSummary,
-              }}
-              loading={loading}
-            />
+            {/* Top Packages Widget - Admin Only */}
+            <AdminOnly>
+              <TopPackagesWidget
+                incomeData={{
+                  incomeByPackage: stats?.topPackages || [],
+                  summary: stats?.packageSummary,
+                }}
+                loading={loading}
+              />
+            </AdminOnly>
           </>
         )}
       </div>

@@ -1,7 +1,7 @@
 /**
  * Integration Test: Admin Rejection Workflow
  *
- * Menguji alur penolakan transaksi oleh admin/manager:
+ * Menguji alur penolakan transaksi oleh admin:
  * 1. Login sebagai admin
  * 2. Lihat pending transactions
  * 3. Reject transaction dengan alasan

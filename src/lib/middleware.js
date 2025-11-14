@@ -35,11 +35,19 @@ export function getTokenFromRequest(request) {
     return authHeader.substring(7);
   }
 
-  // Try cookie
+  // Try cookies - check all possible session cookies
   const cookies = request.headers.get("cookie");
   if (cookies) {
-    const match = cookies.match(/session=([^;]+)/);
-    if (match) return match[1];
+    // Try role-specific cookies first
+    const roleCookies = ['session_admin', 'session_operator'];
+    for (const cookieName of roleCookies) {
+      const match = cookies.match(new RegExp(`${cookieName}=([^;]+)`));
+      if (match) return match[1];
+    }
+
+    // Fallback to general session cookie for backward compatibility
+    const generalMatch = cookies.match(/session=([^;]+)/);
+    if (generalMatch) return generalMatch[1];
   }
 
   return null;
@@ -77,7 +85,7 @@ export async function requireAuth(request) {
 
 /**
  * Role-based authorization middleware
- * @param {array} allowedRoles - Array of allowed roles (e.g., ['ADMIN', 'MANAGER'])
+ * @param {array} allowedRoles - Array of allowed roles (e.g., ['ADMIN', 'OPERATOR'])
  */
 export function requireRole(user, allowedRoles) {
   if (!user) {
@@ -118,8 +126,8 @@ export const permissions = {
   // OPERATOR can view and create expenses (as DRAFT), but must submit for approval
   canViewExpenses: (user) => ["ADMIN", "OPERATOR"].includes(user?.role),
   canCreateExpense: (user) => ["ADMIN", "OPERATOR"].includes(user?.role),
-  // Only ADMIN can update/delete/approve/reject expenses
-  canUpdateExpense: (user) => ["ADMIN"].includes(user?.role),
+  // ADMIN and OPERATOR can update expenses (status-based checks in handlers)
+  canUpdateExpense: (user) => ["ADMIN", "OPERATOR"].includes(user?.role),
   canDeleteExpense: (user) => ["ADMIN"].includes(user?.role),
 
   // Fleet (Armada) permissions
@@ -150,6 +158,38 @@ export const permissions = {
   // Dashboard permissions
   // OPERATOR cannot view dashboard (contains financial data)
   canViewDashboard: (user) => ["ADMIN"].includes(user?.role),
+
+  // Transaction approval/rejection permissions
+  canApproveTransaction: (user) => ["ADMIN"].includes(user?.role),
+  canRejectTransaction: (user) => ["ADMIN"].includes(user?.role),
+  canCompleteTransaction: (user) => ["ADMIN"].includes(user?.role),
+  canSubmitTransaction: (user) => ["ADMIN", "OPERATOR"].includes(user?.role),
+
+  // Expense approval/rejection permissions
+  canApproveExpense: (user) => ["ADMIN"].includes(user?.role),
+  canRejectExpense: (user) => ["ADMIN"].includes(user?.role),
+  canRequestEditExpense: (user) => ["ADMIN", "OPERATOR"].includes(user?.role),
+  canRequestDeleteExpense: (user) => ["ADMIN", "OPERATOR"].includes(user?.role),
+
+  // Report permissions
+  canViewIncomeReports: (user) => ["ADMIN"].includes(user?.role),
+  canViewExpenseReports: (user) => ["ADMIN"].includes(user?.role),
+  canViewPerformanceReports: (user) => ["ADMIN"].includes(user?.role),
+  canViewRekapReports: (user) => ["ADMIN"].includes(user?.role),
+  canViewSummaryReports: (user) => ["ADMIN"].includes(user?.role),
+  canViewFuelAnalysisReports: (user) => ["ADMIN"].includes(user?.role),
+
+  // Staff permissions
+  canViewStaff: (user) => ["ADMIN", "OPERATOR"].includes(user?.role),
+  canManageStaff: (user) => ["ADMIN"].includes(user?.role),
+
+  // Pending transaction/expense permissions (for admin review lists)
+  canViewPendingTransactions: (user) => ["ADMIN"].includes(user?.role),
+  canViewPendingExpenses: (user) => ["ADMIN"].includes(user?.role),
+
+  // Vehicle/Armada management permissions
+  canViewVehicles: (user) => ["ADMIN", "OPERATOR"].includes(user?.role),
+  canManageVehicles: (user) => ["ADMIN"].includes(user?.role),
 };
 
 /**

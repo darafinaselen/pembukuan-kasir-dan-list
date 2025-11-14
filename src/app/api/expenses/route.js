@@ -114,6 +114,15 @@ async function handleCreateExpense(request) {
       return errorResponse("Kategori 'Lainnya' tidak boleh kosong", 400);
     }
 
+    const isAdmin = request.auth.user?.role === "ADMIN";
+    const approvalData = isAdmin
+      ? {
+          approval_status: "APPROVED",
+          approved_by_id: request.auth.user.id,
+          approved_at: new Date(),
+        }
+      : {};
+
     // Build the data object with proper Prisma relations
     const createData = {
       date: body.date,
@@ -122,6 +131,7 @@ async function handleCreateExpense(request) {
       description: body.description,
       amount: amount,
       namaPenerima: body.namaPenerima || null,
+      ...approvalData,
     };
 
     // Add optional relations using connect

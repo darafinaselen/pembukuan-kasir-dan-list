@@ -46,6 +46,7 @@ const INITIAL_FORM_STATE = {
   hotel_name: "",
   pax_count: "",
   hotel_tier_id: "",
+  custom_price: 0,
 };
 
 // function calculateFinancials(formData) {
@@ -282,6 +283,7 @@ export default function TransaksiPage() {
       "overtime_rate_per_hour",
       "dp_amount",
       "pax_count",
+      "custom_price",
     ];
 
     let newValue = value;

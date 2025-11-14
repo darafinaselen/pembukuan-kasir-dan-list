@@ -18,6 +18,32 @@ async function handleUpdateExpense(request, { params }) {
       return errorResponse("Insufficient permissions", 403);
     }
 
+    // Check if expense exists and get approval status
+    const existingExpense = await prisma.expense.findUnique({
+      where: { id: idFromParams },
+    });
+
+    if (!existingExpense) {
+      return errorResponse("Expense not found", 404);
+    }
+
+    const userRole = request.auth.user.role;
+    const approvalStatus = existingExpense.approval_status;
+
+    if (userRole === "OPERATOR") {
+      // OPERATOR can only edit DRAFT expenses
+      if (approvalStatus !== "DRAFT" && approvalStatus !== null) {
+        return errorResponse("Pengeluaran tidak dapat diedit karena sudah disetujui", 403);
+      }
+    }
+
+    // ADMIN can edit any expense except APPROVED ones
+    if (userRole === "ADMIN") {
+      if (approvalStatus === "APPROVED") {
+        return errorResponse("Pengeluaran yang sudah disetujui tidak dapat diedit", 403);
+      }
+    }
+
     const formData = await request.formData();
 
     // Extract fields from FormData
@@ -183,6 +209,24 @@ async function handleDeleteExpense(request, { params }) {
       return errorResponse("Insufficient permissions", 403);
     }
 
+    // Check if expense exists
+    const existingExpense = await prisma.expense.findUnique({
+      where: { id: idFromParams },
+    });
+
+    if (!existingExpense) {
+      return errorResponse("Expense not found", 404);
+    }
+
+    // Prevent deletion if status is APPROVED or has pending requests
+    if (existingExpense.approval_status === "APPROVED") {
+      return errorResponse("Pengeluaran yang sudah disetujui tidak dapat dihapus", 403);
+    }
+
+    if (existingExpense.approval_status === "PENDING_EDIT" || existingExpense.approval_status === "PENDING_DELETE") {
+      return errorResponse("Pengeluaran dengan request pending tidak dapat dihapus", 403);
+    }
+
     await prisma.expense.delete({
       where: { id: idFromParams },
     });
@@ -204,9 +248,9 @@ async function handleDeleteExpense(request, { params }) {
   }
 }
 
-// Only ADMIN can update and delete expenses
+// ADMIN and OPERATOR can update expenses (status-based checks inside handler)
 export const PUT = protectedRoute(handleUpdateExpense, {
-  roles: ["ADMIN"],
+  roles: ["ADMIN", "OPERATOR"],
 });
 
 export const DELETE = protectedRoute(handleDeleteExpense, {

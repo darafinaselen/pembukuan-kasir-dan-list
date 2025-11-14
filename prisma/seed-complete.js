@@ -606,6 +606,76 @@ async function main() {
     },
   });
 
+  // Custom Pricing Package Examples
+  const paketCustomWedding = await prisma.servicePackage.create({
+    data: {
+      name: "Paket Pernikahan Custom",
+      type: "CUSTOM_PRICING",
+      description: "Paket pernikahan dengan harga nego dan custom requirements",
+      includes: [
+        "Mewah",
+        "Sopir berpengalaman",
+        "Dekorasi dasar",
+        "Air minum mineral",
+      ],
+      excludes: ["Makanan", "Foto profesional", "Musik live"],
+      isCustomizable: true,
+      customizableItems: [
+        "Jumlah jam",
+        "Rute perjalanan",
+        "Tipe dekorasi",
+        "Package add-ons",
+      ],
+      price: 5000000, // Base price (can be overridden)
+    },
+  });
+
+  const paketCustomTour = await prisma.servicePackage.create({
+    data: {
+      name: "Paket Wisata Custom",
+      type: "CUSTOM_PRICING",
+      description: "Paket wisata dengan harga fleksibel berdasarkan request",
+      includes: [
+        "Sopir lokal",
+        "BBM",
+        "Parkir",
+        "Air minum",
+      ],
+      excludes: ["Tiket masuk objek wisata", "Makanan", "Penginapan"],
+      isCustomizable: true,
+      customizableItems: [
+        "Destinasi",
+        "Jumlah hari",
+        "Jumlah peserta",
+        "Transportasi tambahan",
+      ],
+      price: 1500000, // Base price (can be overridden)
+    },
+  });
+
+  const paketCorporateEvent = await prisma.servicePackage.create({
+    data: {
+      name: "Paket Korporasi Custom",
+      type: "CUSTOM_PRICING",
+      description: "Transportasi untuk event korporasi dengan harga nego",
+      includes: [
+        "Mewah",
+        "Sopir formal",
+        "WiFi dalam mobil",
+        "Botol air mineral",
+      ],
+      excludes: ["Tol", "Parkir", "BBM"],
+      isCustomizable: true,
+      customizableItems: [
+        "Jumlah mobil",
+        "Jam operasional",
+        "Rute pickup/drop",
+        "Service level",
+      ],
+      price: 2000000, // Base price (can be overridden)
+    },
+  });
+
   console.log(`✅ Created package: ${paket12Jam.name}`);
   console.log(`✅ Created package: ${paket24Jam.name}`);
   console.log(`✅ Created package: ${paketLuarKota.name}`);
@@ -613,7 +683,10 @@ async function main() {
   console.log(`✅ Created package: ${paketAirport.name}`);
   console.log(`✅ Created package: ${paketWedding.name}`);
   console.log(`✅ Created package: ${paketCityTour.name}`);
-  console.log(`✅ Created package: ${paketMonthly.name}\n`);
+  console.log(`✅ Created package: ${paketMonthly.name}`);
+  console.log(`✅ Created package: ${paketCustomWedding.name}`);
+  console.log(`✅ Created package: ${paketCustomTour.name}`);
+  console.log(`✅ Created package: ${paketCorporateEvent.name}\n`);
 
   // ========================================
   // 4. CREATE ARMADA (Vehicles)

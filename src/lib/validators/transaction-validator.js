@@ -54,6 +54,12 @@ export const createTransactionSchema = z
       .uuid("ID Hotel Tier tidak valid")
       .optional()
       .nullable(),
+    custom_price: z
+      .number()
+      .positive("Harga custom harus positif")
+      .int("Harga custom harus angka bulat")
+      .optional()
+      .nullable(),
 
     // Relations
     armadaId: z.string().uuid("ID Armada tidak valid"),

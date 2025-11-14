@@ -142,6 +142,7 @@ async function handleCreateTransaction(request) {
           hotel_name: validatedData.hotel_name,
           pax_count: validatedData.pax_count,
           hotel_tier_id: validatedData.hotel_tier_id,
+          custom_price: validatedData.custom_price,
 
           // Generated
           invoice_code: invoice_code,

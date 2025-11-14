@@ -17,6 +17,7 @@ enum PackageType {
   CAR_RENTAL
   TOUR_PACKAGE
   FULL_DAY_TRIP
+  CUSTOM_PRICING
 }
 
 enum ArmadaStatus {
@@ -324,6 +325,7 @@ model Transaction {
   // Data Tambahan untuk Paket Wisata
   hotel_name String? // Nama hotel yang dipilih (opsional, untuk TOUR_PACKAGE)
   pax_count  Int? // Jumlah penumpang/pax (opsional, untuk TOUR_PACKAGE)
+  custom_price Int? // Harga custom untuk paket CUSTOM_PRICING (opsional)
 
   // Relasi ke HotelTier yang dipilih (opsional, untuk TOUR_PACKAGE)
   hotel_tier_id String?

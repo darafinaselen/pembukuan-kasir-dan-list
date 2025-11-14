@@ -4,6 +4,21 @@
  */
 
 /**
+ * Calculate CUSTOM_PRICING package price
+ * @param {Object} transaction - Transaction object with custom pricing
+ * @returns {number} Custom price for the package
+ */
+function calculateCustomPackagePrice(transaction) {
+  if (!transaction.package || transaction.package.type !== "CUSTOM_PRICING") {
+    return transaction.all_in_rate || 0;
+  }
+
+  // For CUSTOM_PRICING, use the custom_price field if available
+  // Otherwise fall back to all_in_rate
+  return transaction.custom_price || transaction.all_in_rate || 0;
+}
+
+/**
  * Calculate TOUR_PACKAGE pricing based on hotel tier and pax count
  * @param {Object} transaction - Transaction object with package and hotel_tier_id
  * @returns {number} Calculated price for the TOUR_PACKAGE
@@ -100,10 +115,12 @@ export function calculateTransactionFinancials(transaction) {
     ? 0
     : lamaOvertimeJam * (transaction.overtime_rate_per_hour || 0);
 
-  // Calculate base revenue (use TOUR_PACKAGE pricing if applicable)
+  // Calculate base revenue (use appropriate pricing based on package type)
   const baseRevenue =
     packageType === "TOUR_PACKAGE"
       ? calculateTourPackagePrice(transaction)
+      : packageType === "CUSTOM_PRICING"
+      ? calculateCustomPackagePrice(transaction)
       : transaction.all_in_rate || 0;
 
   // Calculate total revenue (base rate + overtime)

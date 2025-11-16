@@ -123,6 +123,15 @@ export async function logTransactionEvent(user, action, transaction, request) {
     case "REJECT":
       description = `Menolak transaksi ${invoice_code} - ${customer_name}, ${formattedAmount}, ${package_type}`;
       break;
+    case "REQUEST_EDIT":
+      description = `Meminta persetujuan edit transaksi ${invoice_code} - ${customer_name}, ${formattedAmount}, ${package_type}`;
+      break;
+    case "APPROVE_EDIT":
+      description = `Menyetujui edit transaksi ${invoice_code} - ${customer_name}, ${formattedAmount}, ${package_type}`;
+      break;
+    case "REJECT_EDIT":
+      description = `Menolak edit transaksi ${invoice_code} - ${customer_name}, ${formattedAmount}, ${package_type}`;
+      break;
     default:
       description = `${action} transaksi ${invoice_code} - ${customer_name}, ${formattedAmount}, ${package_type}`;
   }

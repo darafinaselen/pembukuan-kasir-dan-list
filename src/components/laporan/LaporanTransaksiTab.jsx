@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { exportToExcel } from "@/lib/utils";
+import { exportTransactionReport } from "@/lib/excel-export";
 import { cn } from "@/lib/utils";
 
 const formatCurrency = (amount) =>
@@ -14,31 +14,21 @@ const formatCurrency = (amount) =>
     minimumFractionDigits: 0,
   }).format(amount || 0);
 
-export default function LaporanTransaksiTab({ data, isLoading }) {
+export default function LaporanTransaksiTab({ data, isLoading, dateRange }) {
   const handleDownload = () => {
     if (!data) return;
     try {
-      const excelData = [
-        {
-          Deskripsi: "Total Transaksi (Order)",
-          Jumlah: data.totalTransaksi,
-        },
-        {
-          Deskripsi: "Total Pemasukan Sewa",
-          Jumlah: data.totalPemasukan,
-        },
-        {
-          Deskripsi: "Total Pengeluaran (BBM + Gaji)",
-          Jumlah: data.totalPengeluaranOps,
-        },
-        {
-          Deskripsi: "Total Laba Kotor",
-          Jumlah: data.totalLabaKotor,
-        },
-      ];
-      exportToExcel(excelData, "Laporan_Transaksi_Laba_Kotor");
+      const reportDateRange = dateRange ? {
+        from: dateRange.from.toISOString().split("T")[0],
+        to: dateRange.to.toISOString().split("T")[0]
+      } : {
+        from: new Date().toISOString().split("T")[0],
+        to: new Date().toISOString().split("T")[0]
+      };
+
+      exportTransactionReport(data, reportDateRange);
       toast.success("Laporan berhasil diunduh!", {
-        description: "File Excel telah tersimpan",
+        description: "File Excel dengan multiple sheet telah tersimpan",
       });
     } catch (error) {
       toast.error("Gagal mengunduh laporan", {

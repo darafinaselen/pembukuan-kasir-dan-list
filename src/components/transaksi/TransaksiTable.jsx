@@ -35,6 +35,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import ApprovalStatusBadge from "./ApprovalStatusBadge";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Select,
   SelectContent,
@@ -86,7 +87,9 @@ export default function TransaksiTable({
   onSubmitForApproval,
   onApprove,
   onReject,
+  onReviewEditApproval,
   userRole = "OPERATOR", // Default to OPERATOR for safety
+  loadingActions = {},
 }) {
   const isAdmin = userRole === "ADMIN";
   const isOperator = userRole === "OPERATOR";
@@ -260,6 +263,8 @@ export default function TransaksiTable({
                 !isArmadaInUse;
               const canApproveReject =
                 isAdmin && approvalStatus === "PENDING" && !isArmadaInUse;
+              const canReviewEditApproval =
+                isAdmin && approvalStatus === "PENDING_EDIT" && !isArmadaInUse;
 
               return (
                 <TableRow
@@ -414,7 +419,7 @@ export default function TransaksiTable({
                       onValueChange={(newStatus) =>
                         onUpdateStatus(item.id, newStatus)
                       }
-                      disabled={isCompleted}
+                      disabled={isCompleted || loadingActions[`update-status-${item.id}`]}
                     >
                       <SelectTrigger
                         className={cn(
@@ -470,12 +475,30 @@ export default function TransaksiTable({
                               Review Approval
                             </DropdownMenuItem>
                           )}
+                          {canReviewEditApproval && (
+                            <DropdownMenuItem
+                              onClick={() => onReviewEditApproval(item)}
+                            >
+                              <CheckSquare className="mr-2 h-4 w-4 text-blue-600" />
+                              Review Edit Request
+                            </DropdownMenuItem>
+                          )}
                           {canSubmitForApproval && (
                             <DropdownMenuItem
                               onClick={() => onSubmitForApproval(item.id)}
+                              disabled={loadingActions[`submit-approval-${item.id}`]}
                             >
-                              <Send className="mr-2 h-4 w-4" />
-                              Ajukan Approval
+                              {loadingActions[`submit-approval-${item.id}`] ? (
+                                <>
+                                  <Spinner size="sm" className="mr-2" />
+                                  Mengajukan...
+                                </>
+                              ) : (
+                                <>
+                                  <Send className="mr-2 h-4 w-4" />
+                                  Ajukan Approval
+                                </>
+                              )}
                             </DropdownMenuItem>
                           )}
                           {!canSubmitForApproval &&
@@ -528,9 +551,19 @@ export default function TransaksiTable({
                             <DropdownMenuItem
                               onClick={() => onDelete(item.id)}
                               className="text-red-500"
+                              disabled={loadingActions[`delete-${item.id}`]}
                             >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Hapus
+                              {loadingActions[`delete-${item.id}`] ? (
+                                <>
+                                  <Spinner size="sm" className="mr-2" />
+                                  Menghapus...
+                                </>
+                              ) : (
+                                <>
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Hapus
+                                </>
+                              )}
                             </DropdownMenuItem>
                           )}
                           {!canDelete &&
@@ -577,6 +610,17 @@ export default function TransaksiTable({
                           <CheckSquare className="h-3 w-3" />
                         </Button>
                       )}
+                      {canReviewEditApproval && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onReviewEditApproval(item)}
+                          className="text-purple-600 hover:text-purple-700"
+                          title="Review permintaan edit transaksi"
+                        >
+                          <CheckSquare className="h-3 w-3" />
+                        </Button>
+                      )}
                       {!canApproveReject &&
                         isAdmin &&
                         approvalStatus === "PENDING" &&
@@ -598,8 +642,13 @@ export default function TransaksiTable({
                           onClick={() => onSubmitForApproval(item.id)}
                           className="text-blue-600 hover:text-blue-700"
                           title="Ajukan untuk approval"
+                          disabled={loadingActions[`submit-approval-${item.id}`]}
                         >
-                          <Send className="h-3 w-3" />
+                          {loadingActions[`submit-approval-${item.id}`] ? (
+                            <Spinner size="sm" />
+                          ) : (
+                            <Send className="h-3 w-3" />
+                          )}
                         </Button>
                       )}
                       {!canSubmitForApproval &&
@@ -676,8 +725,13 @@ export default function TransaksiTable({
                           onClick={() => onDelete(item.id)}
                           className="text-red-500 hover:text-red-600"
                           title="Hapus transaksi"
+                          disabled={loadingActions[`delete-${item.id}`]}
                         >
-                          <Trash2 className="h-3 w-3" />
+                          {loadingActions[`delete-${item.id}`] ? (
+                            <Spinner size="sm" />
+                          ) : (
+                            <Trash2 className="h-3 w-3" />
+                          )}
                         </Button>
                       )}
                       {!canDelete &&

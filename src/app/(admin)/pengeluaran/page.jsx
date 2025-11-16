@@ -54,7 +54,8 @@ export default function PengeluaranPage() {
   const { showAlert, showConfirm } = useAlertDialog();
   const [data, setData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [userRole, setUserRole] = useState("OPERATOR");
+  const [userRole, setUserRole] = useState(null); // null until loaded
+  const [userRoleLoading, setUserRoleLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [quickFilter, setQuickFilter] = useState("all");
   const [dateRange, setDateRange] = useState({
@@ -87,17 +88,22 @@ export default function PengeluaranPage() {
   const [requestingExpense, setRequestingExpense] = useState(null);
   const [requestType, setRequestType] = useState("edit"); // "edit" or "delete"
   const [isSubmittingRequest, setIsSubmittingRequest] = useState(false);
+  const [proposedChanges, setProposedChanges] = useState(null);
+  const [updatedData, setUpdatedData] = useState(null);
+  const [loadingActions, setLoadingActions] = useState({}); // Track loading states for individual actions
 
   const [armadaList, setArmadaList] = useState([]);
   const [driverList, setDriverList] = useState([]);
   const [stafList, setStafList] = useState([]);
   const [existingAttachments, setExistingAttachments] = useState([]);
   const [isLoadingDependencies, setIsLoadingDependencies] = useState(false);
+  const [isSubmittingForm, setIsSubmittingForm] = useState(false);
 
   // Fetch user role on mount
   useEffect(() => {
     async function fetchUserRole() {
       try {
+        setUserRoleLoading(true);
         const res = await fetch("/api/auth/me", {
           credentials: "include",
         });
@@ -107,9 +113,15 @@ export default function PengeluaranPage() {
           if (userData?.role) {
             setUserRole(userData.role);
           }
+        } else {
+          // If auth fails, keep userRole as null (will show loading or redirect)
+          console.warn("Failed to fetch user role:", res.status);
         }
       } catch (error) {
         console.error("Error fetching user role:", error);
+        // Keep userRole as null on error
+      } finally {
+        setUserRoleLoading(false);
       }
     }
     fetchUserRole();
@@ -436,6 +448,12 @@ export default function PengeluaranPage() {
   };
 
   const handleDelete = async (id) => {
+    // Additional safeguard: prevent delete if user role is not loaded or not admin
+    if (userRoleLoading || userRole !== "ADMIN") {
+      toast.error("Tidak memiliki izin untuk menghapus data");
+      return;
+    }
+
     const confirmed = await showConfirm({
       message: "Yakin ingin menghapus data ini?",
       title: "Konfirmasi Hapus",
@@ -445,6 +463,7 @@ export default function PengeluaranPage() {
 
     if (!confirmed) return;
 
+    setLoadingActions(prev => ({ ...prev, [`delete-${id}`]: true }));
     try {
       console.log("Menghapus data ID:", id);
       const res = await fetch(`/api/expenses/${id}`, {
@@ -459,6 +478,8 @@ export default function PengeluaranPage() {
     } catch (err) {
       console.error("Failed to delete", err);
       toast.error("Gagal menghapus pengeluaran");
+    } finally {
+      setLoadingActions(prev => ({ ...prev, [`delete-${id}`]: false }));
     }
   };
 
@@ -478,9 +499,55 @@ export default function PengeluaranPage() {
     setIsRequestDialogOpen(true);
   };
 
+  // Handler: Operator edit request from form
+  const handleOperatorEditRequest = () => {
+    if (!editingData) return;
+
+    // Calculate proposed changes (only changed fields for display)
+    const proposedChanges = {};
+    if (formData.date !== editingData.date) proposedChanges.date = formData.date;
+    if (formData.paymentMonth !== editingData.paymentMonth) proposedChanges.paymentMonth = formData.paymentMonth;
+    if (formData.category !== editingData.category) proposedChanges.category = formData.category;
+    if (formData.kategoriLainnya !== editingData.kategoriLainnya) proposedChanges.kategoriLainnya = formData.kategoriLainnya;
+    if (formData.description !== editingData.description) proposedChanges.description = formData.description;
+    if (formData.amount !== editingData.amount) proposedChanges.amount = formData.amount;
+    if (formData.armadaId !== editingData.armadaId) proposedChanges.armadaId = formData.armadaId;
+    if (formData.driverId !== editingData.driverId) proposedChanges.driverId = formData.driverId;
+    if (formData.staffId !== editingData.staffId) proposedChanges.staffId = formData.staffId;
+    if (formData.namaPenerima !== editingData.namaPenerima) proposedChanges.namaPenerima = formData.namaPenerima;
+
+    // Check if there are any changes
+    if (Object.keys(proposedChanges).length === 0) {
+      toast.error("Tidak ada perubahan yang terdeteksi", {
+        description: "Silakan ubah data sebelum mengajukan permintaan",
+      });
+      return;
+    }
+
+    // Prepare full updated data for API (all fields)
+    const updatedData = {
+      date: formData.date,
+      paymentMonth: formData.paymentMonth,
+      category: formData.category,
+      kategoriLainnya: formData.kategoriLainnya,
+      description: formData.description,
+      amount: formData.amount,
+      armadaId: formData.armadaId,
+      driverId: formData.driverId,
+      staffId: formData.staffId,
+      namaPenerima: formData.namaPenerima,
+    };
+
+    setRequestingExpense(editingData);
+    setRequestType("edit");
+    setProposedChanges(proposedChanges);
+    setUpdatedData(updatedData); // Store full data for API
+    setIsRequestDialogOpen(true);
+  };
+
   // Handler: Submit request (edit atau delete)
   const handleSubmitRequest = async (expenseId, reason) => {
-    setIsSubmittingRequest(true);
+    setLoadingActions(prev => ({ ...prev, [`submit-request-${expenseId}`]: true }));
     try {
       const endpoint =
         requestType === "edit"
@@ -489,7 +556,7 @@ export default function PengeluaranPage() {
 
       const body =
         requestType === "edit"
-          ? { reason, updatedData: {} } // TODO: Include updated data for edit
+          ? { reason, updatedData: updatedData || {} }
           : { reason };
 
       const res = await fetch(endpoint, {
@@ -506,20 +573,23 @@ export default function PengeluaranPage() {
 
       await fetchData(currentPage); // Refresh data
       toast.success(
-        `Request ${requestType === "edit" ? "edit" : "delete"} berhasil diajukan`,
+        `Permintaan ${requestType === "edit" ? "perubahan" : "penghapusan"} berhasil diajukan`,
         {
-          description: "Menunggu persetujuan dari admin",
+          description: "Menunggu persetujuan dari administrator",
         }
       );
       setIsRequestDialogOpen(false);
+      setIsDialogOpen(false); // Close the edit dialog too
+      setProposedChanges(null);
+      setUpdatedData(null);
     } catch (err) {
       console.error("Failed to submit request:", err);
-      toast.error("Gagal Mengajukan Request", {
+      toast.error("Gagal Mengirim Permintaan", {
         description: err.message,
       });
       throw err;
     } finally {
-      setIsSubmittingRequest(false);
+      setLoadingActions(prev => ({ ...prev, [`submit-request-${expenseId}`]: false }));
     }
   };
 
@@ -547,12 +617,12 @@ export default function PengeluaranPage() {
 
       await fetchData(currentPage);
       setIsApprovalDialogOpen(false);
-      toast.success("Request Edit Disetujui", {
-        description: "Perubahan telah diterapkan",
+      toast.success("Permintaan Perubahan Disetujui", {
+        description: "Perubahan data telah diterapkan dengan sukses",
       });
     } catch (err) {
       console.error("Failed to approve edit:", err);
-      toast.error("Gagal Menyetujui Edit", {
+      toast.error("Gagal Menyetujui Perubahan", {
         description: err.message,
       });
       throw err;
@@ -577,12 +647,12 @@ export default function PengeluaranPage() {
 
       await fetchData(1); // Reset to first page
       setIsApprovalDialogOpen(false);
-      toast.success("Request Delete Disetujui", {
-        description: "Pengeluaran telah dihapus",
+      toast.success("Permintaan Penghapusan Disetujui", {
+        description: "Data pengeluaran telah dihapus secara permanen",
       });
     } catch (err) {
       console.error("Failed to approve delete:", err);
-      toast.error("Gagal Menyetujui Delete", {
+      toast.error("Gagal Menyetujui Penghapusan", {
         description: err.message,
       });
       throw err;
@@ -609,12 +679,12 @@ export default function PengeluaranPage() {
 
       await fetchData(currentPage);
       setIsApprovalDialogOpen(false);
-      toast.success("Request Ditolak", {
-        description: "Pengeluaran dikembalikan ke status approved",
+      toast.success("Permintaan Ditolak", {
+        description: "Data pengeluaran dikembalikan ke status disetujui",
       });
     } catch (err) {
       console.error("Failed to reject:", err);
-      toast.error("Gagal Menolak Request", {
+      toast.error("Gagal Memproses Penolakan", {
         description: err.message,
       });
       throw err;
@@ -625,6 +695,7 @@ export default function PengeluaranPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmittingForm(true);
     try {
       const method = editingData ? "PUT" : "POST";
       const url = editingData
@@ -738,6 +809,8 @@ export default function PengeluaranPage() {
         message: "Gagal menyimpan: " + err.message,
         type: "error",
       });
+    } finally {
+      setIsSubmittingForm(false);
     }
   };
 
@@ -759,7 +832,7 @@ export default function PengeluaranPage() {
       {/* Konten Utama (Tabel) */}
       <div className="p-4">
         <PengeluaranTable
-          isLoading={isLoading}
+          isLoading={isLoading || userRoleLoading}
           data={filteredData}
           onEdit={openEditDialog}
           onDelete={handleDelete}
@@ -768,6 +841,7 @@ export default function PengeluaranPage() {
           onRequestDelete={handleRequestDelete}
           onReviewApproval={handleReviewApproval}
           userRole={userRole}
+          loadingActions={loadingActions}
         />
 
         {/* Pagination - hanya tampil jika tidak ada filter aktif */}
@@ -805,6 +879,10 @@ export default function PengeluaranPage() {
         isLoadingDependencies={isLoadingDependencies}
         existingAttachments={existingAttachments}
         expenseId={editingData?.id}
+        isLoading={isSubmittingForm}
+        userRole={userRole}
+        originalData={editingData}
+        onRequestApproval={handleOperatorEditRequest}
       />
 
       {/* Detail Modal */}
@@ -833,6 +911,7 @@ export default function PengeluaranPage() {
         requestType={requestType}
         onSubmit={handleSubmitRequest}
         isSubmitting={isSubmittingRequest}
+        proposedChanges={proposedChanges}
       />
     </div>
   );

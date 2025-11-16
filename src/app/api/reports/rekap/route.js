@@ -41,8 +41,21 @@ async function handleGetRekap(request) {
     const rekapByCategory = {};
 
     expenses.forEach((expense) => {
+      // Validate expense data
+      if (!expense.category || typeof expense.amount !== 'number' || isNaN(expense.amount)) {
+        console.warn(`Invalid expense data:`, expense);
+        return; // Skip invalid expenses
+      }
+
       const category = expense.category;
       const date = new Date(expense.date);
+
+      // Validate date
+      if (isNaN(date.getTime())) {
+        console.warn(`Invalid date for expense:`, expense);
+        return; // Skip expenses with invalid dates
+      }
+
       const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 
       if (!rekapByCategory[category]) {
@@ -90,11 +103,15 @@ async function handleGetRekap(request) {
       getUserAgent(request)
     );
 
+    // Calculate summary with validation
+    const validExpenses = expenses.filter(e => typeof e.amount === 'number' && !isNaN(e.amount));
+    const totalExpenses = validExpenses.reduce((sum, e) => sum + e.amount, 0);
+
     return successResponse({
       rekap: rekapData,
       summary: {
-        totalExpenses: expenses.reduce((sum, e) => sum + e.amount, 0),
-        totalTransactions: expenses.length,
+        totalExpenses: totalExpenses,
+        totalTransactions: validExpenses.length,
         categories: Object.keys(rekapByCategory).length,
       },
     });

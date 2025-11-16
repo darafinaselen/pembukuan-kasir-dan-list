@@ -8,11 +8,11 @@ import { logExpenseApprovalEvent } from "@/lib/audit";
  * Operator request untuk delete expense yang sudah approved
  */
 async function handleRequestDelete(req, { params }) {
-  try {
-    const { id } = params;
-    const body = await req.json();
-    const { reason } = body;
-    const user = req.user;
+try {
+  const { id } = await params;
+  const body = await req.json();
+  const { reason } = body;
+  const user = req.auth.user;
 
     if (!reason || !reason.trim()) {
       return NextResponse.json(

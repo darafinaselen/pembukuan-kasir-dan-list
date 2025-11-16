@@ -28,6 +28,12 @@ export default function ApprovalStatusBadge({ status, className = "" }) {
           variant: "success",
           className: "bg-green-100 text-green-700 hover:bg-green-200",
         };
+      case "PENDING_EDIT":
+        return {
+          label: "Menunggu Edit",
+          variant: "warning",
+          className: "bg-purple-100 text-purple-700 hover:bg-purple-200",
+        };
       case "REJECTED":
         return {
           label: "Ditolak",

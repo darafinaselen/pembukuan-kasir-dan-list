@@ -171,6 +171,16 @@ export const permissions = {
   canRequestEditExpense: (user) => ["ADMIN", "OPERATOR"].includes(user?.role),
   canRequestDeleteExpense: (user) => ["ADMIN", "OPERATOR"].includes(user?.role),
 
+  // Transaction edit approval/rejection permissions
+  canApproveTransactionEdit: (user) => ["ADMIN"].includes(user?.role),
+  canRejectTransactionEdit: (user) => ["ADMIN"].includes(user?.role),
+  canRequestTransactionEdit: (user) => ["ADMIN", "OPERATOR"].includes(user?.role),
+
+  // Transaction edit approval permissions
+  canRequestTransactionEdit: (user) => ["ADMIN", "OPERATOR"].includes(user?.role),
+  canApproveTransactionEdit: (user) => ["ADMIN"].includes(user?.role),
+  canRejectTransactionEdit: (user) => ["ADMIN"].includes(user?.role),
+
   // Report permissions
   canViewIncomeReports: (user) => ["ADMIN"].includes(user?.role),
   canViewExpenseReports: (user) => ["ADMIN"].includes(user?.role),

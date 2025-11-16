@@ -74,7 +74,9 @@ async function handleUpdatePackage(request, { params }) {
         ? "TOUR_PACKAGE"
         : tipePaket === "Full Day Trip"
           ? "FULL_DAY_TRIP"
-          : "CAR_RENTAL";
+          : tipePaket === "Harga Custom"
+            ? "CUSTOM_PRICING"
+            : "CAR_RENTAL";
 
     console.log("Mapped type:", type);
     console.log("durasiHari received:", durasiHari);
@@ -143,6 +145,14 @@ async function handleUpdatePackage(request, { params }) {
         "price =",
         updateData.price
       );
+    } else if (type === "CUSTOM_PRICING") {
+      // Custom pricing packages don't have fixed pricing or duration
+      updateData.price = null;
+      updateData.durationHours = null;
+      updateData.overtimeRate = null;
+      updateData.durationDays = null;
+      updateData.durationNights = null;
+      console.log("CUSTOM_PRICING: clearing all pricing and duration fields");
     } else if (type === "CAR_RENTAL") {
       // Car rentals use durationHours, price, and overtimeRate
       // Convert from thousands to full rupiah (CurrencyInput sends in thousands)

@@ -66,60 +66,102 @@ describe("PackageDetail Component", () => {
   const mockOnOpenChange = jest.fn();
 
   const mockPackage = {
-    id: "pkg-1",
-    name: "Paket Tour Bali Deluxe",
-    type: "TOUR_PACKAGE",
-    description:
-      "Paket tour premium ke Bali dengan akomodasi bintang 5 dan transportasi VIP",
-    price: 5000000,
-    durationDays: 4,
-    durationNights: 3,
-    hotelTiers: [
-      {
-        tingkat: "Bintang 5",
-        tarifPerPax: 3000000,
-        daftarHotel: ["Ayodya Resort Bali", "St. Regis Bali Resort"],
-      },
-      {
-        tingkat: "Bintang 4",
-        tarifPerPax: 2500000,
-        daftarHotel: ["The Laguna, a Luxury Collection Resort", "Mulia Resort"],
-      },
-    ],
-    itinerary: [
-      {
-        hari: 1,
-        aktivitas:
-          "Kedatangan di Bandara Ngurah Rai, transfer ke hotel, check-in dan istirahat",
-      },
-      {
-        hari: 2,
-        aktivitas:
-          "Sarapan pagi, tour ke Tanah Lot, Ubud Monkey Forest, dan Tegallalang Rice Terrace",
-      },
-      {
-        hari: 3,
-        aktivitas:
-          "Aktivitas bebas di pantai, spa treatment, dan kuliner khas Bali",
-      },
-      {
-        hari: 4,
-        aktivitas:
-          "Sarapan pagi, check-out hotel, transfer ke bandara, kembali ke Jakarta",
-      },
-    ],
-    isCustomizable: true,
-    customizableItems: ["Upgrade Hotel", "Extra Meal", "Private Guide"],
-  };
+     id: "pkg-1",
+     name: "Paket Tour Bali Deluxe",
+     type: "TOUR_PACKAGE",
+     description:
+       "Paket tour premium ke Bali dengan akomodasi bintang 5 dan transportasi VIP",
+     price: 5000000,
+     durationDays: 4,
+     durationNights: 3,
+     hotelTiers: [
+       {
+         id: "tier-1",
+         starRating: 5,
+         hotels: [
+           { id: "h1", name: "Ayodya Resort Bali" },
+           { id: "h2", name: "St. Regis Bali Resort" },
+         ],
+         priceRanges: [
+           { id: "pr1", minPax: 1, maxPax: 2, price: 3000000 },
+           { id: "pr2", minPax: 3, maxPax: 5, price: 2800000 },
+         ],
+       },
+       {
+         id: "tier-2",
+         starRating: 4,
+         hotels: [
+           { id: "h3", name: "The Laguna, a Luxury Collection Resort" },
+           { id: "h4", name: "Mulia Resort" },
+         ],
+         priceRanges: [
+           { id: "pr3", minPax: 1, maxPax: 2, price: 2500000 },
+           { id: "pr4", minPax: 3, maxPax: 5, price: 2300000 },
+         ],
+       },
+     ],
+     itineraries: [
+       {
+         id: "it1",
+         day: 1,
+         title: "Kedatangan di Bandara Ngurah Rai, transfer ke hotel, check-in dan istirahat",
+         description: "Transfer dari bandara ke hotel dengan guide lokal",
+       },
+       {
+         id: "it2",
+         day: 2,
+         title: "Sarapan pagi, tour ke Tanah Lot, Ubud Monkey Forest, dan Tegallalang Rice Terrace",
+         description: "Tur komprehensif ke atraksi utama Bali",
+       },
+       {
+         id: "it3",
+         day: 3,
+         title: "Aktivitas bebas di pantai, spa treatment, dan kuliner khas Bali",
+         description: "Waktu bebas untuk relaksasi dan eksplorasi",
+       },
+       {
+         id: "it4",
+         day: 4,
+         title: "Sarapan pagi, check-out hotel, transfer ke bandara, kembali ke Jakarta",
+         description: "Transfer kembali ke bandara untuk penerbangan pulang",
+       },
+     ],
+     isCustomizable: true,
+     customizableItems: ["Upgrade Hotel", "Extra Meal", "Private Guide"],
+   };
 
   const mockCarPackage = {
-    id: "pkg-2",
-    name: "Sewa Mobil Toyota Avanza",
-    type: "CAR_RENTAL",
-    description: "Sewa mobil Toyota Avanza dengan supir untuk keperluan wisata",
-    price: 450000,
-    durationHours: 12,
-  };
+     id: "pkg-2",
+     name: "Sewa Mobil Toyota Avanza",
+     type: "CAR_RENTAL",
+     description: "Sewa mobil Toyota Avanza dengan supir untuk keperluan wisata",
+     price: 450000,
+     durationHours: 12,
+   };
+
+  const mockFullDayTripPackage = {
+     id: "pkg-3",
+     name: "Full Day Trip Yogyakarta",
+     type: "FULL_DAY_TRIP",
+     description: "Tur sehari penuh menjelajahi Yogyakarta",
+     price: 750000,
+     overtimeRate: 50000,
+     durationHours: 12,
+     itineraries: [
+       {
+         id: "it1",
+         day: 1,
+         title: "Penjemputan di hotel dan perjalanan ke Borobudur",
+         description: "Perjalanan pagi ke candi Borobudur",
+       },
+       {
+         id: "it2",
+         day: 1,
+         title: "Eksplorasi Candi Prambanan dan Malioboro",
+         description: "Tur ke candi Prambanan dan berbelanja di Malioboro",
+       },
+     ],
+   };
 
   describe("Rendering", () => {
     it("should not render when package is null", () => {
@@ -195,20 +237,41 @@ describe("PackageDetail Component", () => {
   });
 
   describe("Car Rental Package", () => {
-    it("should display duration for car rental packages", () => {
-      render(
-        <PackageDetail
-          open={true}
-          onOpenChange={mockOnOpenChange}
-          pkg={mockCarPackage}
-        />
-      );
+     it("should display duration for car rental packages", () => {
+       render(
+         <PackageDetail
+           open={true}
+           onOpenChange={mockOnOpenChange}
+           pkg={mockCarPackage}
+         />
+       );
 
-      expect(screen.getByText("Sewa Mobil Toyota Avanza")).toBeInTheDocument();
-      expect(screen.getByText("Rp 450.000")).toBeInTheDocument();
-      expect(screen.getByText("12 Jam")).toBeInTheDocument();
-    });
-  });
+       expect(screen.getByText("Sewa Mobil Toyota Avanza")).toBeInTheDocument();
+       expect(screen.getByText("Rp 450.000")).toBeInTheDocument();
+       expect(screen.getByText("12 Jam")).toBeInTheDocument();
+     });
+   });
+
+   describe("Full Day Trip Package", () => {
+     it("should display full day trip package details", () => {
+       render(
+         <PackageDetail
+           open={true}
+           onOpenChange={mockOnOpenChange}
+           pkg={mockFullDayTripPackage}
+         />
+       );
+
+       expect(screen.getByText("Full Day Trip Yogyakarta")).toBeInTheDocument();
+       expect(screen.getByText("Full Day Trip")).toBeInTheDocument();
+       expect(screen.getByText("1 Hari")).toBeInTheDocument();
+       expect(screen.getByText("Rp 750.000")).toBeInTheDocument();
+       expect(screen.getByText("Rp 50.000/jam")).toBeInTheDocument();
+       expect(screen.getByText("Itinerary Full Day Trip")).toBeInTheDocument();
+       expect(screen.getAllByText("Hari ke-1")).toHaveLength(2);
+       expect(screen.getByText("Penjemputan di hotel dan perjalanan ke Borobudur")).toBeInTheDocument();
+     });
+   });
 
   describe("Hotel Information", () => {
     it("should display hotel tiers for tour packages", () => {

@@ -11,7 +11,7 @@ import { logReportAccess } from "@/lib/audit";
 
 /**
  * GET /api/reports/income?from=YYYY-MM-DD&to=YYYY-MM-DD&packageType=CAR_RENTAL|TOUR_PACKAGE|FULL_DAY_TRIP
- * Returns income report grouped by service packages with filtering capabilities
+ * Returns income report for all revenue-generating transactions, grouped by service packages or transaction type
  */
 async function handleGetIncomeReport(request) {
   try {
@@ -39,8 +39,6 @@ async function handleGetIncomeReport(request) {
     // Build where clause for transactions
     const whereClause = {
       booking_date: { gte: fromDate, lte: toDate },
-      // Only include transactions that have a package (paid services)
-      packageId: { not: null },
       approval_status: "APPROVED",
       OR: [
         // Include completed transactions (have actual_checkin_datetime)
@@ -96,44 +94,83 @@ async function handleGetIncomeReport(request) {
     const packageGroups = new Map();
 
     for (const tx of transactions) {
-      if (!tx.package) continue; // Skip if no package (shouldn't happen due to filter)
+      // Handle transactions with packages
+      if (tx.package) {
+        const packageId = tx.package.id;
+        const packageName = tx.package.name;
+        const packageType = tx.package.type;
 
-      const packageId = tx.package.id;
-      const packageName = tx.package.name;
-      const packageType = tx.package.type;
+        if (!packageGroups.has(packageId)) {
+          packageGroups.set(packageId, {
+            packageId,
+            packageName,
+            packageType,
+            transactionCount: 0,
+            totalRevenue: 0,
+            totalOvertimeRevenue: 0,
+            totalBaseRevenue: 0,
+            averageRevenue: 0,
+            transactions: [],
+          });
+        }
 
-      if (!packageGroups.has(packageId)) {
-        packageGroups.set(packageId, {
-          packageId,
-          packageName,
-          packageType,
-          transactionCount: 0,
-          totalRevenue: 0,
-          totalOvertimeRevenue: 0,
-          totalBaseRevenue: 0,
-          averageRevenue: 0,
-          transactions: [],
+        const group = packageGroups.get(packageId);
+        const financials = calculateTransactionFinancials(tx);
+
+        group.transactionCount += 1;
+        group.totalRevenue += financials.totalPendapatan;
+        group.totalOvertimeRevenue += financials.biayaOvertime || 0;
+        group.totalBaseRevenue += financials.tarifSewa || 0;
+        group.transactions.push({
+          id: tx.id,
+          invoice_code: tx.invoice_code,
+          customer_name: tx.customer_name,
+          booking_date: tx.booking_date,
+          totalRevenue: financials.totalPendapatan,
+          overtimeRevenue: financials.biayaOvertime || 0,
+          baseRevenue: financials.tarifSewa || 0,
+          armada: tx.armada,
+          driver: tx.driver,
+        });
+      } else {
+        // Handle transactions without packages (custom pricing or basic rentals)
+        const customPackageId = `custom_${tx.id}`;
+        const packageName = tx.custom_price ? "Custom Pricing" : "Basic Car Rental";
+        const packageType = tx.custom_price ? "CUSTOM_PRICING" : "CAR_RENTAL";
+
+        if (!packageGroups.has(customPackageId)) {
+          packageGroups.set(customPackageId, {
+            packageId: customPackageId,
+            packageName,
+            packageType,
+            transactionCount: 0,
+            totalRevenue: 0,
+            totalOvertimeRevenue: 0,
+            totalBaseRevenue: 0,
+            averageRevenue: 0,
+            transactions: [],
+          });
+        }
+
+        const group = packageGroups.get(customPackageId);
+        const financials = calculateTransactionFinancials(tx);
+
+        group.transactionCount += 1;
+        group.totalRevenue += financials.totalPendapatan;
+        group.totalOvertimeRevenue += financials.biayaOvertime || 0;
+        group.totalBaseRevenue += financials.tarifSewa || 0;
+        group.transactions.push({
+          id: tx.id,
+          invoice_code: tx.invoice_code,
+          customer_name: tx.customer_name,
+          booking_date: tx.booking_date,
+          totalRevenue: financials.totalPendapatan,
+          overtimeRevenue: financials.biayaOvertime || 0,
+          baseRevenue: financials.tarifSewa || 0,
+          armada: tx.armada,
+          driver: tx.driver,
         });
       }
-
-      const group = packageGroups.get(packageId);
-      const financials = calculateTransactionFinancials(tx);
-
-      group.transactionCount += 1;
-      group.totalRevenue += financials.totalPendapatan;
-      group.totalOvertimeRevenue += financials.biayaOvertime || 0;
-      group.totalBaseRevenue += financials.tarifSewa || 0;
-      group.transactions.push({
-        id: tx.id,
-        invoice_code: tx.invoice_code,
-        customer_name: tx.customer_name,
-        booking_date: tx.booking_date,
-        totalRevenue: financials.totalPendapatan,
-        overtimeRevenue: financials.biayaOvertime || 0,
-        baseRevenue: financials.tarifSewa || 0,
-        armada: tx.armada,
-        driver: tx.driver,
-      });
     }
 
     // Convert to array and calculate averages

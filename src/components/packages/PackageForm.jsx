@@ -143,10 +143,12 @@ export function PackageForm({
         CAR_RENTAL: "Sewa Mobil",
         FULL_DAY_TRIP: "Full Day Trip",
         TOUR_PACKAGE: "Paket Tour",
+        CUSTOM_PRICING: "Harga Custom",
         // passthrough for already-localized labels
         "Sewa Mobil": "Sewa Mobil",
         "Full Day Trip": "Full Day Trip",
         "Paket Tour": "Paket Tour",
+        "Harga Custom": "Harga Custom",
       };
 
       const rawTipe = pkg.type ?? pkg.tipePaket ?? "Sewa Mobil";
@@ -252,6 +254,17 @@ export function PackageForm({
               ? itineraryVal
               : [{ hari: 1, aktivitas: "" }],
         });
+      } else if (mappedTipe === "Harga Custom") {
+        // Custom pricing: no fixed price or duration, just basic info
+        reset({
+          ...base,
+          durasiHari: 0,
+          durasiMalam: 0,
+          hargaDefault: 0,
+          tarifOvertime: 0,
+          tarifHotel: [],
+          itinerary: [{ hari: 1, aktivitas: "" }],
+        });
       } else {
         // Sewa Mobil / default: include price/overtime; clear tour-specific fields
         reset({
@@ -321,6 +334,14 @@ export function PackageForm({
       if (getValues("durasiMalam") === undefined) {
         setValue("durasiMalam", 0);
       }
+    } else if (tipePaket === "Harga Custom") {
+      // Custom pricing: no fixed price or duration, clear all pricing and duration fields
+      setValue("hargaDefault", 0);
+      setValue("tarifOvertime", 0);
+      setValue("tarifHotel", []);
+      setValue("itinerary", [{ hari: 1, aktivitas: "" }]);
+      setValue("durasiHari", 0);
+      setValue("durasiMalam", 0);
     } else {
       // Sewa Mobil or other: clear tour-specific data
       setValue("tarifHotel", []);
@@ -414,10 +435,6 @@ export function PackageForm({
       namaPaket: data.namaPaket,
       tipePaket: data.tipePaket,
       deskripsi: data.deskripsi,
-      durasi: {
-        hari: data.durasiHari,
-        malam: data.durasiMalam,
-      },
       isCustomizable: data.isCustomizable,
       customizableItems: data.isCustomizable
         ? data.customizableItems
@@ -425,6 +442,14 @@ export function PackageForm({
       include: data.include,
       exclude: data.exclude,
     };
+
+    // Only include duration for non-custom pricing packages
+    if (data.tipePaket !== "Harga Custom") {
+      packageData.durasi = {
+        hari: data.durasiHari,
+        malam: data.durasiMalam,
+      };
+    }
 
     if (data.tipePaket === "Sewa Mobil" || data.tipePaket === "Full Day Trip") {
       packageData.hargaDefault = data.hargaDefault;
@@ -436,6 +461,7 @@ export function PackageForm({
       packageData.tarifHotel = data.tarifHotel;
       packageData.itinerary = data.itinerary;
     }
+    // CUSTOM_PRICING doesn't need special fields - it's just a template
 
     // preserve id whether caller passed package_ or defaultValues
     if (package_?.id) {
@@ -550,6 +576,11 @@ export function PackageForm({
                           );
                         }
 
+                        // Custom pricing -> switching away doesn't lose data
+                        if (oldType === "Harga Custom") {
+                          return false;
+                        }
+
                         return false;
                       };
 
@@ -633,6 +664,9 @@ export function PackageForm({
                               <SelectItem value="Paket Tour">
                                 Paket Tour (Multi Hari)
                               </SelectItem>
+                              <SelectItem value="Harga Custom">
+                                Harga Custom
+                              </SelectItem>
                             </SelectContent>
                           </Select>
 
@@ -711,6 +745,15 @@ export function PackageForm({
                                         )}
                                       </>
                                     )}
+
+                                  {field.value === "Harga Custom" && (
+                                    <>
+                                      <li className="text-green-600">
+                                        Paket harga custom tidak memiliki data
+                                        yang akan hilang
+                                      </li>
+                                    </>
+                                  )}
 
                                   <li className="text-gray-600">
                                     Data lain yang relevan dengan tipe saat ini
@@ -877,80 +920,88 @@ export function PackageForm({
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField>
-                <FormItem>
-                  <FormLabel htmlFor="durasiHari">
-                    {tipePaket === "Sewa Mobil"
-                      ? "Durasi (Jam)"
-                      : "Durasi (Hari)"}{" "}
-                    <span className="text-red-500">*</span>
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      id="durasiHari"
-                      type="number"
-                      placeholder={tipePaket === "Sewa Mobil" ? "24" : "4"}
-                      {...register("durasiHari", {
-                        required:
-                          tipePaket === "Sewa Mobil"
-                            ? "Durasi jam harus diisi"
-                            : "Durasi hari harus diisi",
-                        min: {
-                          value: 1,
-                          message:
-                            tipePaket === "Sewa Mobil"
-                              ? "Minimal 1 jam"
-                              : "Minimal 1 hari",
-                        },
-                        valueAsNumber: true,
-                      })}
-                    />
-                  </FormControl>
-                  {errors.durasiHari && (
-                    <FormMessage className="text-red-500">
-                      {errors.durasiHari.message}
-                    </FormMessage>
-                  )}
-                </FormItem>
-              </FormField>
-
-              {tipePaket === "Paket Tour" || tipePaket === "Full Day Trip" ? (
+            {tipePaket === "Harga Custom" ? (
+              <div className="flex items-center justify-center p-4 bg-yellow-50 rounded-lg border-2 border-dashed border-yellow-200">
+                <p className="text-sm text-yellow-700 text-center">
+                  Paket harga custom tidak memerlukan durasi tetap
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
                 <FormField>
                   <FormItem>
-                    <FormLabel htmlFor="durasiMalam">
-                      Durasi (Malam) <span className="text-red-500">*</span>
+                    <FormLabel htmlFor="durasiHari">
+                      {tipePaket === "Sewa Mobil"
+                        ? "Durasi (Jam)"
+                        : "Durasi (Hari)"}{" "}
+                      <span className="text-red-500">*</span>
                     </FormLabel>
                     <FormControl>
                       <Input
-                        id="durasiMalam"
+                        id="durasiHari"
                         type="number"
-                        placeholder={tipePaket === "Full Day Trip" ? "0" : "3"}
-                        {...register("durasiMalam", {
-                          required: "Durasi malam harus diisi",
+                        placeholder={tipePaket === "Sewa Mobil" ? "24" : "4"}
+                        {...register("durasiHari", {
+                          required:
+                            tipePaket === "Sewa Mobil"
+                              ? "Durasi jam harus diisi"
+                              : "Durasi hari harus diisi",
                           min: {
-                            value: 0,
-                            message: "Minimal 0 malam",
+                            value: 1,
+                            message:
+                              tipePaket === "Sewa Mobil"
+                                ? "Minimal 1 jam"
+                                : "Minimal 1 hari",
                           },
                           valueAsNumber: true,
                         })}
                       />
                     </FormControl>
-                    {errors.durasiMalam && (
+                    {errors.durasiHari && (
                       <FormMessage className="text-red-500">
-                        {errors.durasiMalam.message}
+                        {errors.durasiHari.message}
                       </FormMessage>
                     )}
                   </FormItem>
                 </FormField>
-              ) : (
-                <div className="flex items-center justify-center p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-                  <p className="text-sm text-gray-500 text-center">
-                    Sewa Mobil tidak memiliki durasi malam
-                  </p>
-                </div>
-              )}
-            </div>
+
+                {tipePaket === "Paket Tour" || tipePaket === "Full Day Trip" ? (
+                  <FormField>
+                    <FormItem>
+                      <FormLabel htmlFor="durasiMalam">
+                        Durasi (Malam) <span className="text-red-500">*</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          id="durasiMalam"
+                          type="number"
+                          placeholder={tipePaket === "Full Day Trip" ? "0" : "3"}
+                          {...register("durasiMalam", {
+                            required: "Durasi malam harus diisi",
+                            min: {
+                              value: 0,
+                              message: "Minimal 0 malam",
+                            },
+                            valueAsNumber: true,
+                          })}
+                        />
+                      </FormControl>
+                      {errors.durasiMalam && (
+                        <FormMessage className="text-red-500">
+                          {errors.durasiMalam.message}
+                        </FormMessage>
+                      )}
+                    </FormItem>
+                  </FormField>
+                ) : (
+                  <div className="flex items-center justify-center p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+                    <p className="text-sm text-gray-500 text-center">
+                      Sewa Mobil tidak memiliki durasi malam
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <FormField>
@@ -983,6 +1034,21 @@ export function PackageForm({
             </div>
 
             <div className="space-y-4">
+              {tipePaket === "Harga Custom" && (
+                <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                    <h3 className="font-medium text-yellow-900">
+                      Paket Harga Custom
+                    </h3>
+                  </div>
+                  <p className="text-yellow-700 mt-2">
+                    Paket ini memungkinkan harga yang disesuaikan per transaksi.
+                    Harga akan ditentukan saat membuat transaksi.
+                  </p>
+                </div>
+              )}
+
               {tipePaket === "Paket Tour" && (
                 <div className="space-y-4">
                   <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
@@ -1312,7 +1378,8 @@ export function PackageForm({
               )}
 
               {(tipePaket === "Sewa Mobil" ||
-                tipePaket === "Full Day Trip") && (
+                tipePaket === "Full Day Trip") &&
+               tipePaket !== "Harga Custom" && (
                 <>
                   <div className="space-y-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                     <div className="flex items-center gap-2">

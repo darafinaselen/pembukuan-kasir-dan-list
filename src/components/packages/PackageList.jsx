@@ -61,9 +61,11 @@ export function PackageList({ packages, onEdit, onDelete, onView }) {
             CAR_RENTAL: "Sewa Mobil",
             FULL_DAY_TRIP: "Full Day Trip",
             TOUR_PACKAGE: "Paket Tour",
+            CUSTOM_PRICING: "Harga Custom",
             "Sewa Mobil": "Sewa Mobil",
             "Full Day Trip": "Full Day Trip",
             "Paket Tour": "Paket Tour",
+            "Harga Custom": "Harga Custom",
           };
 
           const rawTipe = pkg.type ?? pkg.tipePaket;
@@ -121,6 +123,8 @@ export function PackageList({ packages, onEdit, onDelete, onView }) {
                           <Car className="h-7 w-7 text-white" />
                         ) : tipe === "Full Day Trip" ? (
                           <Compass className="h-7 w-7 text-white" />
+                        ) : tipe === "Harga Custom" || tipe === "CUSTOM_PRICING" ? (
+                          <Settings className="h-7 w-7 text-white" />
                         ) : (
                           <Plane className="h-7 w-7 text-white" />
                         )}
@@ -164,9 +168,17 @@ export function PackageList({ packages, onEdit, onDelete, onView }) {
                   </div>
                 </div>
 
-                {tipe === "Sewa Mobil" ||
-                tipe === "CAR_RENTAL" ||
-                tipe === "Full Day Trip" ? (
+                {tipe === "Harga Custom" || tipe === "CUSTOM_PRICING" ? (
+                  <div className="px-3 py-2.5 bg-yellow-50 rounded-lg border border-yellow-100">
+                    <div className="flex items-center justify-center">
+                      <p className="text-yellow-700 text-sm">
+                        💰 Harga disesuaikan per transaksi
+                      </p>
+                    </div>
+                  </div>
+                ) : tipe === "Sewa Mobil" ||
+                  tipe === "CAR_RENTAL" ||
+                  tipe === "Full Day Trip" ? (
                   <div className="space-y-2">
                     <div className="px-3 py-2.5 bg-blue-50 rounded-lg border border-blue-100">
                       <div className="flex items-center justify-between">
@@ -194,12 +206,19 @@ export function PackageList({ packages, onEdit, onDelete, onView }) {
                         <p className="text-blue-600">Harga</p>
                         <p className="text-blue-900">
                           {(() => {
-                            // Get minimum pricePerPax from all hotel tiers for TOUR_PACKAGE
-                            const minPrice = pkg.hotelTiers?.reduce(
-                              (min, tier) =>
-                                tier.pricePerPax < min ? tier.pricePerPax : min,
-                              pkg.hotelTiers[0]?.pricePerPax ?? 0
-                            );
+                            // Get minimum price from all priceRanges across all hotel tiers for TOUR_PACKAGE
+                            let minPrice = null;
+                            if (pkg.hotelTiers && Array.isArray(pkg.hotelTiers)) {
+                              for (const tier of pkg.hotelTiers) {
+                                if (tier.priceRanges && Array.isArray(tier.priceRanges)) {
+                                  for (const range of tier.priceRanges) {
+                                    if (range.price && (minPrice === null || range.price < minPrice)) {
+                                      minPrice = range.price;
+                                    }
+                                  }
+                                }
+                              }
+                            }
                             return minPrice
                               ? `Mulai dari ${fmt(minPrice)}/PAX`
                               : fmt(price);

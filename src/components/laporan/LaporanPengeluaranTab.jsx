@@ -33,7 +33,7 @@ import {
   Download,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import * as XLSX from "xlsx";
+import { exportExpenseReport } from "@/lib/excel-export";
 import { useAlertDialog } from "@/components/ui/alert-dialog-provider";
 
 // Helper function untuk format mata uang
@@ -103,178 +103,19 @@ export default function LaporanPengeluaranTab({ data, isLoading, dateRange }) {
     }
 
     try {
-      const { summary, data: groupedData, rawExpenses } = data;
-      const workbook = XLSX.utils.book_new();
-
-      // Helper function to format currency for Excel
-      const formatCurrencyExcel = (amount) => {
-        return `Rp ${amount.toLocaleString("id-ID")}`;
+      const reportDateRange = dateRange ? {
+        from: dateRange.from.toISOString().split("T")[0],
+        to: dateRange.to.toISOString().split("T")[0]
+      } : {
+        from: new Date().toISOString().split("T")[0],
+        to: new Date().toISOString().split("T")[0]
       };
 
-      // Helper function to format date for Excel
-      const formatDateExcel = (dateString) => {
-        return new Date(dateString).toLocaleDateString("id-ID");
-      };
-
-      // Get all expenses (prefer rawExpenses if available)
-      const allExpenses =
-        rawExpenses || groupedData.flatMap((cat) => cat.expenses);
-
-      // 1. Summary Sheet
-      const summaryData = [
-        ["Laporan Pengeluaran - Ringkasan"],
-        [
-          "Periode",
-          `${dateRange?.from?.toLocaleDateString("id-ID")} - ${dateRange?.to?.toLocaleDateString("id-ID")}`,
-        ],
-        ["Tanggal Export", new Date().toLocaleString("id-ID")],
-        [""],
-        ["Total Pengeluaran", formatCurrencyExcel(summary.totalAmount)],
-        ["Jumlah Transaksi", summary.totalExpenses],
-        ["Jumlah Kategori", summary.categoriesCount],
-        [
-          "Rata-rata per Transaksi",
-          formatCurrencyExcel(
-            Math.round(summary.totalAmount / summary.totalExpenses)
-          ),
-        ],
-        [""],
-        ["Breakdown per Kategori:"],
-        ["Kategori", "Total Amount", "Jumlah Transaksi", "Persentase"],
-      ];
-
-      // Add category breakdown to summary
-      groupedData
-        .sort((a, b) => b.totalAmount - a.totalAmount)
-        .forEach((category) => {
-          const percentage = (
-            (category.totalAmount / summary.totalAmount) *
-            100
-          ).toFixed(1);
-          summaryData.push([
-            formatCategory(category.category),
-            formatCurrencyExcel(category.totalAmount),
-            category.count,
-            `${percentage}%`,
-          ]);
-        });
-
-      const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
-      // Set column widths for summary sheet
-      summarySheet["!cols"] = [
-        { wch: 20 }, // Kategori
-        { wch: 15 }, // Total Amount
-        { wch: 15 }, // Jumlah Transaksi
-        { wch: 12 }, // Persentase
-      ];
-      XLSX.utils.book_append_sheet(workbook, summarySheet, "Ringkasan");
-
-      // 2. Detail per Kategori Sheet
-      const detailData = [
-        ["Laporan Pengeluaran - Detail per Kategori"],
-        [
-          "Periode",
-          `${dateRange?.from?.toLocaleDateString("id-ID")} - ${dateRange?.to?.toLocaleDateString("id-ID")}`,
-        ],
-        [""],
-        [
-          "Tanggal",
-          "Kategori",
-          "Deskripsi",
-          "Jumlah",
-          "Penerima",
-          "Armada",
-          "Sopir",
-          "Staff",
-        ],
-      ];
-
-      // Add all expenses sorted by date
-      allExpenses
-        .sort((a, b) => new Date(b.date) - new Date(a.date))
-        .forEach((expense) => {
-          detailData.push([
-            formatDateExcel(expense.date),
-            formatCategory(expense.category),
-            expense.description,
-            expense.amount, // Raw number for Excel calculations
-            expense.namaPenerima || "-",
-            expense.armada?.license_plate || "-",
-            expense.driver?.driver_name || "-",
-            expense.staff?.name || "-",
-          ]);
-        });
-
-      const detailSheet = XLSX.utils.aoa_to_sheet(detailData);
-      // Set column widths for detail sheet
-      detailSheet["!cols"] = [
-        { wch: 12 }, // Tanggal
-        { wch: 20 }, // Kategori
-        { wch: 40 }, // Deskripsi
-        { wch: 15 }, // Jumlah
-        { wch: 20 }, // Penerima
-        { wch: 15 }, // Armada
-        { wch: 20 }, // Sopir
-        { wch: 20 }, // Staff
-      ];
-      XLSX.utils.book_append_sheet(workbook, detailSheet, "Detail Transaksi");
-
-      // 3. Pivot Sheet (Summary per Category)
-      const pivotData = [
-        ["Laporan Pengeluaran - Pivot per Kategori"],
-        [
-          "Periode",
-          `${dateRange?.from?.toLocaleDateString("id-ID")} - ${dateRange?.to?.toLocaleDateString("id-ID")}`,
-        ],
-        [""],
-        [
-          "Kategori",
-          "Total Amount",
-          "Jumlah Transaksi",
-          "Rata-rata per Transaksi",
-          "Persentase dari Total",
-        ],
-      ];
-
-      groupedData
-        .sort((a, b) => b.totalAmount - a.totalAmount)
-        .forEach((category) => {
-          const percentage = (
-            (category.totalAmount / summary.totalAmount) *
-            100
-          ).toFixed(1);
-          const average = Math.round(category.totalAmount / category.count);
-          pivotData.push([
-            formatCategory(category.category),
-            category.totalAmount, // Raw number
-            category.count,
-            average,
-            `${percentage}%`,
-          ]);
-        });
-
-      const pivotSheet = XLSX.utils.aoa_to_sheet(pivotData);
-      // Set column widths for pivot sheet
-      pivotSheet["!cols"] = [
-        { wch: 25 }, // Kategori
-        { wch: 15 }, // Total Amount
-        { wch: 18 }, // Jumlah Transaksi
-        { wch: 20 }, // Rata-rata
-        { wch: 18 }, // Persentase
-      ];
-      XLSX.utils.book_append_sheet(workbook, pivotSheet, "Pivot Kategori");
-
-      // Generate filename with date range
-      const startDate = dateRange?.from?.toISOString().split("T")[0] || "start";
-      const endDate = dateRange?.to?.toISOString().split("T")[0] || "end";
-      const filename = `Laporan_Pengeluaran_${startDate}_${endDate}.xlsx`;
-
-      // Save file
-      XLSX.writeFile(workbook, filename);
+      exportExpenseReport(data, reportDateRange);
 
       // Show success message
       await showAlert({
-        message: `File Excel berhasil diekspor: ${filename}`,
+        message: "File Excel berhasil diekspor dengan multiple sheet",
         type: "success",
         title: "Export Berhasil",
       });

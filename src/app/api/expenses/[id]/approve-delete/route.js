@@ -8,9 +8,9 @@ import { logExpenseApprovalEvent } from "@/lib/audit";
  * Admin approve request delete dari operator - akan DELETE expense
  */
 async function handleApproveDelete(req, { params }) {
-  try {
-    const { id } = params;
-    const user = req.user;
+try {
+  const { id } = await params;
+  const user = req.auth.user;
 
     // Get expense dengan status PENDING_DELETE
     const expense = await prisma.expense.findUnique({

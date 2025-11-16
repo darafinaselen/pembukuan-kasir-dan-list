@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { AlertCircle, CheckCircle, XCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Spinner } from "@/components/ui/spinner";
 
 export default function ApprovalDialog({
   isOpen,
@@ -25,6 +26,12 @@ export default function ApprovalDialog({
 }) {
   const [rejectionReason, setRejectionReason] = useState("");
   const [error, setError] = useState("");
+
+  const handleOpenChange = (newOpen) => {
+    // Prevent closing dialog when submitting
+    if (isSubmitting && !newOpen) return;
+    onClose();
+  };
 
   const handleApprove = async () => {
     setError("");
@@ -55,7 +62,7 @@ export default function ApprovalDialog({
   if (!transaction) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Approval Transaksi</DialogTitle>
@@ -109,6 +116,7 @@ export default function ApprovalDialog({
               onChange={(e) => setRejectionReason(e.target.value)}
               rows={4}
               className="resize-none"
+              disabled={isSubmitting}
             />
           </div>
 
@@ -137,7 +145,11 @@ export default function ApprovalDialog({
             disabled={isSubmitting}
             className="gap-2"
           >
-            <XCircle className="h-4 w-4" />
+            {isSubmitting ? (
+              <Spinner size="sm" />
+            ) : (
+              <XCircle className="h-4 w-4" />
+            )}
             Tolak
           </Button>
           <Button
@@ -146,7 +158,11 @@ export default function ApprovalDialog({
             disabled={isSubmitting}
             className="gap-2 bg-green-600 hover:bg-green-700"
           >
-            <CheckCircle className="h-4 w-4" />
+            {isSubmitting ? (
+              <Spinner size="sm" />
+            ) : (
+              <CheckCircle className="h-4 w-4" />
+            )}
             Setujui
           </Button>
         </DialogFooter>

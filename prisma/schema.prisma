@@ -45,6 +45,7 @@ enum ApprovalStatus {
   PENDING
   APPROVED
   REJECTED
+  PENDING_EDIT
 }
 
 enum ExpenseApprovalStatus {
@@ -262,6 +263,7 @@ model Expense {
   delete_request_reason String? // Alasan operator request delete
   rejection_reason      String? // Alasan admin reject
   original_data         Json? // Backup data sebelum edit (untuk restore jika rejected)
+  proposed_changes      Json? // Perubahan yang diusulkan operator (untuk review admin)
 
   // User relations untuk approval workflow
   requested_by_id String?
@@ -339,6 +341,13 @@ model Transaction {
   rejected_at      DateTime? // Waktu ditolak
   rejected_by      String? // User ID yang reject
   rejection_reason String? // Alasan penolakan
+
+  // Edit Request Workflow
+  edit_request_reason String? // Alasan operator request edit
+  original_data       Json? // Backup data sebelum edit (untuk restore jika rejected)
+  proposed_changes    Json? // Perubahan yang diusulkan operator (untuk review admin)
+  requested_by        String? // User ID yang request edit
+  requested_at        DateTime? // Waktu request edit
 
   // --- Relasi (Foreign Keys) ---
 

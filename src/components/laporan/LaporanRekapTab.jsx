@@ -12,7 +12,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { exportToExcel, formatCurrency } from "@/lib/utils";
+import { exportRekapReport } from "@/lib/excel-export";
+import { formatCurrency } from "@/lib/transaction-utils";
 
 export default function LaporanRekapTab({ startDate, endDate }) {
   const [rekapData, setRekapData] = useState(null);
@@ -47,28 +48,15 @@ export default function LaporanRekapTab({ startDate, endDate }) {
     fetchRekapData();
   }, [startDate, endDate, fetchRekapData]);
 
-  const handleDownloadCategory = (categoryData) => {
-    if (
-      !categoryData ||
-      !categoryData.months ||
-      categoryData.months.length === 0
-    )
-      return;
+  const handleDownloadAll = () => {
+    if (!rekapData) return;
 
-    const cleanData = categoryData.months.map((monthData) => ({
-      Bulan: new Date(monthData.month + "-01").toLocaleDateString("id-ID", {
-        year: "numeric",
-        month: "long",
-      }),
-      "Jumlah Transaksi": monthData.count,
-      Total: monthData.total,
-      "Rata-rata": Math.round(monthData.total / monthData.count),
-    }));
+    const reportDateRange = {
+      from: startDate,
+      to: endDate
+    };
 
-    exportToExcel(
-      cleanData,
-      `Laporan_Rekap_${categoryData.category.replace(/\s+/g, "_")}`
-    );
+    exportRekapReport(rekapData, reportDateRange);
   };
 
   if (isLoading) {
@@ -87,46 +75,55 @@ export default function LaporanRekapTab({ startDate, endDate }) {
 
   return (
     <div className="space-y-6">
-      {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Pengeluaran
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {formatCurrency(rekapData.summary.totalExpenses)}
-            </div>
-          </CardContent>
-        </Card>
+      {/* Summary Cards and Export Button */}
+      <div className="flex justify-between items-start">
+        <div className="grid gap-4 md:grid-cols-3 flex-1">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Total Pengeluaran
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {formatCurrency(rekapData.summary?.totalExpenses || 0)}
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Jumlah Transaksi
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {rekapData.summary.totalTransactions}
-            </div>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Jumlah Transaksi
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {rekapData.summary?.totalTransactions || 0}
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Kategori
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {rekapData.summary.categories}
-            </div>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Kategori
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {rekapData.summary?.categories || 0}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="ml-4">
+          <Button onClick={handleDownloadAll} className="flex items-center gap-2">
+            <Download className="h-4 w-4" />
+            Export Excel Lengkap
+          </Button>
+        </div>
       </div>
 
       {/* Rekap by Category */}
@@ -145,22 +142,13 @@ export default function LaporanRekapTab({ startDate, endDate }) {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>{categoryData.category}</CardTitle>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <div className="text-lg font-bold">
-                        {formatCurrency(categoryData.totalAmount)}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {categoryData.totalCount} transaksi
-                      </div>
+                  <div className="text-right">
+                    <div className="text-lg font-bold">
+                      {formatCurrency(categoryData.totalAmount || 0)}
                     </div>
-                    <Button
-                      onClick={() => handleDownloadCategory(categoryData)}
-                      size="sm"
-                      variant="outline"
-                    >
-                      <Download className="mr-2 h-4 w-4" /> Download
-                    </Button>
+                    <div className="text-sm text-muted-foreground">
+                      {categoryData.totalCount || 0} transaksi
+                    </div>
                   </div>
                 </div>
               </CardHeader>
@@ -189,14 +177,16 @@ export default function LaporanRekapTab({ startDate, endDate }) {
                           )}
                         </TableCell>
                         <TableCell className="text-right">
-                          {monthData.count}
+                          {monthData.count || 0}
                         </TableCell>
                         <TableCell className="text-right">
-                          {formatCurrency(monthData.total)}
+                          {formatCurrency(monthData.total || 0)}
                         </TableCell>
                         <TableCell className="text-right">
                           {formatCurrency(
-                            Math.round(monthData.total / monthData.count)
+                            monthData.count > 0
+                              ? Math.round(monthData.total / monthData.count)
+                              : 0
                           )}
                         </TableCell>
                       </TableRow>

@@ -44,19 +44,7 @@ async function main() {
     },
   });
 
-  const operator = await prisma.user.create({
-    data: {
-      username: "operator",
-      email: "operator@pembukuan.com",
-      password: await bcrypt.hash("operator123", 12),
-      name: "Operator",
-      role: "OPERATOR",
-      isActive: true,
-    },
-  });
-
-  console.log(`✅ Created ${admin.name} (ADMIN)`);
-  console.log(`✅ Created ${operator.name} (OPERATOR)\n`);
+  console.log(`✅ Created ${admin.name} (ADMIN)\n`);
 
   // ========================================
   // 3. CREATE SERVICE PACKAGES
@@ -1260,7 +1248,7 @@ async function main() {
   // ========================================
   console.log("📝 Creating expenses for Oktober 2025...");
 
-  // BBM Oktober - menggunakan enum ExpenseCategory yang benar
+  // BBM Oktober
   const exp1 = await prisma.expense.create({
     data: {
       date: new Date("2025-10-05"),
@@ -1268,7 +1256,6 @@ async function main() {
       description: "BBM untuk B 1234 ABC - Transaksi PT Maju Bersama",
       amount: 150000,
       armadaId: innova1.id,
-      approval_status: "APPROVED", // Default approved untuk backward compatibility
     },
   });
 
@@ -1279,7 +1266,6 @@ async function main() {
       description: "BBM untuk B 5678 DEF - Keluarga Bpk Wijaya",
       amount: 180000,
       armadaId: innova2.id,
-      approval_status: "APPROVED",
     },
   });
 
@@ -1290,7 +1276,6 @@ async function main() {
       description: "BBM untuk B 9012 GHI - Rombongan wisata",
       amount: 250000,
       armadaId: hiace.id,
-      approval_status: "APPROVED",
     },
   });
 
@@ -1301,7 +1286,6 @@ async function main() {
       description: "BBM untuk B 1234 ABC - Luar kota CV Global Tour (2 hari)",
       amount: 400000,
       armadaId: innova1.id,
-      approval_status: "APPROVED",
     },
   });
 
@@ -1312,7 +1296,6 @@ async function main() {
       description: "BBM untuk B 5678 DEF - Wedding Organizer",
       amount: 120000,
       armadaId: innova2.id,
-      approval_status: "APPROVED",
     },
   });
 
@@ -1323,19 +1306,17 @@ async function main() {
       description: "BBM untuk B 9012 GHI - Ibu Siti (24 jam)",
       amount: 200000,
       armadaId: hiace.id,
-      approval_status: "APPROVED",
     },
   });
 
-  // Gaji Sopir Oktober - menggunakan enum yang benar
+  // Gaji Sopir Oktober
   const exp7 = await prisma.expense.create({
     data: {
       date: new Date("2025-10-05"),
       category: "GAJI_SOPIR",
       description: "Gaji sopir Budi Santoso - PT Maju Bersama",
       amount: 100000,
-      driverId: driver1.id,
-      approval_status: "APPROVED",
+      armadaId: innova1.id,
     },
   });
 
@@ -1345,8 +1326,7 @@ async function main() {
       category: "GAJI_SOPIR",
       description: "Gaji sopir Ahmad Wijaya - Keluarga Bpk Wijaya",
       amount: 120000,
-      driverId: driver2.id,
-      approval_status: "APPROVED",
+      armadaId: innova2.id,
     },
   });
 
@@ -1356,8 +1336,7 @@ async function main() {
       category: "GAJI_SOPIR",
       description: "Gaji sopir Dedi Kurniawan - Rombongan wisata",
       amount: 150000,
-      driverId: driver3.id,
-      approval_status: "APPROVED",
+      armadaId: hiace.id,
     },
   });
 
@@ -1367,8 +1346,7 @@ async function main() {
       category: "GAJI_SOPIR",
       description: "Gaji sopir Budi Santoso - Luar kota 2 hari",
       amount: 200000,
-      driverId: driver1.id,
-      approval_status: "APPROVED",
+      armadaId: innova1.id,
     },
   });
 
@@ -1378,8 +1356,7 @@ async function main() {
       category: "GAJI_SOPIR",
       description: "Gaji sopir Ahmad Wijaya - Wedding Organizer",
       amount: 100000,
-      driverId: driver2.id,
-      approval_status: "APPROVED",
+      armadaId: innova2.id,
     },
   });
 
@@ -1389,12 +1366,11 @@ async function main() {
       category: "GAJI_SOPIR",
       description: "Gaji sopir Dedi Kurniawan - Ibu Siti",
       amount: 120000,
-      driverId: driver3.id,
-      approval_status: "APPROVED",
+      armadaId: hiace.id,
     },
   });
 
-  // Maintenance Oktober - menggunakan enum yang benar
+  // Maintenance Oktober
   const exp13 = await prisma.expense.create({
     data: {
       date: new Date("2025-10-10"),
@@ -1402,7 +1378,6 @@ async function main() {
       description: "Service rutin B 3456 JKL (Avanza) - Ganti oli + filter",
       amount: 500000,
       armadaId: avanza.id,
-      approval_status: "APPROVED",
     },
   });
 
@@ -1413,18 +1388,17 @@ async function main() {
       description: "Cuci mobil + salon interior B 1234 ABC",
       amount: 150000,
       armadaId: innova1.id,
-      approval_status: "APPROVED",
     },
   });
 
-  // Operasional Oktober - menggunakan enum yang benar
+  // Operasional Oktober
   const exp15 = await prisma.expense.create({
     data: {
       date: new Date("2025-10-01"),
       category: "OPERASIONAL_LAINNYA",
       description: "Sewa kantor bulan Oktober 2025",
       amount: 2000000,
-      approval_status: "APPROVED",
+      armadaId: null,
     },
   });
 
@@ -1434,363 +1408,86 @@ async function main() {
       category: "LISTRIK",
       description: "Listrik dan air bulan Oktober",
       amount: 500000,
-      approval_status: "APPROVED",
+      armadaId: null,
     },
   });
 
-  // Tambahkan expense dengan approval workflow untuk demonstrasi
-  const exp17 = await prisma.expense.create({
-    data: {
-      date: new Date("2025-10-20"),
-      category: "GAJI_STAF_ADMIN",
-      description: "Gaji admin - perlu approval",
-      amount: 4500000,
-      staffId: staff1.id,
-      approval_status: "PENDING_EDIT",
-      edit_request_reason: "Perlu approval untuk perubahan gaji",
-      requested_by_id: operator.id,
-      requested_at: new Date("2025-10-19"),
-    },
-  });
-
-  const exp18 = await prisma.expense.create({
-    data: {
-      date: new Date("2025-10-22"),
-      category: "BBM",
-      description: "BBM untuk maintenance - perlu approval hapus",
-      amount: 300000,
-      armadaId: innova2.id,
-      approval_status: "PENDING_DELETE",
-      delete_request_reason: "Biaya BBM tidak sesuai dengan kebijakan",
-      requested_by_id: operator.id,
-      requested_at: new Date("2025-10-21"),
-    },
-  });
-
-  console.log(`✅ Created ${18} expense records for Oktober 2025\n`);
+  console.log(`✅ Created ${16} expense records for Oktober 2025\n`);
 
   // ========================================
   // 10. CREATE EXPENSES (November 2025)
   // ========================================
   console.log("📝 Creating expenses for November 2025...");
 
-  const exp19 = await prisma.expense.create({
+  const exp17 = await prisma.expense.create({
     data: {
       date: new Date("2025-11-02"),
       category: "BBM",
       description: "BBM untuk B 1234 ABC - Event Organizer Prima",
       amount: 140000,
       armadaId: innova1.id,
-      approval_status: "APPROVED",
     },
   });
 
-  const exp20 = await prisma.expense.create({
+  const exp18 = await prisma.expense.create({
     data: {
       date: new Date("2025-11-02"),
       category: "GAJI_SOPIR",
       description: "Gaji sopir Budi Santoso - Event Organizer Prima",
       amount: 100000,
-      driverId: driver1.id,
-      approval_status: "APPROVED",
+      armadaId: innova1.id,
     },
   });
 
-  const exp21 = await prisma.expense.create({
+  const exp19 = await prisma.expense.create({
     data: {
       date: new Date("2025-11-03"),
       category: "BBM",
       description: "BBM untuk B 5678 DEF - PT Berkah Sejahtera",
       amount: 200000,
       armadaId: innova2.id,
-      approval_status: "APPROVED",
     },
   });
 
-  const exp22 = await prisma.expense.create({
+  const exp20 = await prisma.expense.create({
     data: {
       date: new Date("2025-11-03"),
       category: "GAJI_SOPIR",
       description: "Gaji sopir Ahmad Wijaya - PT Berkah Sejahtera",
       amount: 120000,
-      driverId: driver2.id,
-      approval_status: "APPROVED",
+      armadaId: innova2.id,
     },
   });
 
-  const exp23 = await prisma.expense.create({
+  const exp21 = await prisma.expense.create({
     data: {
       date: new Date("2025-11-04"),
       category: "BBM",
       description: "BBM untuk B 9012 GHI - Keluarga Ibu Ratna",
       amount: 250000,
       armadaId: hiace.id,
-      approval_status: "APPROVED",
     },
   });
 
-  const exp24 = await prisma.expense.create({
+  const exp22 = await prisma.expense.create({
     data: {
       date: new Date("2025-11-04"),
       category: "GAJI_SOPIR",
       description: "Gaji sopir Dedi Kurniawan - Keluarga Ibu Ratna",
       amount: 150000,
-      driverId: driver3.id,
-      approval_status: "APPROVED",
-    },
-  });
-
-  // Tambahkan expense dengan approval workflow untuk November
-  const exp25 = await prisma.expense.create({
-    data: {
-      date: new Date("2025-11-10"),
-      category: "GAJI_STAF_OPERASIONAL",
-      description: "Gaji operational staff - perlu approval",
-      amount: 5500000,
-      staffId: staff5.id,
-      approval_status: "PENDING_EDIT",
-      edit_request_reason: "Penyesuaian gaji berdasarkan performance",
-      requested_by_id: operator.id,
-      requested_at: new Date("2025-11-09"),
-    },
-  });
-
-  const exp26 = await prisma.expense.create({
-    data: {
-      date: new Date("2025-11-15"),
-      category: "PERAWATAN_ARMADA",
-      description: "Service darurat - perlu approval hapus",
-      amount: 750000,
       armadaId: hiace.id,
-      approval_status: "PENDING_DELETE",
-      delete_request_reason: "Service dilakukan di luar schedule",
-      requested_by_id: operator.id,
-      requested_at: new Date("2025-11-14"),
     },
   });
 
-  console.log(`✅ Created ${8} expense records for November 2025\n`);
-
-  // ========================================
-  // 11. CREATE AUDIT LOGS
-  // ========================================
-  console.log("📋 Creating comprehensive audit logs...");
-
-  // Helper function untuk IP dan User Agent simulasi
-  const getSimulatedRequestData = () => ({
-    ipAddress: "127.0.0.1",
-    userAgent: "SeedingScript/1.0"
-  });
-
-  const { ipAddress, userAgent } = getSimulatedRequestData();
-
-  // Audit logs untuk user creation
-  await prisma.auditLog.create({
-    data: {
-      userId: admin.id,
-      action: "CREATE",
-      resource: "User",
-      resourceId: admin.id,
-      description: "Membuat pengguna: admin (ADMIN)",
-      metadata: { username: admin.username, role: admin.role },
-      ipAddress,
-      userAgent,
-    },
-  });
-
-  // Audit logs untuk service packages
-  const packages = await prisma.servicePackage.findMany();
-  for (const pkg of packages) {
-    await prisma.auditLog.create({
-      data: {
-        userId: admin.id,
-        action: "CREATE",
-        resource: "Package",
-        resourceId: pkg.id,
-        description: `Membuat paket: ${pkg.name} (${pkg.type})`,
-        metadata: { name: pkg.name, type: pkg.type, price: pkg.price },
-        ipAddress,
-        userAgent,
-      },
-    });
-  }
-
-  // Audit logs untuk armada
-  const armadas = await prisma.armada.findMany();
-  for (const armada of armadas) {
-    await prisma.auditLog.create({
-      data: {
-        userId: admin.id,
-        action: "CREATE",
-        resource: "Armada",
-        resourceId: armada.id,
-        description: `Membuat armada: ${armada.license_plate} (${armada.brand} ${armada.model})`,
-        metadata: {
-          license_plate: armada.license_plate,
-          brand: armada.brand,
-          model: armada.model,
-          status: armada.status
-        },
-        ipAddress,
-        userAgent,
-      },
-    });
-  }
-
-  // Audit logs untuk drivers
-  const drivers = await prisma.driver.findMany();
-  for (const driver of drivers) {
-    await prisma.auditLog.create({
-      data: {
-        userId: admin.id,
-        action: "CREATE",
-        resource: "Driver",
-        resourceId: driver.id,
-        description: `Membuat sopir: ${driver.driver_name}`,
-        metadata: {
-          name: driver.driver_name,
-          phone: driver.phone_number,
-          status: driver.status
-        },
-        ipAddress,
-        userAgent,
-      },
-    });
-  }
-
-  // Audit logs untuk staff
-  const staffs = await prisma.staff.findMany();
-  for (const staff of staffs) {
-    await prisma.auditLog.create({
-      data: {
-        userId: admin.id,
-        action: "CREATE",
-        resource: "Staff",
-        resourceId: staff.id,
-        description: `Membuat staf: ${staff.staff_name} (${staff.position})`,
-        metadata: {
-          name: staff.staff_name,
-          position: staff.position,
-          salary: staff.salary_amount
-        },
-        ipAddress,
-        userAgent,
-      },
-    });
-  }
-
-  // Audit logs untuk transactions
-  const transactions = await prisma.transaction.findMany({ include: { package: true } });
-  for (const tx of transactions) {
-    await prisma.auditLog.create({
-      data: {
-        userId: admin.id,
-        action: "CREATE",
-        resource: "Transaction",
-        resourceId: tx.id,
-        description: `Membuat transaksi ${tx.invoice_code} - ${tx.customer_name}, Rp ${tx.all_in_rate.toLocaleString()}, ${tx.package?.type || 'CUSTOM'}`,
-        metadata: {
-          invoice_code: tx.invoice_code,
-          customer_name: tx.customer_name,
-          amount: tx.all_in_rate,
-          package_type: tx.package?.type,
-          payment_status: tx.payment_status,
-          approval_status: tx.approval_status
-        },
-        ipAddress,
-        userAgent,
-      },
-    });
-  }
-
-  // Audit logs untuk expenses
-  const expenses = await prisma.expense.findMany({
-    include: {
-      armada: { select: { license_plate: true } },
-      driver: { select: { driver_name: true } },
-      staff: { select: { staff_name: true } }
-    }
-  });
-  for (const exp of expenses) {
-    let resourceDesc = exp.category;
-    if (exp.armada) resourceDesc += ` (${exp.armada.license_plate})`;
-    else if (exp.driver) resourceDesc += ` (${exp.driver.driver_name})`;
-    else if (exp.staff) resourceDesc += ` (${exp.staff.staff_name})`;
-
-    await prisma.auditLog.create({
-      data: {
-        userId: admin.id,
-        action: "CREATE",
-        resource: "Expense",
-        resourceId: exp.id,
-        description: `Membuat pengeluaran: ${exp.category} - ${exp.description}, Rp ${exp.amount.toLocaleString()}`,
-        metadata: {
-          category: exp.category,
-          description: exp.description,
-          amount: exp.amount,
-          date: exp.date,
-          approval_status: exp.approval_status
-        },
-        ipAddress,
-        userAgent,
-      },
-    });
-  }
-
-  // Audit logs untuk approval workflows (expenses)
-  const pendingExpenses = expenses.filter(e => e.approval_status !== "APPROVED");
-  for (const exp of pendingExpenses) {
-    if (exp.approval_status === "PENDING_EDIT") {
-      await prisma.auditLog.create({
-        data: {
-          userId: exp.requested_by_id,
-          action: "REQUEST_EDIT",
-          resource: "Expense",
-          resourceId: exp.id,
-          description: `Meminta persetujuan edit pengeluaran: ${exp.category} - ${exp.description}, Rp ${exp.amount.toLocaleString()}`,
-          metadata: {
-            category: exp.category,
-            amount: exp.amount,
-            reason: exp.edit_request_reason,
-            approval_status: exp.approval_status
-          },
-          ipAddress,
-          userAgent,
-        },
-      });
-    } else if (exp.approval_status === "PENDING_DELETE") {
-      await prisma.auditLog.create({
-        data: {
-          userId: exp.requested_by_id,
-          action: "REQUEST_DELETE",
-          resource: "Expense",
-          resourceId: exp.id,
-          description: `Meminta persetujuan hapus pengeluaran: ${exp.category} - ${exp.description}, Rp ${exp.amount.toLocaleString()}`,
-          metadata: {
-            category: exp.category,
-            amount: exp.amount,
-            reason: exp.delete_request_reason,
-            approval_status: exp.approval_status
-          },
-          ipAddress,
-          userAgent,
-        },
-      });
-    }
-  }
-
-  console.log("✅ Created comprehensive audit logs for all operations\n");
+  console.log(`✅ Created ${6} expense records for November 2025\n`);
 
   // ========================================
   // SUMMARY
   // ========================================
   console.log("\n🎉 Database seeding completed successfully!\n");
-  // Hitung total audit logs
-  const auditLogCount = await prisma.auditLog.count();
-
   console.log("📊 SUMMARY:");
   console.log("─────────────────────────────────────────");
-  console.log(`✅ Users created: 2 (1 Admin, 1 Operator)`);
+  console.log(`✅ Users created: 1 (1 Admin)`);
   console.log(`✅ Service packages: 11 (8 CAR_RENTAL + 3 TOUR_PACKAGE)`);
   console.log(`✅ Vehicles (Armada): 4`);
   console.log(`✅ Drivers: 4`);
@@ -1800,10 +1497,9 @@ async function main() {
     `✅ Transactions November: 7 (1 UNPAID, 2 DOWN_PAYMENT, 4 TOUR_PACKAGE)`
   );
   console.log(`✅ Total Transactions: 13`);
-  console.log(`✅ Expenses Oktober: 18 (16 APPROVED + 2 PENDING)`);
-  console.log(`✅ Expenses November: 8 (6 APPROVED + 2 PENDING)`);
-  console.log(`✅ Total Expenses: 26`);
-  console.log(`✅ Audit Logs: ${auditLogCount} (100% coverage)`);
+  console.log(`✅ Expenses Oktober: 16`);
+  console.log(`✅ Expenses November: 6`);
+  console.log(`✅ Total Expenses: 22`);
   console.log(`✅ TOUR_PACKAGE Features:`);
   console.log(`   - Bali Tour (3H/2N): 3 hotel tiers, 5+ price ranges each`);
   console.log(
@@ -1811,10 +1507,6 @@ async function main() {
   );
   console.log(`   - Bandung Tour (2H/1N): 3 hotel tiers, 5+ price ranges each`);
   console.log(`   - Complete itineraries with day-by-day activities`);
-  console.log(`✅ Approval Workflow Data:`);
-  console.log(`   - Expense approval states: APPROVED, PENDING_EDIT, PENDING_DELETE`);
-  console.log(`   - Request/approval tracking with user relations`);
-  console.log(`   - Edit and delete request reasons`);
   console.log("─────────────────────────────────────────\n");
 }
 

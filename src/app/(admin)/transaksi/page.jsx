@@ -10,6 +10,7 @@ import TransaksiDialog from "@/components/transaksi/TransaksiDialog";
 import TransaksiCompleteModal from "@/components/transaksi/TransaksiCompleteModal";
 import TransaksiDetailModal from "@/components/transaksi/TransaksiDetailModal";
 import ApprovalDialog from "@/components/transaksi/ApprovalDialog";
+import TransactionEditApprovalDialog from "@/components/transaksi/TransactionEditApprovalDialog";
 import { Pagination } from "@/components/ui/pagination";
 
 import { startOfMonth, startOfYear, endOfToday } from "date-fns";
@@ -104,6 +105,11 @@ export default function TransaksiPage() {
   const [viewingData, setViewingData] = useState(null);
   const [approvingTransaction, setApprovingTransaction] = useState(null);
   const [isSubmittingApproval, setIsSubmittingApproval] = useState(false);
+
+  // State untuk Edit Approval Dialog (Admin)
+  const [isEditApprovalOpen, setIsEditApprovalOpen] = useState(false);
+  const [approvingEditTransaction, setApprovingEditTransaction] = useState(null);
+  const [isSubmittingEditApproval, setIsSubmittingEditApproval] = useState(false);
 
   const [formData, setFormData] = useState(INITIAL_FORM_STATE);
   const [calculatedData, setCalculatedData] = useState({});
@@ -893,6 +899,77 @@ export default function TransaksiPage() {
     }
   };
 
+  // Handler: Admin review edit approval
+  const handleReviewEditApproval = (transaction) => {
+    setApprovingEditTransaction(transaction);
+    setIsEditApprovalOpen(true);
+  };
+
+  // Handler: Admin approve edit
+  const handleApproveEdit = async (transactionId) => {
+    setIsSubmittingEditApproval(true);
+    try {
+      const res = await fetch(`/api/transactions/${transactionId}/approve-edit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Gagal menyetujui edit");
+      }
+
+      await fetchData(currentPage);
+      setIsEditApprovalOpen(false);
+      setApprovingEditTransaction(null);
+      toast.success("Permintaan Edit Disetujui", {
+        description: "Perubahan transaksi telah diterapkan",
+      });
+    } catch (err) {
+      console.error("Failed to approve edit:", err);
+      toast.error("Gagal Menyetujui Edit", {
+        description: err.message,
+      });
+      throw err;
+    } finally {
+      setIsSubmittingEditApproval(false);
+    }
+  };
+
+  // Handler: Admin reject edit
+  const handleRejectEdit = async (transactionId, reason) => {
+    setIsSubmittingEditApproval(true);
+    try {
+      const res = await fetch(`/api/transactions/${transactionId}/reject-edit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ rejection_reason: reason }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Gagal menolak edit");
+      }
+
+      await fetchData(currentPage);
+      setIsEditApprovalOpen(false);
+      setApprovingEditTransaction(null);
+      toast.success("Permintaan Edit Ditolak", {
+        description: "Transaksi dikembalikan ke data sebelumnya",
+      });
+    } catch (err) {
+      console.error("Failed to reject edit:", err);
+      toast.error("Gagal Menolak Edit", {
+        description: err.message,
+      });
+      throw err;
+    } finally {
+      setIsSubmittingEditApproval(false);
+    }
+  };
+
   const handleCompleteTransaction = async (completionData) => {
     console.log("handleCompleteTransaction called with:", {
       completionData,
@@ -992,6 +1069,7 @@ export default function TransaksiPage() {
           onSubmitForApproval={handleSubmitForApproval}
           onApprove={openApprovalDialog}
           onReject={openApprovalDialog}
+          onReviewEditApproval={handleReviewEditApproval}
           userRole={userRole}
         />
 
@@ -1019,6 +1097,7 @@ export default function TransaksiPage() {
         armadaList={armadaList}
         sopirList={sopirList}
         isLoadingDependencies={isLoadingDependencies}
+        userRole={userRole}
       />
 
       <TransaksiDetailModal
@@ -1043,6 +1122,15 @@ export default function TransaksiPage() {
         onApprove={handleApprove}
         onReject={handleReject}
         isSubmitting={isSubmittingApproval}
+      />
+
+      <TransactionEditApprovalDialog
+        isOpen={isEditApprovalOpen}
+        onClose={() => setIsEditApprovalOpen(false)}
+        transaction={approvingEditTransaction}
+        onApproveEdit={handleApproveEdit}
+        onRejectEdit={handleRejectEdit}
+        isSubmitting={isSubmittingEditApproval}
       />
     </div>
   );

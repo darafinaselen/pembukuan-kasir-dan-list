@@ -9,19 +9,28 @@ import { TransactionChart } from "@/components/dashboard/TransactionChart";
 import { FleetStatusChart } from "@/components/dashboard/FleetStatusChart";
 import { FleetRevenueChart } from "@/components/dashboard/FleetRevenueChart";
 import { TopPackagesWidget } from "@/components/dashboard/TopPackagesWidget";
+import { DriverPerformanceChart } from "@/components/dashboard/DriverPerformanceChart";
 import { AdminOnly } from "@/components/PermissionGuard";
 import { Calendar, Clock, TrendingUp } from "lucide-react";
 import { useAuthFetch } from "@/lib/useAuthFetch";
 import { useUser } from "@/hooks/useUser";
+import { ErrorDisplay } from "@/components/ui/error-display";
+import { useRetry } from "@/hooks/useRetry";
+import { toast } from "sonner";
 
 function DashboardPage() {
   const [period, setPeriod] = useState("month");
   const [stats, setStats] = useState(null);
+  const [driverPerformance, setDriverPerformance] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [driverLoading, setDriverLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [driverError, setDriverError] = useState(null);
   const router = useRouter();
   const authFetch = useAuthFetch();
   const { user, loading: userLoading } = useUser();
+  const { retry: retryDashboard, isRetrying: isRetryingDashboard } = useRetry(3, 1000);
+  const { retry: retryDriver, isRetrying: isRetryingDriver } = useRetry(3, 1000);
 
   // Redirect OPERATOR away from dashboard (contains financial data)
   useEffect(() => {
@@ -34,35 +43,92 @@ function DashboardPage() {
     setLoading(true);
     setError(null); // Reset error on each fetch
     console.log("Fetching dashboard data for period:", period);
+
     try {
-      const res = await authFetch(`/api/dashboard/stats?period=${period}`);
+      await retryDashboard(
+        async () => {
+          const res = await authFetch(`/api/dashboard/stats?period=${period}`);
 
-      if (!res) return; // authFetch returns null on 401/403 and redirects
+          if (!res) return; // authFetch returns null on 401/403 and redirects
 
-      if (!res.ok) {
-        throw new Error(
-          `Gagal mengambil data: ${res.statusText || res.status}`
-        );
-      }
-      const result = await res.json();
+          if (!res.ok) {
+            throw new Error(
+              `Gagal mengambil data: ${res.statusText || res.status}`
+            );
+          }
+          const result = await res.json();
 
-      // API returns { success, data, message }
-      const data = result.data || result;
-      console.log("Dashboard data received:", data);
-      setStats(data);
-      setError(null); // Clear any previous errors
+          // API returns { success, data, message }
+          const data = result.data || result;
+          console.log("Dashboard data received:", data);
+          setStats(data);
+          setError(null); // Clear any previous errors
+        },
+        (attempt, maxRetries, delay) => {
+          toast.info(`Mencoba lagi mengambil data dashboard (${attempt}/${maxRetries})...`, {
+            description: `Menunggu ${delay}ms`,
+          });
+        }
+      );
     } catch (err) {
       console.error("Error fetching dashboard data:", err);
-      setError(err.message || "Terjadi kesalahan yang tidak diketahui.");
+      setError(err);
       setStats(null);
+      toast.error("Gagal Memuat Dashboard", {
+        description: "Tidak dapat mengambil data dashboard setelah beberapa percobaan.",
+      });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchDriverPerformanceData = async () => {
+    setDriverLoading(true);
+    setDriverError(null);
+    console.log("Fetching driver performance data for period:", period);
+
+    try {
+      await retryDriver(
+        async () => {
+          const res = await authFetch(`/api/dashboard/driver-performance?period=${period}`);
+
+          if (!res) return; // authFetch returns null on 401/403 and redirects
+
+          if (!res.ok) {
+            throw new Error(
+              `Gagal mengambil data performa sopir: ${res.statusText || res.status}`
+            );
+          }
+          const result = await res.json();
+
+          // API returns { success, data, message }
+          const data = result.data || result;
+          console.log("Driver performance data received:", data);
+          setDriverPerformance(data);
+          setDriverError(null);
+        },
+        (attempt, maxRetries, delay) => {
+          toast.info(`Mencoba lagi mengambil data performa sopir (${attempt}/${maxRetries})...`, {
+            description: `Menunggu ${delay}ms`,
+          });
+        }
+      );
+    } catch (err) {
+      console.error("Error fetching driver performance data:", err);
+      setDriverError(err);
+      setDriverPerformance(null);
+      toast.error("Gagal Memuat Performa Sopir", {
+        description: "Tidak dapat mengambil data performa sopir setelah beberapa percobaan.",
+      });
+    } finally {
+      setDriverLoading(false);
     }
   };
 
   useEffect(() => {
     console.log("Period changed to:", period);
     fetchDashboardData();
+    fetchDriverPerformanceData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [period]);
 
@@ -151,15 +217,13 @@ function DashboardPage() {
       </header>
       <div className="flex flex-1 flex-col gap-6 p-6 pt-0">
         {error ? (
-          <div className="flex flex-col items-center justify-center h-64 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-red-600 font-semibold text-lg">
-              Gagal memuat data dashboard
-            </p>
-            <p className="text-sm text-gray-600 mt-2">{error}</p>
-            <Button onClick={fetchDashboardData} className="mt-4">
-              Coba Lagi
-            </Button>
-          </div>
+          <ErrorDisplay
+            error={error}
+            onRetry={fetchDashboardData}
+            title="Gagal Memuat Dashboard"
+            description="Tidak dapat mengambil data dashboard. Periksa koneksi internet Anda."
+            className="mb-6"
+          />
         ) : (
           <>
             <div className="flex flex-col gap-2">
@@ -207,6 +271,25 @@ function DashboardPage() {
                 }}
                 loading={loading}
               />
+            </AdminOnly>
+
+            {/* Driver Performance Chart - Admin Only */}
+            <AdminOnly>
+              {driverError ? (
+                <ErrorDisplay
+                  error={driverError}
+                  onRetry={fetchDriverPerformanceData}
+                  title="Gagal Memuat Performa Sopir"
+                  description="Tidak dapat mengambil data performa sopir."
+                  className="mb-6"
+                />
+              ) : (
+                <DriverPerformanceChart
+                  data={driverPerformance}
+                  period={period}
+                  loading={driverLoading}
+                />
+              )}
             </AdminOnly>
           </>
         )}

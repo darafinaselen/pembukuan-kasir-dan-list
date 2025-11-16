@@ -16,16 +16,20 @@ async function handleGetPendingTransactions(request) {
     const limit = parseInt(searchParams.get("limit") || "10");
     const skip = (page - 1) * limit;
 
-    // Get pending transactions with details
+    // Get pending transactions with details (including edit requests)
     const [transactions, total] = await Promise.all([
       prisma.transaction.findMany({
         where: {
-          approval_status: "PENDING",
+          OR: [
+            { approval_status: "PENDING" },
+            { approval_status: "PENDING_EDIT" },
+          ],
         },
         include: {
           armada: true,
           driver: true,
           package: true,
+          requested_by: { select: { name: true, email: true } },
         },
         orderBy: {
           submitted_at: "asc", // Oldest submissions first
@@ -35,7 +39,10 @@ async function handleGetPendingTransactions(request) {
       }),
       prisma.transaction.count({
         where: {
-          approval_status: "PENDING",
+          OR: [
+            { approval_status: "PENDING" },
+            { approval_status: "PENDING_EDIT" },
+          ],
         },
       }),
     ]);

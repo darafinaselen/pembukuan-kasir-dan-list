@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import ExpenseApprovalBadge from "./ExpenseApprovalBadge";
+import { Spinner } from "@/components/ui/spinner";
 
 function formatCurrency(amount) {
   return new Intl.NumberFormat("id-ID", {
@@ -82,9 +83,11 @@ export default function PengeluaranTable({
   onRequestDelete,
   onReviewApproval,
   userRole = "OPERATOR", // Default to OPERATOR for safety
+  loadingActions = {},
 }) {
   const isAdmin = userRole === "ADMIN";
   const isOperator = userRole === "OPERATOR";
+  const isRoleLoading = userRole === null;
   if (isLoading) {
     return (
       <div className="rounded-md border">
@@ -164,8 +167,13 @@ export default function PengeluaranTable({
               approvalStatus === "PENDING_EDIT" ||
               approvalStatus === "PENDING_DELETE";
             const canRequestActions =
-              isOperator && approvalStatus === "APPROVED";
-            const canReview = isAdmin && hasPendingRequest;
+              isOperator && !isRoleLoading && approvalStatus === "APPROVED";
+            const canReview = isAdmin && !isRoleLoading && hasPendingRequest;
+            const canDeleteDirectly = isAdmin && !isRoleLoading && !hasPendingRequest;
+            const canEditDirectly = !isRoleLoading && (
+              isAdmin ||
+              (isOperator && (approvalStatus === "DRAFT" || approvalStatus === null || approvalStatus === "APPROVED"))
+            );
 
             return (
               <TableRow key={item.id}>
@@ -194,21 +202,33 @@ export default function PengeluaranTable({
                           Lihat Detail
                         </DropdownMenuItem>
 
-                        {/* Admin actions */}
-                        {isAdmin && !hasPendingRequest && (
-                          <>
-                            <DropdownMenuItem onClick={() => onEdit(item)}>
-                              <Pencil className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => onDelete(item.id)}
-                              className="text-red-500"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Hapus
-                            </DropdownMenuItem>
-                          </>
+                        {/* Edit actions - separate from delete */}
+                        {canEditDirectly && (
+                          <DropdownMenuItem onClick={() => onEdit(item)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                        )}
+
+                        {/* Delete actions */}
+                        {canDeleteDirectly && (
+                          <DropdownMenuItem
+                            onClick={() => onDelete(item.id)}
+                            className="text-red-500"
+                            disabled={loadingActions[`delete-${item.id}`]}
+                          >
+                            {loadingActions[`delete-${item.id}`] ? (
+                              <>
+                                <Spinner size="sm" className="mr-2" />
+                                Menghapus...
+                              </>
+                            ) : (
+                              <>
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Hapus
+                              </>
+                            )}
+                          </DropdownMenuItem>
                         )}
 
                         {/* Admin review pending request */}
@@ -229,16 +249,36 @@ export default function PengeluaranTable({
                           <>
                             <DropdownMenuItem
                               onClick={() => onRequestEdit(item)}
+                              disabled={loadingActions[`submit-request-${item.id}`]}
                             >
-                              <Edit className="mr-2 h-4 w-4 text-blue-600" />
-                              Request Edit
+                              {loadingActions[`submit-request-${item.id}`] ? (
+                                <>
+                                  <Spinner size="sm" className="mr-2" />
+                                  Mengajukan...
+                                </>
+                              ) : (
+                                <>
+                                  <Edit className="mr-2 h-4 w-4 text-blue-600" />
+                                  Request Edit
+                                </>
+                              )}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => onRequestDelete(item)}
                               className="text-orange-600"
+                              disabled={loadingActions[`submit-request-${item.id}`]}
                             >
-                              <FileText className="mr-2 h-4 w-4" />
-                              Request Delete
+                              {loadingActions[`submit-request-${item.id}`] ? (
+                                <>
+                                  <Spinner size="sm" className="mr-2" />
+                                  Mengajukan...
+                                </>
+                              ) : (
+                                <>
+                                  <FileText className="mr-2 h-4 w-4" />
+                                  Request Delete
+                                </>
+                              )}
                             </DropdownMenuItem>
                           </>
                         )}
@@ -256,25 +296,34 @@ export default function PengeluaranTable({
                       <Eye className="mr-1 h-3 w-3" /> Lihat
                     </Button>
 
-                    {/* Admin direct actions */}
-                    {isAdmin && !hasPendingRequest && (
-                      <>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => onEdit(item)}
-                        >
-                          <Pencil className="mr-1 h-3 w-3" /> Edit
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => onDelete(item.id)}
-                          className="text-red-500 hover:text-red-600 hover:border-red-400"
-                        >
-                          <Trash2 className="mr-1 h-3 w-3" /> Hapus
-                        </Button>
-                      </>
+                    {/* Edit actions - separate from delete */}
+                    {canEditDirectly && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onEdit(item)}
+                      >
+                        <Pencil className="mr-1 h-3 w-3" /> Edit
+                      </Button>
+                    )}
+
+                    {/* Delete actions */}
+                    {canDeleteDirectly && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onDelete(item.id)}
+                        className="text-red-500 hover:text-red-600 hover:border-red-400"
+                        disabled={loadingActions[`delete-${item.id}`]}
+                      >
+                        {loadingActions[`delete-${item.id}`] ? (
+                          <Spinner size="sm" />
+                        ) : (
+                          <>
+                            <Trash2 className="mr-1 h-3 w-3" /> Hapus
+                          </>
+                        )}
+                      </Button>
                     )}
 
                     {/* Admin review button */}
@@ -298,16 +347,30 @@ export default function PengeluaranTable({
                           size="sm"
                           onClick={() => onRequestEdit(item)}
                           className="text-blue-600 hover:text-blue-700"
+                          disabled={loadingActions[`submit-request-${item.id}`]}
                         >
-                          <Edit className="mr-1 h-3 w-3" /> Request Edit
+                          {loadingActions[`submit-request-${item.id}`] ? (
+                            <Spinner size="sm" />
+                          ) : (
+                            <>
+                              <Edit className="mr-1 h-3 w-3" /> Request Edit
+                            </>
+                          )}
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => onRequestDelete(item)}
                           className="text-orange-600 hover:text-orange-700"
+                          disabled={loadingActions[`submit-request-${item.id}`]}
                         >
-                          <FileText className="mr-1 h-3 w-3" /> Request Delete
+                          {loadingActions[`submit-request-${item.id}`] ? (
+                            <Spinner size="sm" />
+                          ) : (
+                            <>
+                              <FileText className="mr-1 h-3 w-3" /> Request Delete
+                            </>
+                          )}
                         </Button>
                       </>
                     )}

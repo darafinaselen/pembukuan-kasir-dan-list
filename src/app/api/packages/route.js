@@ -129,7 +129,9 @@ async function handleCreatePackage(request) {
         ? "TOUR_PACKAGE"
         : tipePaket === "Full Day Trip"
           ? "FULL_DAY_TRIP"
-          : "CAR_RENTAL";
+          : tipePaket === "Harga Custom"
+            ? "CUSTOM_PRICING"
+            : "CAR_RENTAL";
 
     const includes =
       typeof include === "string"

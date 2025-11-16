@@ -8,11 +8,11 @@ import { logExpenseApprovalEvent } from "@/lib/audit";
  * Admin reject request edit/delete dari operator
  */
 async function handleReject(req, { params }) {
-  try {
-    const { id } = params;
-    const body = await req.json();
-    const { reason } = body;
-    const user = req.user;
+try {
+  const { id } = await params;
+  const body = await req.json();
+  const { reason } = body;
+  const user = req.auth.user;
 
     if (!reason || !reason.trim()) {
       return NextResponse.json(

@@ -48,6 +48,7 @@ export default function TransaksiDialog({
   armadaList,
   sopirList,
   isLoadingDependencies,
+  userRole,
 }) {
   // Cari paket yang dipilih untuk cek tipenya
   const selectedPackage = paketList.find(
@@ -500,7 +501,9 @@ export default function TransaksiDialog({
             </Button>
           </DialogClose>
           <Button type="submit" form="transaksi-form">
-            {isEditing ? "Simpan Perubahan" : "Simpan Transaksi"}
+            {isEditing
+              ? (userRole === "OPERATOR" ? "Ajukan Perubahan" : "Simpan Perubahan")
+              : "Simpan Transaksi"}
           </Button>
         </DialogFooter>
       </DialogContent>

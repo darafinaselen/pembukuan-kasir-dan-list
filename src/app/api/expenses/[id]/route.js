@@ -37,12 +37,8 @@ async function handleUpdateExpense(request, { params }) {
       }
     }
 
-    // ADMIN can edit any expense except APPROVED ones
-    if (userRole === "ADMIN") {
-      if (approvalStatus === "APPROVED") {
-        return errorResponse("Pengeluaran yang sudah disetujui tidak dapat diedit", 403);
-      }
-    }
+    // ADMIN can edit any expense - no restrictions
+    // (Approval workflow restrictions removed for ADMIN role)
 
     const formData = await request.formData();
 
@@ -218,9 +214,13 @@ async function handleDeleteExpense(request, { params }) {
       return errorResponse("Expense not found", 404);
     }
 
-    // Prevent deletion if status is APPROVED or has pending requests
-    if (existingExpense.approval_status === "APPROVED") {
-      return errorResponse("Pengeluaran yang sudah disetujui tidak dapat dihapus", 403);
+    // Prevent deletion if status has pending requests (but allow ADMIN to delete APPROVED)
+    const userRole = request.auth.user.role;
+
+    if (userRole !== "ADMIN") {
+      if (existingExpense.approval_status === "APPROVED") {
+        return errorResponse("Pengeluaran yang sudah disetujui tidak dapat dihapus", 403);
+      }
     }
 
     if (existingExpense.approval_status === "PENDING_EDIT" || existingExpense.approval_status === "PENDING_DELETE") {

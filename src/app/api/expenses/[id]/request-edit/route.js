@@ -8,11 +8,11 @@ import { logExpenseApprovalEvent } from "@/lib/audit";
  * Operator request untuk edit expense yang sudah approved
  */
 async function handleRequestEdit(req, { params }) {
-  try {
-    const { id } = params;
-    const body = await req.json();
-    const { reason, updatedData } = body;
-    const user = req.user;
+try {
+  const { id } = await params;
+  const body = await req.json();
+  const { reason, updatedData } = body;
+  const user = req.auth.user;
 
     if (!reason || !reason.trim()) {
       return NextResponse.json(
@@ -70,6 +70,19 @@ async function handleRequestEdit(req, { params }) {
       namaPenerima: expense.namaPenerima,
     };
 
+    // Store proposed changes
+    const proposedChanges = {
+      date: updatedData.date,
+      paymentMonth: updatedData.paymentMonth,
+      category: updatedData.category,
+      description: updatedData.description,
+      amount: updatedData.amount,
+      armadaId: updatedData.armadaId,
+      driverId: updatedData.driverId,
+      staffId: updatedData.staffId,
+      namaPenerima: updatedData.namaPenerima,
+    };
+
     // Update expense dengan status PENDING_EDIT
     const updatedExpense = await prisma.expense.update({
       where: { id },
@@ -77,10 +90,9 @@ async function handleRequestEdit(req, { params }) {
         approval_status: "PENDING_EDIT",
         edit_request_reason: reason,
         original_data: originalData,
+        proposed_changes: proposedChanges,
         requested_by_id: user.id,
         requested_at: new Date(),
-        // Temporarily store updated data in description field untuk review
-        // Admin akan melihat ini dan bisa approve/reject
       },
       include: {
         armada: true,

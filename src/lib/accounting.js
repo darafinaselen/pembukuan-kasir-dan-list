@@ -69,8 +69,11 @@ export function calculateTransactionFinancials(transaction) {
   // Default duration is 12 hours if no package specified
   const durasiPaketJam = transaction.package?.durationHours || 12;
 
+  // Use actual checkin time if transaction is completed, otherwise use planned time
   const start = new Date(transaction.checkout_datetime);
-  const end = new Date(transaction.checkin_datetime);
+  const end = transaction.actual_checkin_datetime
+    ? new Date(transaction.actual_checkin_datetime)
+    : new Date(transaction.checkin_datetime);
 
   // Validate dates are valid Date objects
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {

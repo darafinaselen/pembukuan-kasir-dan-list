@@ -16,9 +16,9 @@ import {
 } from "@/components/ui/chart";
 
 const PACKAGE_TYPE_LABELS = {
-  CAR_RENTAL: "Sewa Mobil",
-  TOUR_PACKAGE: "Paket Wisata",
-  FULL_DAY_TRIP: "Trip Sehari Penuh",
+   CAR_RENTAL: "Sewa Mobil",
+   TOUR_PACKAGE: "Paket Tour",
+   FULL_DAY_TRIP: "Full Day Trip",
 };
 
 const PACKAGE_TYPE_COLORS = {

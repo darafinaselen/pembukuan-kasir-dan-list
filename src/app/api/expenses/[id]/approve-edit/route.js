@@ -8,11 +8,11 @@ import { logExpenseApprovalEvent } from "@/lib/audit";
  * Admin approve request edit dari operator
  */
 async function handleApproveEdit(req, { params }) {
-  try {
-    const { id } = params;
-    const body = await req.json();
-    const { updatedData } = body; // Data baru yang akan di-apply
-    const user = req.user;
+try {
+  const { id } = await params;
+  const body = await req.json();
+  const { updatedData } = body; // Data baru yang akan di-apply
+  const user = req.auth.user;
 
     if (!updatedData) {
       return NextResponse.json(
@@ -40,15 +40,40 @@ async function handleApproveEdit(req, { params }) {
       );
     }
 
-    // Apply perubahan dan ubah status ke APPROVED
+    // Use stored proposed changes instead of requiring admin to re-send data
+    const proposedChanges = expense.proposed_changes;
+
+    if (!proposedChanges) {
+      return NextResponse.json(
+        { error: "Tidak ada perubahan yang diusulkan untuk disetujui" },
+        { status: 400 }
+      );
+    }
+
+    // Prepare data for update, converting date strings to Date objects
+    const updateData = { ...proposedChanges };
+
+    // Convert date string to Date object if present
+    if (updateData.date && typeof updateData.date === 'string') {
+      updateData.date = new Date(updateData.date);
+    }
+
+    // Convert paymentMonth to Date object if present
+    if (updateData.paymentMonth && typeof updateData.paymentMonth === 'string') {
+      const year = new Date().getFullYear();
+      const monthIndex = parseInt(updateData.paymentMonth, 10) - 1;
+      updateData.paymentMonth = new Date(year, monthIndex, 1);
+    }
+
+    // Apply stored proposed changes and update status ke APPROVED
     const updatedExpense = await prisma.expense.update({
       where: { id },
       data: {
-        ...updatedData,
+        ...updateData,
         approval_status: "APPROVED",
         approved_by_id: user.id,
         approved_at: new Date(),
-        // Keep original_data, edit_request_reason for audit trail
+        // Keep original_data, edit_request_reason, proposed_changes for audit trail
       },
       include: {
         armada: true,
@@ -61,7 +86,7 @@ async function handleApproveEdit(req, { params }) {
 
     // Log audit event
     await logExpenseApprovalEvent(user, "APPROVE_EDIT", updatedExpense, req, {
-      updatedData,
+      proposed_changes: proposedChanges,
       original_data: expense.original_data,
       edit_request_reason: expense.edit_request_reason,
       requested_by: expense.requested_by_id,

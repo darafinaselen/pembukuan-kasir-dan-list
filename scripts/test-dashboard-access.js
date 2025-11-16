@@ -14,8 +14,8 @@ async function testDashboardAccess() {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      username: "admin",
-      password: "Admin123!",
+      username: "admin-regression",
+      password: "password123",
     }),
   });
 
@@ -88,8 +88,8 @@ async function testDashboardAccess() {
   console.log("\n📋 Instructions:");
   console.log("1. Open http://localhost:3000 in your browser");
   console.log("2. Login with:");
-  console.log("   Username: admin");
-  console.log("   Password: Admin123!");
+  console.log("   Username: admin-regression");
+  console.log("   Password: password123");
   console.log("3. You will be redirected to /dashboard automatically");
 }
 

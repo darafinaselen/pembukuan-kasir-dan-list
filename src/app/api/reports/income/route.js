@@ -115,19 +115,21 @@ async function handleGetIncomeReport(request) {
 
       const group = packageGroups.get(packageId);
       const financials = calculateTransactionFinancials(tx);
+      const baseRevenue =
+        financials.totalPendapatan - financials.totalOvertimeFee;
 
       group.transactionCount += 1;
       group.totalRevenue += financials.totalPendapatan;
-      group.totalOvertimeRevenue += financials.biayaOvertime || 0;
-      group.totalBaseRevenue += financials.tarifSewa || 0;
+      group.totalOvertimeRevenue += financials.totalOvertimeFee;
+      group.totalBaseRevenue += baseRevenue;
       group.transactions.push({
         id: tx.id,
         invoice_code: tx.invoice_code,
         customer_name: tx.customer_name,
         booking_date: tx.booking_date,
         totalRevenue: financials.totalPendapatan,
-        overtimeRevenue: financials.biayaOvertime || 0,
-        baseRevenue: financials.tarifSewa || 0,
+        overtimeRevenue: financials.totalOvertimeFee,
+        baseRevenue: baseRevenue,
         armada: tx.armada,
         driver: tx.driver,
       });

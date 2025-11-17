@@ -15,7 +15,7 @@ import { Loader2, Users, Package, TrendingUp, Fuel } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
-import { exportToExcel } from "@/lib/utils";
+import { exportPerformanceReport } from "@/lib/excel-export";
 
 const PACKAGE_TYPE_LABELS = {
   CAR_RENTAL: "Sewa Mobil",
@@ -150,83 +150,17 @@ export default function LaporanKinerjaTab({ dateRange, isLoading }) {
     if (!performanceData || !fuelData) return;
 
     try {
-      const excelData = [
-        // Summary data
-        {
-          Kategori: "RINGKASAN KINERJA",
-          Detail: "",
-          Jumlah: "",
-          Persentase: "",
-        },
-        {
-          Kategori: "Total Sopir",
-          Detail: "Sopir aktif",
-          Jumlah: summary.totalDrivers,
-          Persentase: "",
-        },
-        {
-          Kategori: "Total Paket",
-          Detail: "Paket digunakan",
-          Jumlah: summary.totalPackages,
-          Persentase: "",
-        },
-        {
-          Kategori: "Total Trip",
-          Detail: "Transaksi",
-          Jumlah: summary.totalTrips,
-          Persentase: "",
-        },
-        {
-          Kategori: "Total Biaya BBM",
-          Detail: `${fuelSummary.totalRefuels || 0}x pengisian`,
-          Jumlah: fuelSummary.totalFuelCost || 0,
-          Persentase: "",
-        },
-        { Kategori: "", Detail: "", Jumlah: "", Persentase: "" },
-        // Driver performance
-        {
-          Kategori: "KINERJA SOPIR",
-          Detail: "",
-          Jumlah: "",
-          Persentase: "",
-        },
-        ...driverPerformance.map((driver) => ({
-          Kategori: driver.driver_name,
-          Detail: `${driver.totalTrips} trip`,
-          Jumlah: driver.totalRevenue,
-          Persentase: `${driver.utilizationRate}%`,
-        })),
-        { Kategori: "", Detail: "", Jumlah: "", Persentase: "" },
-        // Package performance
-        {
-          Kategori: "KINERJA PAKET",
-          Detail: "",
-          Jumlah: "",
-          Persentase: "",
-        },
-        ...packagePerformance.map((pkg) => ({
-          Kategori: PACKAGE_TYPE_LABELS[pkg.packageType] || pkg.packageType,
-          Detail: `${pkg.totalBookings} booking`,
-          Jumlah: pkg.totalRevenue,
-          Persentase: `${pkg.revenueShare}%`,
-        })),
-        { Kategori: "", Detail: "", Jumlah: "", Persentase: "" },
-        // Fuel analysis
-        {
-          Kategori: "ANALISIS BBM",
-          Detail: "",
-          Jumlah: "",
-          Persentase: "",
-        },
-        ...fuelAnalysis.map((fuel) => ({
-          Kategori: fuel.armada_name,
-          Detail: `${fuel.totalRefuels} kali isi`,
-          Jumlah: fuel.totalCost,
-          Persentase: `${fuel.avgConsumptionPerTrip?.toFixed(2) || 0} L/trip`,
-        })),
-      ];
+      const reportDateRange = dateRange
+        ? {
+            from: dateRange.from.toISOString().split("T")[0],
+            to: dateRange.to.toISOString().split("T")[0],
+          }
+        : {
+            from: new Date().toISOString().split("T")[0],
+            to: new Date().toISOString().split("T")[0],
+          };
 
-      exportToExcel(excelData, "Laporan_Kinerja");
+      exportPerformanceReport(performanceData, fuelData, reportDateRange);
     } catch (error) {
       console.error("Export failed:", error);
     }

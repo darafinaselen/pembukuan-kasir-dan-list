@@ -10,16 +10,34 @@ import { validateTransactionData } from "@/lib/validators/transaction-validator"
 
 async function handleGetTransactions(request) {
   try {
-
     const url = new URL(request.url);
     const page = parseInt(url.searchParams.get("page")) || 1;
     const limit = parseInt(url.searchParams.get("limit")) || 10;
     const offset = (page - 1) * limit;
+    const from = url.searchParams.get("from");
+    const to = url.searchParams.get("to");
+
+    // Build where clause with optional date filtering
+    const whereClause = {};
+
+    if (from && to) {
+      const fromDate = new Date(from);
+      fromDate.setHours(0, 0, 0, 0);
+
+      const toDate = new Date(to);
+      toDate.setHours(23, 59, 59, 999);
+
+      whereClause.booking_date = {
+        gte: fromDate,
+        lte: toDate,
+      };
+    }
 
     // Get total count for pagination
-    const totalCount = await prisma.transaction.count();
+    const totalCount = await prisma.transaction.count({ where: whereClause });
 
     const transactions = await prisma.transaction.findMany({
+      where: whereClause,
       skip: offset,
       take: limit,
       orderBy: {
@@ -67,7 +85,6 @@ async function handleGetTransactions(request) {
 
 async function handleCreateTransaction(request) {
   try {
-
     const body = await request.json();
 
     // Validate input data

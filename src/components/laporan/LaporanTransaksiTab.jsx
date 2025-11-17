@@ -15,25 +15,63 @@ const formatCurrency = (amount) =>
   }).format(amount || 0);
 
 export default function LaporanTransaksiTab({ data, isLoading, dateRange }) {
-  const handleDownload = () => {
+  const [isExporting, setIsExporting] = React.useState(false);
+
+  const handleDownload = async () => {
     if (!data) return;
+
+    setIsExporting(true);
     try {
-      const reportDateRange = dateRange ? {
-        from: dateRange.from.toISOString().split("T")[0],
-        to: dateRange.to.toISOString().split("T")[0]
-      } : {
-        from: new Date().toISOString().split("T")[0],
-        to: new Date().toISOString().split("T")[0]
+      const reportDateRange = dateRange
+        ? {
+            from: dateRange.from.toISOString().split("T")[0],
+            to: dateRange.to.toISOString().split("T")[0],
+          }
+        : {
+            from: new Date().toISOString().split("T")[0],
+            to: new Date().toISOString().split("T")[0],
+          };
+
+      // Fetch detailed transaction data (without pagination for export)
+      const params = new URLSearchParams({
+        from: reportDateRange.from,
+        to: reportDateRange.to,
+        limit: "10000", // Large limit to get all transactions
+      });
+
+      const res = await fetch(`/api/transactions?${params.toString()}`, {
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        throw new Error("Gagal mengambil data transaksi detail");
+      }
+
+      const result = await res.json();
+      const transactions = result.data || [];
+
+      // Filter only approved transactions
+      const approvedTransactions = transactions.filter(
+        (tx) => tx.approval_status === "APPROVED"
+      );
+
+      // Combine summary data with detailed transactions
+      const exportData = {
+        ...data,
+        transactions: approvedTransactions,
       };
 
-      exportTransactionReport(data, reportDateRange);
+      await exportTransactionReport(exportData, reportDateRange);
       toast.success("Laporan berhasil diunduh!", {
         description: "File Excel dengan multiple sheet telah tersimpan",
       });
     } catch (error) {
+      console.error("Export error:", error);
       toast.error("Gagal mengunduh laporan", {
         description: error.message,
       });
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -52,9 +90,14 @@ export default function LaporanTransaksiTab({ data, isLoading, dateRange }) {
   return (
     <div className="rounded-md border">
       <div className="p-4">
-        <Button onClick={handleDownload} size="sm" className="mb-4">
+        <Button
+          onClick={handleDownload}
+          size="sm"
+          className="mb-4"
+          disabled={isExporting || !data}
+        >
           <Download className="mr-2 h-4 w-4" />
-          Download Laporan (Excel)
+          {isExporting ? "Mengunduh..." : "Download Laporan (Excel)"}
         </Button>
       </div>
 

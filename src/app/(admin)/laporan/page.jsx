@@ -145,6 +145,7 @@ export default function LaporanPage() {
           <LaporanLabaRugiTab
             data={reportData?.laporanLabaRugi}
             isLoading={isLoading}
+            dateRange={dateRange}
           />
         </TabsContent>
 

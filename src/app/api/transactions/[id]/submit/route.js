@@ -49,7 +49,7 @@ async function handleSubmitTransaction(request, context) {
       data: {
         approval_status: "PENDING",
         submitted_at: new Date(),
-        submitted_by: user.email,
+        submitted_by_id: user.id,
       },
       include: {
         armada: true,

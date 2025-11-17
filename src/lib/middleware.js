@@ -401,9 +401,11 @@ export function successResponse(data, message = "Success", meta = {}) {
 export function protectedRoute(handler, options = {}) {
   const {
     roles = null, // Array of allowed roles
+    permissions: requiredPermissions = null, // Array of permission function names (e.g., ['canViewExpenses', 'canCreateExpense'])
     rateLimit: rateLimitConfig = null, // Rate limit config or null to use method-based defaults
     auditLog = true,
     method = null, // Specify method for method-specific rate limits
+    adminAutoApprove = false, // Whether to auto-approve for admin users
   } = options;
 
   return async (request, context) => {
@@ -498,12 +500,27 @@ export function protectedRoute(handler, options = {}) {
         }
       }
 
+      // Permission-based authorization
+      if (requiredPermissions) {
+        for (const permissionName of requiredPermissions) {
+          if (!permissions[permissionName] || typeof permissions[permissionName] !== 'function') {
+            console.error(`Permission function '${permissionName}' not found or not a function`);
+            return errorResponse("Server configuration error", 500);
+          }
+          if (!permissions[permissionName](user)) {
+            return errorResponse(`Insufficient permissions: ${permissionName}`, 403);
+          }
+        }
+      }
+
       // Attach context to request
       request.auth = {
         user,
         session,
         ipAddress,
         userAgent,
+        isAdmin: user.role === "ADMIN",
+        adminAutoApprove: adminAutoApprove && user.role === "ADMIN",
       };
 
       // Call the actual handler

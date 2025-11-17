@@ -54,7 +54,7 @@ async function handleRejectEdit(req, { params }) {
         approval_status: "REJECTED",
         rejection_reason: rejection_reason,
         rejected_at: new Date(),
-        rejected_by: user.id,
+        rejected_by_id: user.id,
         // Clear edit request data
         edit_request_reason: null,
         proposed_changes: null,

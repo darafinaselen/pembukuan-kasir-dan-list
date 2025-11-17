@@ -221,8 +221,12 @@ async function handler(req, { params }) {
       }
 
       // Prevent deleting yourself (optional safety check)
-      // You would need to get current user from session
-      // For now, we'll allow deletion
+      if (req.auth.user.id === id) {
+        return NextResponse.json(
+          { success: false, message: "Anda tidak dapat menghapus akun Anda sendiri." },
+          { status: 400 }
+        );
+      }
 
       await prisma.user.delete({
         where: { id },

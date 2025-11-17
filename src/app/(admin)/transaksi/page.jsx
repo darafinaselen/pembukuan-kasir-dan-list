@@ -14,7 +14,7 @@ import TransactionEditApprovalDialog from "@/components/transaksi/TransactionEdi
 import { Pagination } from "@/components/ui/pagination";
 
 import { startOfMonth, startOfYear, endOfToday } from "date-fns";
-import { calculateTransactionFinancials } from "@/lib/accounting";
+import { calculateTransactionFinancials, calculateTourPackagePriceFromParams } from "@/lib/accounting";
 
 function getTodayDateString() {
   const today = new Date();
@@ -307,27 +307,28 @@ export default function TransaksiPage() {
 
       // Auto-update payment_status based on dp_amount
       if (id === "dp_amount") {
-        updatedData.payment_status = newValue > 0 ? "DOWN_PAYMENT" : "UNPAID";
+        const dp = newValue;
+        const total = updatedData.all_in_rate;
+        if (dp >= total) {
+          updatedData.payment_status = "PAID";
+        } else if (dp > 0) {
+          updatedData.payment_status = "DOWN_PAYMENT";
+        } else {
+          updatedData.payment_status = "UNPAID";
+        }
       }
 
       // For TOUR_PACKAGE, recalculate pricing when pax_count changes
       if (id === "pax_count") {
         const currentPackage = paketList.find((p) => p.id === prev.packageId);
         if (currentPackage?.type === "TOUR_PACKAGE" && prev.hotel_tier_id) {
-          const selectedTier = currentPackage.hotelTiers?.find(
-            (tier) => tier.id === prev.hotel_tier_id
+          const calculatedPrice = calculateTourPackagePriceFromParams(
+            currentPackage,
+            prev.hotel_tier_id,
+            newValue
           );
-          const paxCount = parseInt(newValue) || 0;
-
-          if (selectedTier && paxCount > 0) {
-            const applicableRange = selectedTier.priceRanges?.find(
-              (range) => paxCount >= range.minPax && paxCount <= range.maxPax
-            );
-
-            if (applicableRange) {
-              const calculatedPrice = applicableRange.price * paxCount;
-              updatedData.all_in_rate = calculatedPrice;
-            }
+          if (calculatedPrice > 0) {
+            updatedData.all_in_rate = calculatedPrice;
           }
         }
       }
@@ -523,27 +524,18 @@ export default function TransaksiPage() {
       setFormData((prev) => {
         const currentPackage = paketList.find((p) => p.id === prev.packageId);
         if (currentPackage?.type === "TOUR_PACKAGE") {
-          // Calculate TOUR_PACKAGE price based on selected tier and pax
-          const selectedTier = currentPackage.hotelTiers?.find(
-            (tier) =>
-              tier.id === (id === "hotel_tier_id" ? value : prev.hotel_tier_id)
+          const hotelTierId = id === "hotel_tier_id" ? value : prev.hotel_tier_id;
+          const paxCount = id === "pax_count" ? value : prev.pax_count;
+          const calculatedPrice = calculateTourPackagePriceFromParams(
+            currentPackage,
+            hotelTierId,
+            paxCount
           );
-          const paxCount =
-            parseInt(id === "pax_count" ? value : prev.pax_count) || 0;
-
-          if (selectedTier && paxCount > 0) {
-            // Find applicable price range
-            const applicableRange = selectedTier.priceRanges?.find(
-              (range) => paxCount >= range.minPax && paxCount <= range.maxPax
-            );
-
-            if (applicableRange) {
-              const calculatedPrice = applicableRange.price * paxCount;
-              return {
-                ...prev,
-                all_in_rate: calculatedPrice,
-              };
-            }
+          if (calculatedPrice > 0) {
+            return {
+              ...prev,
+              all_in_rate: calculatedPrice,
+            };
           }
         }
         return prev;
@@ -745,10 +737,17 @@ export default function TransaksiPage() {
             : null,
 
         // Status Pembayaran (otomatis berdasarkan DP)
-        payment_status:
-          formData.dp_amount && Number(formData.dp_amount) > 0
-            ? "DOWN_PAYMENT"
-            : "UNPAID",
+        payment_status: (() => {
+          const dp = formData.dp_amount ? Number(formData.dp_amount) : 0;
+          const total = Number(formData.all_in_rate) || 0;
+          if (dp >= total) {
+            return "PAID";
+          } else if (dp > 0) {
+            return "DOWN_PAYMENT";
+          } else {
+            return "UNPAID";
+          }
+        })(),
 
         // Data Tambahan untuk Paket Wisata (opsional)
         hotel_name: formData.hotel_name || null,

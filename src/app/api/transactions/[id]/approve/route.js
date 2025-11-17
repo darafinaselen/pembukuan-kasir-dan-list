@@ -86,7 +86,7 @@ async function handleApproveTransaction(request, context) {
         data: {
           approval_status: "APPROVED",
           approved_at: new Date(),
-          approved_by: user.email,
+          approved_by_id: user.id,
         },
         include: {
           armada: true,

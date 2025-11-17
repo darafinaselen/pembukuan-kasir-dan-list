@@ -172,7 +172,7 @@ async function handleUpdateTransaction(request, { params }) {
           approval_status: "PENDING_EDIT",
           edit_request_reason: edit_request_reason,
           original_data: originalData,
-          requested_by: request.auth.user.id,
+          requested_by_id: request.auth.user.id,
           requested_at: new Date(),
           // Note: We don't update the actual data yet - it stays as original
         },
@@ -306,6 +306,10 @@ async function handleUpdateTransaction(request, { params }) {
             hotelTier: true,
             armada: true,
             driver: true,
+            submitted_by: { select: { name: true, email: true } },
+            approved_by: { select: { name: true, email: true } },
+            rejected_by: { select: { name: true, email: true } },
+            requested_by: { select: { name: true, email: true } },
           },
         });
 

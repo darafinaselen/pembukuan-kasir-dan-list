@@ -291,14 +291,33 @@ describe("Package API - /api/packages", () => {
         const data = await req.json();
         const { id } = await params;
 
+        // Mock the new diff-based logic
+        const existingPackage = await prisma.servicePackage.findUnique({
+          where: { id },
+          include: {
+            hotelTiers: {
+              include: {
+                hotels: true,
+                priceRanges: true,
+              },
+            },
+            itineraries: true,
+          },
+        });
+
+        if (!existingPackage) {
+          return NextResponse.json(
+            { error: "Package not found" },
+            { status: 404 }
+          );
+        }
+
         const updatedPackage = await prisma.servicePackage.update({
           where: { id },
           data: {
             name: data.namaPaket || data.name,
             type: data.tipePaket || data.type,
             description: data.deskripsi || data.description,
-            hotelTiers: data.tarifHotel || data.hotelTiers || [],
-            itineraries: data.itinerary || data.itineraries || [],
           },
           include: {
             hotelTiers: {
@@ -723,6 +742,23 @@ describe("Package API - /api/packages/[id]", () => {
         ],
       };
 
+      const mockExistingPackage = {
+        id: "pkg-1",
+        name: "Basic Bali Tour",
+        type: "TOUR_PACKAGE",
+        hotelTiers: [
+          {
+            id: "tier-1",
+            starRating: 3,
+            hotels: [{ id: "h1", name: "Basic Hotel" }],
+            priceRanges: [{ id: "pr1", minPax: 1, maxPax: 5, price: 1500000 }],
+          },
+        ],
+        itineraries: [
+          { id: "it-1", day: 1, title: "Basic arrival", description: null },
+        ],
+      };
+
       const mockUpdatedPackage = {
         id: "pkg-1",
         name: "Premium Bali Tour",
@@ -731,7 +767,7 @@ describe("Package API - /api/packages/[id]", () => {
         itineraries: [],
       };
 
-      prisma.servicePackage.findUnique.mockResolvedValue(mockUpdatedPackage);
+      prisma.servicePackage.findUnique.mockResolvedValue(mockExistingPackage);
       prisma.servicePackage.update.mockResolvedValue(mockUpdatedPackage);
 
       const { req } = createMocks({
@@ -743,6 +779,150 @@ describe("Package API - /api/packages/[id]", () => {
         params: Promise.resolve({ id: "pkg-1" }),
       });
 
+      expect(prisma.servicePackage.findUnique).toHaveBeenCalledWith({
+        where: { id: "pkg-1" },
+        include: {
+          hotelTiers: {
+            include: {
+              hotels: true,
+              priceRanges: true,
+            },
+          },
+          itineraries: true,
+        },
+      });
+      expect(prisma.servicePackage.update).toHaveBeenCalled();
+      expect(response.status).toBe(200);
+    });
+
+    it("should handle removal of hotel tiers and itineraries", async () => {
+      const updateDataWithRemovals = {
+        namaPaket: "Basic Bali Tour",
+        tipePaket: "Paket Tour",
+        tarifHotel: [], // Remove all hotel tiers
+        itinerary: [], // Remove all itineraries
+      };
+
+      const mockExistingPackage = {
+        id: "pkg-1",
+        name: "Premium Bali Tour",
+        type: "TOUR_PACKAGE",
+        hotelTiers: [
+          {
+            id: "tier-1",
+            starRating: 5,
+            hotels: [{ id: "h1", name: "Luxury Hotel" }],
+            priceRanges: [{ id: "pr1", minPax: 1, maxPax: 2, price: 2500000 }],
+          },
+        ],
+        itineraries: [
+          { id: "it-1", day: 1, title: "Luxury arrival", description: null },
+          { id: "it-2", day: 2, title: "Beach tour", description: null },
+        ],
+      };
+
+      const mockUpdatedPackage = {
+        id: "pkg-1",
+        name: "Basic Bali Tour",
+        type: "TOUR_PACKAGE",
+        hotelTiers: [],
+        itineraries: [],
+      };
+
+      prisma.servicePackage.findUnique.mockResolvedValue(mockExistingPackage);
+      prisma.servicePackage.update.mockResolvedValue(mockUpdatedPackage);
+
+      const { req } = createMocks({
+        method: "PUT",
+      });
+      req.json = jest.fn().mockResolvedValue(updateDataWithRemovals);
+
+      const response = await PUT(req, {
+        params: Promise.resolve({ id: "pkg-1" }),
+      });
+
+      expect(prisma.servicePackage.findUnique).toHaveBeenCalled();
+      expect(prisma.servicePackage.update).toHaveBeenCalled();
+      expect(response.status).toBe(200);
+    });
+
+    it("should handle partial updates with some entities added/removed", async () => {
+      const partialUpdateData = {
+        namaPaket: "Updated Bali Tour",
+        tipePaket: "Paket Tour",
+        tarifHotel: [
+          {
+            id: "existing-tier-1", // Keep existing tier
+            tingkat: "4 Star",
+            daftarHotel: ["Updated Hotel A"],
+            priceRanges: [{ minPax: 1, maxPax: 5, price: 2000000 }],
+          },
+          // Add new tier without ID
+          {
+            tingkat: "3 Star",
+            daftarHotel: ["Budget Hotel"],
+            priceRanges: [{ minPax: 1, maxPax: 5, price: 1500000 }],
+          },
+        ],
+        itinerary: [
+          {
+            id: "existing-it-1", // Keep existing itinerary
+            hari: 1,
+            aktivitas: "Updated arrival",
+          },
+          // Add new itinerary without ID
+          {
+            hari: 2,
+            aktivitas: "New activity",
+          },
+        ],
+      };
+
+      const mockExistingPackage = {
+        id: "pkg-1",
+        name: "Bali Tour",
+        type: "TOUR_PACKAGE",
+        hotelTiers: [
+          {
+            id: "existing-tier-1",
+            starRating: 3,
+            hotels: [{ id: "h1", name: "Old Hotel" }],
+            priceRanges: [{ id: "pr1", minPax: 1, maxPax: 5, price: 1500000 }],
+          },
+          {
+            id: "tier-to-remove",
+            starRating: 2,
+            hotels: [{ id: "h2", name: "Remove Hotel" }],
+            priceRanges: [{ id: "pr2", minPax: 1, maxPax: 5, price: 1000000 }],
+          },
+        ],
+        itineraries: [
+          { id: "existing-it-1", day: 1, title: "Old arrival", description: null },
+          { id: "it-to-remove", day: 2, title: "Remove activity", description: null },
+        ],
+      };
+
+      const mockUpdatedPackage = {
+        id: "pkg-1",
+        name: "Updated Bali Tour",
+        type: "TOUR_PACKAGE",
+        hotelTiers: [],
+        itineraries: [],
+      };
+
+      prisma.servicePackage.findUnique.mockResolvedValue(mockExistingPackage);
+      prisma.servicePackage.update.mockResolvedValue(mockUpdatedPackage);
+
+      const { req } = createMocks({
+        method: "PUT",
+      });
+      req.json = jest.fn().mockResolvedValue(partialUpdateData);
+
+      const response = await PUT(req, {
+        params: Promise.resolve({ id: "pkg-1" }),
+      });
+
+      expect(prisma.servicePackage.findUnique).toHaveBeenCalled();
       expect(prisma.servicePackage.update).toHaveBeenCalled();
       expect(response.status).toBe(200);
     });

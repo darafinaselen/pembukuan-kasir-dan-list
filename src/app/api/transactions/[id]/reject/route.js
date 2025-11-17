@@ -59,7 +59,7 @@ async function handleRejectTransaction(request, context) {
         data: {
           approval_status: "REJECTED",
           rejected_at: new Date(),
-          rejected_by: user.email,
+          rejected_by_id: user.id,
           rejection_reason: rejection_reason.trim(),
         },
         include: {

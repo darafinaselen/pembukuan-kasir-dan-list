@@ -97,10 +97,6 @@ async function handleGetPackages(request) {
 
 async function handleCreatePackage(request) {
   try {
-    // Check permissions - only ADMIN can create
-    if (!["ADMIN"].includes(request.auth.user.role)) {
-      return errorResponse("Insufficient permissions", 403);
-    }
 
     const data = await request.json();
     const {
@@ -302,10 +298,10 @@ async function handleCreatePackage(request) {
 
 // ADMIN and OPERATOR can view packages (OPERATOR needs to select for transactions)
 export const GET = protectedRoute(handleGetPackages, {
-  roles: ["ADMIN", "OPERATOR"],
+  permissions: ["canViewPackages"],
 });
 
 // Only ADMIN can create packages
 export const POST = protectedRoute(handleCreatePackage, {
-  roles: ["ADMIN"],
+  permissions: ["canManagePackages"],
 });

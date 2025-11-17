@@ -11,10 +11,6 @@ import { v4 as uuidv4 } from "uuid";
 
 async function handleGetExpenses(request) {
   try {
-    // Check permissions
-    if (!permissions.canViewExpenses(request.auth.user)) {
-      return errorResponse("Insufficient permissions", 403);
-    }
 
     const url = new URL(request.url);
     const page = parseInt(url.searchParams.get("page")) || 1;
@@ -67,10 +63,6 @@ async function handleGetExpenses(request) {
 
 async function handleCreateExpense(request) {
   try {
-    // Check permissions
-    if (!permissions.canCreateExpense(request.auth.user)) {
-      return errorResponse("Insufficient permissions", 403);
-    }
 
     const formData = await request.formData();
 
@@ -114,8 +106,7 @@ async function handleCreateExpense(request) {
       return errorResponse("Kategori 'Lainnya' tidak boleh kosong", 400);
     }
 
-    const isAdmin = request.auth.user?.role === "ADMIN";
-    const approvalData = isAdmin
+    const approvalData = request.auth.adminAutoApprove
       ? {
           approval_status: "APPROVED",
           approved_by_id: request.auth.user.id,
@@ -217,9 +208,10 @@ async function handleCreateExpense(request) {
 // ADMIN and OPERATOR can view and create expenses
 // OPERATOR creates as DRAFT and must submit for approval
 export const GET = protectedRoute(handleGetExpenses, {
-  roles: ["ADMIN", "OPERATOR"],
+  permissions: ["canViewExpenses"],
 });
 
 export const POST = protectedRoute(handleCreateExpense, {
-  roles: ["ADMIN", "OPERATOR"],
+  permissions: ["canCreateExpense"],
+  adminAutoApprove: true,
 });

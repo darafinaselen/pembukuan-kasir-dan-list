@@ -50,7 +50,7 @@ async function handleApproveEdit(req, { params }) {
         ...transaction.proposed_changes,
         approval_status: "APPROVED",
         approved_at: new Date(),
-        approved_by: user.id,
+        approved_by_id: user.id,
         // Clear edit request data
         edit_request_reason: null,
         proposed_changes: null,

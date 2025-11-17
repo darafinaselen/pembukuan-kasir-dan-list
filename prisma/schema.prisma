@@ -335,18 +335,22 @@ model Transaction {
   // Approval Workflow
   approval_status  ApprovalStatus @default(DRAFT)
   submitted_at     DateTime? // Waktu submit untuk persetujuan
-  submitted_by     String? // User ID yang submit
+  submitted_by_id  String?
+  submitted_by     User?     @relation("TransactionSubmittedBy", fields: [submitted_by_id], references: [id], onDelete: SetNull)
   approved_at      DateTime? // Waktu disetujui
-  approved_by      String? // User ID yang approve
+  approved_by_id   String?
+  approved_by      User?     @relation("TransactionApprovedBy", fields: [approved_by_id], references: [id], onDelete: SetNull)
   rejected_at      DateTime? // Waktu ditolak
-  rejected_by      String? // User ID yang reject
+  rejected_by_id   String?
+  rejected_by      User?     @relation("TransactionRejectedBy", fields: [rejected_by_id], references: [id], onDelete: SetNull)
   rejection_reason String? // Alasan penolakan
 
   // Edit Request Workflow
   edit_request_reason String? // Alasan operator request edit
   original_data       Json? // Backup data sebelum edit (untuk restore jika rejected)
   proposed_changes    Json? // Perubahan yang diusulkan operator (untuk review admin)
-  requested_by        String? // User ID yang request edit
+  requested_by_id     String?
+  requested_by        User?     @relation("TransactionRequestedBy", fields: [requested_by_id], references: [id], onDelete: SetNull)
   requested_at        DateTime? // Waktu request edit
 
   // --- Relasi (Foreign Keys) ---
@@ -368,6 +372,10 @@ model Transaction {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([submitted_by_id])
+  @@index([approved_by_id])
+  @@index([rejected_by_id])
+  @@index([requested_by_id])
   @@map("transactions")
 }
 
@@ -398,6 +406,12 @@ model User {
   // Relasi untuk expense approval workflow
   expensesRequested Expense[] @relation("ExpenseRequestedBy")
   expensesApproved  Expense[] @relation("ExpenseApprovedBy")
+
+  // Relasi untuk transaction approval workflow
+  transactionsSubmitted Transaction[] @relation("TransactionSubmittedBy")
+  transactionsApproved  Transaction[] @relation("TransactionApprovedBy")
+  transactionsRejected  Transaction[] @relation("TransactionRejectedBy")
+  transactionsRequested Transaction[] @relation("TransactionRequestedBy")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -10,10 +10,6 @@ import { validateTransactionData } from "@/lib/validators/transaction-validator"
 
 async function handleGetTransactions(request) {
   try {
-    // Check permissions
-    if (!permissions.canViewTransactions(request.auth.user)) {
-      return errorResponse("Insufficient permissions", 403);
-    }
 
     const url = new URL(request.url);
     const page = parseInt(url.searchParams.get("page")) || 1;
@@ -43,6 +39,10 @@ async function handleGetTransactions(request) {
         hotelTier: true,
         armada: true,
         driver: true,
+        submitted_by: { select: { name: true, email: true } },
+        approved_by: { select: { name: true, email: true } },
+        rejected_by: { select: { name: true, email: true } },
+        requested_by: { select: { name: true, email: true } },
       },
     });
 
@@ -67,10 +67,6 @@ async function handleGetTransactions(request) {
 
 async function handleCreateTransaction(request) {
   try {
-    // Check permissions
-    if (!permissions.canCreateTransaction(request.auth.user)) {
-      return errorResponse("Insufficient permissions", 403);
-    }
 
     const body = await request.json();
 
@@ -87,8 +83,7 @@ async function handleCreateTransaction(request) {
     const validatedData = validation.data;
 
     // Determine if admin created this transaction for auto-approval
-    const isAdmin = request.auth.user?.role === "ADMIN";
-    const approvalMeta = isAdmin
+    const approvalMeta = request.auth.adminAutoApprove
       ? {
           approval_status: "APPROVED",
           approved_at: new Date(),
@@ -192,9 +187,10 @@ async function handleCreateTransaction(request) {
 // ADMIN and OPERATOR can view and create transactions
 // OPERATOR creates as DRAFT and must submit for approval
 export const GET = protectedRoute(handleGetTransactions, {
-  roles: ["ADMIN", "OPERATOR"],
+  permissions: ["canViewTransactions"],
 });
 
 export const POST = protectedRoute(handleCreateTransaction, {
-  roles: ["ADMIN", "OPERATOR"],
+  permissions: ["canCreateTransaction"],
+  adminAutoApprove: true,
 });

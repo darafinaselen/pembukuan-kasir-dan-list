@@ -130,7 +130,14 @@ export default function PengeluaranDialog({
 
         <form
           id="pengeluaran-form"
-          onSubmit={isOperatorRequest ? (e) => { e.preventDefault(); onRequestApproval(); } : handleSubmit}
+          onSubmit={
+            isOperatorRequest
+              ? (e) => {
+                  e.preventDefault();
+                  onRequestApproval();
+                }
+              : handleSubmit
+          }
           className="space-y-4 py-4"
         >
           <div className="space-y-2">
@@ -543,8 +550,10 @@ export default function PengeluaranDialog({
                 <Spinner size="sm" className="mr-2" />
                 {isOperatorRequest ? "Mengajukan..." : "Menyimpan..."}
               </>
+            ) : isOperatorRequest ? (
+              "Ajukan Persetujuan"
             ) : (
-              isOperatorRequest ? "Ajukan Persetujuan" : "Simpan"
+              "Simpan"
             )}
           </Button>
         </DialogFooter>

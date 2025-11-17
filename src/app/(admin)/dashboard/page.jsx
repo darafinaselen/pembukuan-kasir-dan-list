@@ -32,12 +32,6 @@ function DashboardPage() {
   const { retry: retryDashboard, isRetrying: isRetryingDashboard } = useRetry(3, 1000);
   const { retry: retryDriver, isRetrying: isRetryingDriver } = useRetry(3, 1000);
 
-  // Redirect OPERATOR away from dashboard (contains financial data)
-  useEffect(() => {
-    if (!userLoading && user && user.role !== "ADMIN") {
-      router.push("/transaksi");
-    }
-  }, [user, userLoading, router]);
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -159,19 +153,11 @@ function DashboardPage() {
     }
   };
 
-  // Show loading or redirect message for non-admin users
+  // Show loading message while user data is being fetched
   if (userLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <p className="text-muted-foreground">Loading...</p>
-      </div>
-    );
-  }
-
-  if (user && user.role !== "ADMIN") {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <p className="text-muted-foreground">Redirecting...</p>
       </div>
     );
   }

@@ -227,19 +227,19 @@ async function handleDeleteExpense(request, { params }) {
       return errorResponse("Pengeluaran dengan request pending tidak dapat dihapus", 403);
     }
 
-    await prisma.expense.delete({
-      where: { id: idFromParams },
-    });
-
-    // Log audit event
+    // Log audit event before deletion
     await logExpenseEvent(
       request.auth.user.id,
       "DELETE",
       idFromParams,
-      null,
+      existingExpense,
       request.auth.ipAddress,
       request.auth.userAgent
     );
+
+    await prisma.expense.delete({
+      where: { id: idFromParams },
+    });
 
     return successResponse({ message: "Data berhasil dihapus" });
   } catch (error) {

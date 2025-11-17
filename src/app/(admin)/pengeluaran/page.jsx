@@ -724,7 +724,7 @@ export default function PengeluaranPage() {
         const monthIndex = parseInt(formData.paymentMonth, 10) - 1;
         formDataToSend.append(
           "paymentMonth",
-          new Date(year, monthIndex, 1).toISOString()
+          new Date(Date.UTC(year, monthIndex, 1)).toISOString()
         );
       }
       formDataToSend.append("category", formData.category);

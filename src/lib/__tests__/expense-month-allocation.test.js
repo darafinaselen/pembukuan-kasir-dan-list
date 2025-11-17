@@ -137,7 +137,7 @@ describe("Expense Month Allocation Feature", () => {
       const mockExpense = {
         id: 1,
         date: new Date("2025-11-07"),
-        paymentMonth: new Date("2025-09-01"), // September
+        paymentMonth: new Date("2025-09-01T00:00:00.000Z"), // September
         category: "LISTRIK",
         description: "Test expense",
         amount: 150000,
@@ -148,11 +148,11 @@ describe("Expense Month Allocation Feature", () => {
         ...mockExpense,
         date: new Date(mockExpense.date).toISOString().split("T")[0],
         paymentMonth: mockExpense.paymentMonth
-          ? new Date(mockExpense.paymentMonth).toISOString().substring(0, 7)
-          : new Date(mockExpense.date).toISOString().substring(0, 7),
+          ? String(new Date(mockExpense.paymentMonth).getMonth() + 1).padStart(2, "0")
+          : undefined,
       };
 
-      expect(formData.paymentMonth).toBe("2025-09");
+      expect(formData.paymentMonth).toBe("09");
     });
   });
 });

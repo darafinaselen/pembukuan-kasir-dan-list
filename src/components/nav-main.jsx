@@ -22,13 +22,13 @@ import {
 export function NavMain({ items }) {
   // Initialize state from localStorage
   const [openItems, setOpenItems] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const persistedState = localStorage.getItem('sidebar-expanded-items');
+    if (typeof window !== "undefined") {
+      const persistedState = localStorage.getItem("sidebar-expanded-items");
       if (persistedState) {
         try {
           return JSON.parse(persistedState);
         } catch (error) {
-          console.error('Error parsing sidebar state:', error);
+          console.error("Error parsing sidebar state:", error);
           return {};
         }
       }
@@ -38,13 +38,13 @@ export function NavMain({ items }) {
 
   // Save state to localStorage whenever it changes
   useEffect(() => {
-    localStorage.setItem('sidebar-expanded-items', JSON.stringify(openItems));
+    localStorage.setItem("sidebar-expanded-items", JSON.stringify(openItems));
   }, [openItems]);
 
   const toggleItem = (itemTitle) => {
-    setOpenItems(prev => ({
+    setOpenItems((prev) => ({
       ...prev,
-      [itemTitle]: !prev[itemTitle]
+      [itemTitle]: !prev[itemTitle],
     }));
   };
 

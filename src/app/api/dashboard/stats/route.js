@@ -52,12 +52,9 @@ async function handleGetDashboardStats(request) {
           { actual_checkin_datetime: { not: null } },
           // Include transactions with down payment
           {
-            AND: [
-              { payment_status: "DOWN_PAYMENT" },
-              { dp_amount: { gt: 0 } }
-            ]
-          }
-        ]
+            AND: [{ payment_status: "DOWN_PAYMENT" }, { dp_amount: { gt: 0 } }],
+          },
+        ],
       },
       select: {
         id: true,
@@ -79,24 +76,9 @@ async function handleGetDashboardStats(request) {
             name: true,
             type: true,
             durationHours: true,
-            hotelTiers: {
-              select: {
-                id: true,
-                priceRanges: {
-                  select: {
-                    minPax: true,
-                    maxPax: true,
-                    price: true,
-                  },
-                },
-              },
-            },
           },
         },
         packageId: true,
-        hotel_tier_id: true,
-        pax_count: true,
-        custom_price: true,
       },
       orderBy: {
         booking_date: "asc",

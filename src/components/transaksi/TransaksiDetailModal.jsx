@@ -85,8 +85,14 @@ export default function TransaksiDetailModal({
             />
             {data.package?.type === "TOUR_PACKAGE" && (
               <>
+                {data.hotelTier && (
+                  <DetailItem
+                    label="Tingkat Hotel"
+                    value={`${data.hotelTier.starRating} Bintang`}
+                  />
+                )}
                 {data.hotel_name && (
-                  <DetailItem label="Hotel" value={data.hotel_name} />
+                  <DetailItem label="Hotel Terpilih" value={data.hotel_name} />
                 )}
                 {data.pax_count && (
                   <DetailItem

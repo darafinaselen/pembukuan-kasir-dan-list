@@ -198,33 +198,10 @@ async function handleUpdatePackage(request, { params }) {
 
     console.log("Existing package found:", existingPackage.name);
 
-    // Smartly update hotel tiers and itineraries
+    // Update hotel tiers and itineraries intelligently
     const tx = [];
 
-    // Delete old data first (only related data, not the package itself)
-    console.log("Deleting old hotel tiers and itineraries...");
-    tx.push(
-      prisma.hotelPriceRange.deleteMany({
-        where: { hotelTier: { servicePackageId: id } },
-      })
-    );
-    tx.push(
-      prisma.hotel.deleteMany({
-        where: { hotelTier: { servicePackageId: id } },
-      })
-    );
-    tx.push(
-      prisma.hotelTier.deleteMany({
-        where: { servicePackageId: id },
-      })
-    );
-    tx.push(
-      prisma.itineraryDay.deleteMany({
-        where: { servicePackageId: id },
-      })
-    );
-
-    // Then, update the main package data
+    // Update the main package data first
     console.log("Updating main package data...");
     tx.push(
       prisma.servicePackage.update({
@@ -233,18 +210,28 @@ async function handleUpdatePackage(request, { params }) {
       })
     );
 
-    // Then, create new hotel tiers and itineraries if they exist
-    if (
-      type === "TOUR_PACKAGE" &&
-      hotelTiers &&
-      Array.isArray(hotelTiers) &&
-      hotelTiers.length > 0
-    ) {
-      console.log("Creating new hotel tiers...", hotelTiers.length);
-      // validate priceRanges for each tier
-      for (let i = 0; i < hotelTiers.length; i++) {
-        const tier = hotelTiers[i];
-        if (tier.priceRanges) {
+    // Handle hotel tiers for TOUR_PACKAGE
+    if (type === "TOUR_PACKAGE") {
+      if (hotelTiers && Array.isArray(hotelTiers) && hotelTiers.length > 0) {
+        console.log("Processing hotel tiers...", hotelTiers.length);
+
+        // Validate all tiers first
+        for (let i = 0; i < hotelTiers.length; i++) {
+          const tier = hotelTiers[i];
+
+          // Ensure priceRanges exist and is not empty
+          if (
+            !tier.priceRanges ||
+            !Array.isArray(tier.priceRanges) ||
+            tier.priceRanges.length === 0
+          ) {
+            return errorResponse(
+              `Tingkat hotel ke-${i + 1} harus memiliki minimal satu rentang harga`,
+              400
+            );
+          }
+
+          // Validate price ranges
           const v = validatePriceRangesForTier(tier.priceRanges);
           if (!v.ok) {
             console.error("Price range validation failed:", v.message);
@@ -253,62 +240,179 @@ async function handleUpdatePackage(request, { params }) {
               400
             );
           }
-        }
-      }
 
-      tx.push(
-        ...hotelTiers.map((tier, idx) => {
-          console.log(`Creating hotel tier ${idx + 1}:`, tier);
-          return prisma.hotelTier.create({
-            data: {
-              servicePackageId: id,
-              starRating: (() => {
-                const m = String(tier.tingkat || "").match(/\d+/);
-                return m ? Number(m[0]) : tier.starRating || 0;
-              })(),
-              hotels:
-                tier.daftarHotel && Array.isArray(tier.daftarHotel)
-                  ? {
-                      create: tier.daftarHotel.map((hotelName) => ({
-                        name: String(hotelName),
-                      })),
-                    }
-                  : undefined,
-              priceRanges:
-                tier.priceRanges && Array.isArray(tier.priceRanges)
-                  ? {
-                      create: tier.priceRanges.map((r) => ({
-                        minPax: Number(r.minPax || 0),
-                        maxPax: Number(r.maxPax || 0),
-                        // Convert from thousands to full rupiah
-                        price: Number(r.price || 0) * 1000,
-                      })),
-                    }
-                  : undefined,
-            },
+          // Ensure at least one price range has valid price > 0
+          const hasValidPrice = tier.priceRanges.some((r) => {
+            const price =
+              typeof r.price === "string"
+                ? Number(r.price.trim() || 0)
+                : Number(r.price || 0);
+            return price > 0;
           });
+
+          if (!hasValidPrice) {
+            return errorResponse(
+              `Tingkat hotel ke-${i + 1} harus memiliki minimal satu rentang harga dengan nilai > 0`,
+              400
+            );
+          }
+        }
+
+        // Process each hotel tier
+        for (const tier of hotelTiers) {
+          const starRating = (() => {
+            const m = String(tier.tingkat || "").match(/\d+/);
+            return m ? Number(m[0]) : tier.starRating || 0;
+          })();
+
+          if (tier.id) {
+            // Update existing hotel tier
+            console.log(`Updating hotel tier ${tier.id}`);
+            tx.push(
+              prisma.hotelTier.update({
+                where: { id: tier.id },
+                data: {
+                  starRating,
+                  // Handle hotels
+                  hotels: tier.daftarHotel && Array.isArray(tier.daftarHotel)
+                    ? {
+                        deleteMany: {}, // Delete existing hotels
+                        create: tier.daftarHotel.map((hotel) => ({
+                          name: typeof hotel === 'string' ? hotel : hotel.name,
+                        })),
+                      }
+                    : { deleteMany: {} },
+                  // Handle price ranges
+                  priceRanges: tier.priceRanges && Array.isArray(tier.priceRanges)
+                    ? {
+                        deleteMany: {}, // Delete existing price ranges
+                        create: tier.priceRanges.map((r) => ({
+                          minPax: Number(r.minPax || 0),
+                          maxPax: Number(r.maxPax || 0),
+                          price: Number(r.price || 0),
+                        })),
+                      }
+                    : { deleteMany: {} },
+                },
+              })
+            );
+          } else {
+            // Create new hotel tier
+            console.log(`Creating new hotel tier`);
+            tx.push(
+              prisma.hotelTier.create({
+                data: {
+                  servicePackageId: id,
+                  starRating,
+                  hotels: tier.daftarHotel && Array.isArray(tier.daftarHotel)
+                    ? {
+                        create: tier.daftarHotel.map((hotel) => ({
+                          name: typeof hotel === 'string' ? hotel : hotel.name,
+                        })),
+                      }
+                    : undefined,
+                  priceRanges: tier.priceRanges && Array.isArray(tier.priceRanges)
+                    ? {
+                        create: tier.priceRanges.map((r) => ({
+                          minPax: Number(r.minPax || 0),
+                          maxPax: Number(r.maxPax || 0),
+                          price: Number(r.price || 0),
+                        })),
+                      }
+                    : undefined,
+                },
+              })
+            );
+          }
+        }
+      } else {
+        // No hotel tiers provided, delete all existing ones
+        console.log("Deleting all hotel tiers...");
+        tx.push(
+          prisma.hotelPriceRange.deleteMany({
+            where: { hotelTier: { servicePackageId: id } },
+          })
+        );
+        tx.push(
+          prisma.hotel.deleteMany({
+            where: { hotelTier: { servicePackageId: id } },
+          })
+        );
+        tx.push(
+          prisma.hotelTier.deleteMany({
+            where: { servicePackageId: id },
+          })
+        );
+      }
+    } else {
+      // Not TOUR_PACKAGE, ensure no hotel tiers exist
+      console.log("Deleting all hotel tiers (not TOUR_PACKAGE)...");
+      tx.push(
+        prisma.hotelPriceRange.deleteMany({
+          where: { hotelTier: { servicePackageId: id } },
+        })
+      );
+      tx.push(
+        prisma.hotel.deleteMany({
+          where: { hotelTier: { servicePackageId: id } },
+        })
+      );
+      tx.push(
+        prisma.hotelTier.deleteMany({
+          where: { servicePackageId: id },
         })
       );
     }
 
-    if (
-      (type === "TOUR_PACKAGE" || type === "FULL_DAY_TRIP") &&
-      itineraries &&
-      Array.isArray(itineraries) &&
-      itineraries.length > 0
-    ) {
-      console.log("Creating new itineraries...", itineraries.length);
+    // Handle itineraries for TOUR_PACKAGE and FULL_DAY_TRIP
+    if (type === "TOUR_PACKAGE" || type === "FULL_DAY_TRIP") {
+      if (itineraries && Array.isArray(itineraries) && itineraries.length > 0) {
+        console.log("Processing itineraries...", itineraries.length);
+
+        for (const itinerary of itineraries) {
+          if (itinerary.id) {
+            // Update existing itinerary
+            console.log(`Updating itinerary ${itinerary.id}`);
+            tx.push(
+              prisma.itineraryDay.update({
+                where: { id: itinerary.id },
+                data: {
+                  day: itinerary.hari ? Number(itinerary.hari) : 0,
+                  title: itinerary.aktivitas || String(itinerary.title || ""),
+                  description: itinerary.deskripsi || null,
+                },
+              })
+            );
+          } else {
+            // Create new itinerary
+            console.log(`Creating new itinerary`);
+            tx.push(
+              prisma.itineraryDay.create({
+                data: {
+                  servicePackageId: id,
+                  day: itinerary.hari ? Number(itinerary.hari) : 0,
+                  title: itinerary.aktivitas || String(itinerary.title || ""),
+                  description: itinerary.deskripsi || null,
+                },
+              })
+            );
+          }
+        }
+      } else {
+        // No itineraries provided, delete all existing ones
+        console.log("Deleting all itineraries...");
+        tx.push(
+          prisma.itineraryDay.deleteMany({
+            where: { servicePackageId: id },
+          })
+        );
+      }
+    } else {
+      // Not TOUR_PACKAGE or FULL_DAY_TRIP, ensure no itineraries exist
+      console.log("Deleting all itineraries (not TOUR_PACKAGE or FULL_DAY_TRIP)...");
       tx.push(
-        ...itineraries.map((it, idx) => {
-          console.log(`Creating itinerary ${idx + 1}:`, it);
-          return prisma.itineraryDay.create({
-            data: {
-              servicePackageId: id,
-              day: it.hari ? Number(it.hari) : 0,
-              title: it.aktivitas || String(it.title || ""),
-              description: it.deskripsi || null,
-            },
-          });
+        prisma.itineraryDay.deleteMany({
+          where: { servicePackageId: id },
         })
       );
     }

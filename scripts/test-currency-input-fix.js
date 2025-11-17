@@ -1,0 +1,25 @@
+// Test CurrencyInput dengan Controller
+console.log('✅ Test: CurrencyInput dengan Controller dari react-hook-form');
+console.log('');
+console.log('Sebelum (SALAH):');
+console.log('  <CurrencyInput {...register("price")} />');
+console.log('  ❌ Masalah: register() tidak kompatibel dengan controlled component');
+console.log('  ❌ Hasil: value selalu 0 atau tidak terupdate');
+console.log('');
+console.log('Sesudah (BENAR):');
+console.log('  <Controller');
+console.log('    name="price"');
+console.log('    control={control}');
+console.log('    render={({ field }) => (');
+console.log('      <CurrencyInput');
+console.log('        value={field.value}');
+console.log('        onChange={(e) => field.onChange(e.target.value)}');
+console.log('      />');
+console.log('    )}');
+console.log('  />');
+console.log('  ✅ Hasil: value terupdate dengan benar');
+console.log('');
+console.log('Penerapan di PackageForm.jsx:');
+console.log('  1. TOUR_PACKAGE priceRanges → Controller ✅');
+console.log('  2. CAR_RENTAL hargaDefault → Controller ✅');
+console.log('  3. CAR_RENTAL tarifOvertime → Controller ✅');

@@ -211,6 +211,7 @@ if (!permissions.canViewReports(request.auth.user)) {
 ```
 
 **Permission Hierarchy:**
+
 - `ADMIN`: Full access to all features
 - `OPERATOR`: Can create/view transactions & expenses (as DRAFT), submit for approval
 - **Financial reports**: Only ADMIN can view/export

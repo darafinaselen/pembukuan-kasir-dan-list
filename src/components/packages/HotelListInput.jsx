@@ -11,9 +11,16 @@ export function HotelListInput({
   const [input, setInput] = React.useState("");
 
   const addHotel = () => {
-    if (input.trim() && !hotels.includes(input.trim())) {
-      onChange([...hotels, input.trim()]);
-      setInput("");
+    if (input.trim()) {
+      const hotelName = input.trim();
+      // Check if hotel already exists (handle both string and object formats)
+      const exists = hotels.some(hotel =>
+        typeof hotel === 'string' ? hotel === hotelName : hotel.name === hotelName
+      );
+      if (!exists) {
+        onChange([...hotels, hotelName]);
+        setInput("");
+      }
     }
   };
 
@@ -45,11 +52,11 @@ export function HotelListInput({
       </button>
       {hotels.map((hotel, idx) => (
         <Badge
-          key={hotel + idx}
+          key={(typeof hotel === 'string' ? hotel : hotel.name) + idx}
           color="teal"
           className="flex items-center gap-1"
         >
-          {hotel}
+          {typeof hotel === 'string' ? hotel : hotel.name}
           <button
             type="button"
             className="ml-1 text-xs"

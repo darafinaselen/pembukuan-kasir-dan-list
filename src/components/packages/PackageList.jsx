@@ -72,10 +72,10 @@ export function PackageList({ packages, onEdit, onDelete, onView }) {
           const tipe = typeMap[rawTipe] ?? rawTipe ?? "-";
           const title = pkg.name ?? pkg.namaPaket;
           const description = pkg.description ?? pkg.deskripsi ?? "-";
-          let duration = "-";
+          let duration = null;
 
           if (tipe === "Sewa Mobil") {
-            duration = pkg.durationHours + " Jam";
+            duration = pkg.durationHours ? `${pkg.durationHours} Jam` : null;
           } else if (tipe === "Full Day Trip") {
             duration = "1 Hari";
           } else if (tipe === "Paket Tour") {
@@ -88,7 +88,7 @@ export function PackageList({ packages, onEdit, onDelete, onView }) {
                 pkg.durasi.malam ?? 0
               } Malam`;
             } else {
-              duration = "-";
+              duration = null;
             }
           } else {
             // fallback for other/unknown shapes
@@ -99,7 +99,7 @@ export function PackageList({ packages, onEdit, onDelete, onView }) {
                   ? `${pkg.durationHours} Jam`
                   : pkg.durasi
                     ? `${pkg.durasi.hari} Hari ${pkg.durasi.malam ?? 0} Malam`
-                    : "-";
+                    : null;
           }
 
           const price = pkg.price ?? pkg.hargaDefault ?? 0;
@@ -123,7 +123,8 @@ export function PackageList({ packages, onEdit, onDelete, onView }) {
                           <Car className="h-7 w-7 text-white" />
                         ) : tipe === "Full Day Trip" ? (
                           <Compass className="h-7 w-7 text-white" />
-                        ) : tipe === "Harga Custom" || tipe === "CUSTOM_PRICING" ? (
+                        ) : tipe === "Harga Custom" ||
+                          tipe === "CUSTOM_PRICING" ? (
                           <Settings className="h-7 w-7 text-white" />
                         ) : (
                           <Plane className="h-7 w-7 text-white" />
@@ -161,12 +162,14 @@ export function PackageList({ packages, onEdit, onDelete, onView }) {
                   <p className="text-gray-900 line-clamp-2">{description}</p>
                 </div>
 
-                <div className="flex items-center gap-2 px-3 py-2.5 bg-purple-50 rounded-lg border border-purple-100">
-                  <Clock className="h-4 w-4 text-purple-600 shrink-0" />
-                  <div>
-                    <p className="text-purple-900">{duration}</p>
+                {duration && (
+                  <div className="flex items-center gap-2 px-3 py-2.5 bg-purple-50 rounded-lg border border-purple-100">
+                    <Clock className="h-4 w-4 text-purple-600 shrink-0" />
+                    <div>
+                      <p className="text-purple-900">{duration}</p>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {tipe === "Harga Custom" || tipe === "CUSTOM_PRICING" ? (
                   <div className="px-3 py-2.5 bg-yellow-50 rounded-lg border border-yellow-100">
@@ -208,20 +211,40 @@ export function PackageList({ packages, onEdit, onDelete, onView }) {
                           {(() => {
                             // Get minimum price from all priceRanges across all hotel tiers for TOUR_PACKAGE
                             let minPrice = null;
-                            if (pkg.hotelTiers && Array.isArray(pkg.hotelTiers)) {
+                            let validPriceCount = 0;
+                            if (
+                              pkg.hotelTiers &&
+                              Array.isArray(pkg.hotelTiers)
+                            ) {
                               for (const tier of pkg.hotelTiers) {
-                                if (tier.priceRanges && Array.isArray(tier.priceRanges)) {
+                                if (
+                                  tier.priceRanges &&
+                                  Array.isArray(tier.priceRanges)
+                                ) {
                                   for (const range of tier.priceRanges) {
-                                    if (range.price && (minPrice === null || range.price < minPrice)) {
-                                      minPrice = range.price;
+                                    if (
+                                      range.price &&
+                                      Number(range.price) > 0
+                                    ) {
+                                      validPriceCount++;
+                                      if (
+                                        minPrice === null ||
+                                        range.price < minPrice
+                                      ) {
+                                        minPrice = range.price;
+                                      }
                                     }
                                   }
                                 }
                               }
                             }
-                            return minPrice
-                              ? `Mulai dari ${fmt(minPrice)}/PAX`
-                              : fmt(price);
+                            if (minPrice !== null) {
+                              return `Mulai dari ${fmt(minPrice)}/PAX`;
+                            } else if (validPriceCount === 0) {
+                              return "Harga belum ditentukan";
+                            } else {
+                              return fmt(price);
+                            }
                           })()}
                         </p>
                       </div>

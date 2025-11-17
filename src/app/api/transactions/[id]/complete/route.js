@@ -11,7 +11,10 @@ async function handleCompleteTransaction(request, { params }) {
   try {
     // Check permissions - only ADMIN can complete transactions
     if (!permissions.canCompleteTransaction(request.auth.user)) {
-      return errorResponse("Insufficient permissions to complete transaction", 403);
+      return errorResponse(
+        "Insufficient permissions to complete transaction",
+        403
+      );
     }
 
     const { id } = await params;

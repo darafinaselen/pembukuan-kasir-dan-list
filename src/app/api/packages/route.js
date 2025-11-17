@@ -188,14 +188,42 @@ async function handleCreatePackage(request) {
         // validate priceRanges for each tier
         for (let i = 0; i < hotelTiers.length; i++) {
           const tier = hotelTiers[i];
-          if (tier.priceRanges) {
-            const v = validatePriceRangesForTier(tier.priceRanges);
-            if (!v.ok) {
-              return errorResponse(
-                `Validasi priceRanges gagal di tingkat ke-${i + 1}: ${v.message}`,
-                400
-              );
-            }
+
+          // Ensure priceRanges exist and is not empty
+          if (
+            !tier.priceRanges ||
+            !Array.isArray(tier.priceRanges) ||
+            tier.priceRanges.length === 0
+          ) {
+            return errorResponse(
+              `Tingkat hotel ke-${i + 1} harus memiliki minimal satu rentang harga`,
+              400
+            );
+          }
+
+          // Validate price ranges
+          const v = validatePriceRangesForTier(tier.priceRanges);
+          if (!v.ok) {
+            return errorResponse(
+              `Validasi priceRanges gagal di tingkat ke-${i + 1}: ${v.message}`,
+              400
+            );
+          }
+
+          // Ensure at least one price range has valid price > 0
+          const hasValidPrice = tier.priceRanges.some((r) => {
+            const price =
+              typeof r.price === "string"
+                ? Number(r.price.trim() || 0)
+                : Number(r.price || 0);
+            return price > 0;
+          });
+
+          if (!hasValidPrice) {
+            return errorResponse(
+              `Tingkat hotel ke-${i + 1} harus memiliki minimal satu rentang harga dengan nilai > 0`,
+              400
+            );
           }
         }
 
@@ -220,8 +248,8 @@ async function handleCreatePackage(request) {
                     create: tier.priceRanges.map((r) => ({
                       minPax: Number(r.minPax || 0),
                       maxPax: Number(r.maxPax || 0),
-                      // Convert from thousands to full rupiah
-                      price: Number(r.price || 0) * 1000,
+                      // TOUR_PACKAGE prices are already in thousands from CurrencyInput, no need to multiply by 1000
+                      price: Number(r.price || 0),
                     })),
                   }
                 : undefined,

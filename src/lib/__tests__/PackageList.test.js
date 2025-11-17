@@ -76,8 +76,20 @@ describe("PackageList Component", () => {
       durationDays: 3,
       durationNights: 2,
       hotelTiers: [
-        { tingkat: "Bintang 3", tarifPerPax: 1500000 },
-        { tingkat: "Bintang 4", tarifPerPax: 2000000 },
+        {
+          starRating: 3,
+          priceRanges: [
+            { minPax: 1, maxPax: 2, price: 1500000 },
+            { minPax: 3, maxPax: 5, price: 1300000 },
+          ],
+        },
+        {
+          starRating: 4,
+          priceRanges: [
+            { minPax: 1, maxPax: 2, price: 2000000 },
+            { minPax: 3, maxPax: 5, price: 1800000 },
+          ],
+        },
       ],
       itinerary: [
         { hari: 1, aktivitas: "Kedatangan di Bali" },
@@ -166,7 +178,9 @@ describe("PackageList Component", () => {
     });
 
     it("should display formatted prices", () => {
-      expect(screen.getByText("Rp 2.500.000")).toBeInTheDocument();
+      expect(
+        screen.getByText("Mulai dari Rp 1.300.000/PAX")
+      ).toBeInTheDocument();
       expect(screen.getByText("Rp 350.000")).toBeInTheDocument();
       expect(screen.getByText("Rp 500.000")).toBeInTheDocument();
     });

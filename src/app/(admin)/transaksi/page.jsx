@@ -108,8 +108,10 @@ export default function TransaksiPage() {
 
   // State untuk Edit Approval Dialog (Admin)
   const [isEditApprovalOpen, setIsEditApprovalOpen] = useState(false);
-  const [approvingEditTransaction, setApprovingEditTransaction] = useState(null);
-  const [isSubmittingEditApproval, setIsSubmittingEditApproval] = useState(false);
+  const [approvingEditTransaction, setApprovingEditTransaction] =
+    useState(null);
+  const [isSubmittingEditApproval, setIsSubmittingEditApproval] =
+    useState(false);
 
   const [formData, setFormData] = useState(INITIAL_FORM_STATE);
   const [calculatedData, setCalculatedData] = useState({});
@@ -909,11 +911,14 @@ export default function TransaksiPage() {
   const handleApproveEdit = async (transactionId) => {
     setIsSubmittingEditApproval(true);
     try {
-      const res = await fetch(`/api/transactions/${transactionId}/approve-edit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-      });
+      const res = await fetch(
+        `/api/transactions/${transactionId}/approve-edit`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        }
+      );
 
       if (!res.ok) {
         const errorData = await res.json();
@@ -941,12 +946,15 @@ export default function TransaksiPage() {
   const handleRejectEdit = async (transactionId, reason) => {
     setIsSubmittingEditApproval(true);
     try {
-      const res = await fetch(`/api/transactions/${transactionId}/reject-edit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ rejection_reason: reason }),
-      });
+      const res = await fetch(
+        `/api/transactions/${transactionId}/reject-edit`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ rejection_reason: reason }),
+        }
+      );
 
       if (!res.ok) {
         const errorData = await res.json();

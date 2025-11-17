@@ -279,11 +279,23 @@ describe("Approval Workflow - Approve Transaction", () => {
     };
 
     prisma.transaction.findUnique.mockResolvedValue(mockTransaction);
-    prisma.armada.findFirst.mockResolvedValue({ id: "armada-1", status: "READY" });
-    prisma.driver.findFirst.mockResolvedValue({ id: "driver-1", status: "READY" });
-    prisma.armada.update.mockResolvedValue({ id: "armada-1", status: "BOOKED" });
-    prisma.driver.update.mockResolvedValue({ id: "driver-1", status: "BOOKED" });
-    
+    prisma.armada.findFirst.mockResolvedValue({
+      id: "armada-1",
+      status: "READY",
+    });
+    prisma.driver.findFirst.mockResolvedValue({
+      id: "driver-1",
+      status: "READY",
+    });
+    prisma.armada.update.mockResolvedValue({
+      id: "armada-1",
+      status: "BOOKED",
+    });
+    prisma.driver.update.mockResolvedValue({
+      id: "driver-1",
+      status: "BOOKED",
+    });
+
     // Mock $transaction to return the updated transaction
     prisma.$transaction.mockImplementation(async (callback) => {
       const tx = {
@@ -386,7 +398,7 @@ describe("Approval Workflow - Reject Transaction", () => {
     prisma.transaction.findUnique.mockResolvedValue(mockTransaction);
     prisma.armada.update.mockResolvedValue({ id: "armada-1", status: "READY" });
     prisma.driver.update.mockResolvedValue({ id: "driver-1", status: "READY" });
-    
+
     // Mock $transaction to return the updated transaction
     prisma.$transaction.mockImplementation(async (callback) => {
       const tx = {
@@ -813,11 +825,23 @@ describe("Approval Workflow - Status Transitions", () => {
     currentTransaction.armadaId = "armada-1";
     currentTransaction.driverId = "driver-1";
     prisma.transaction.findUnique.mockResolvedValue(currentTransaction);
-    prisma.armada.findFirst.mockResolvedValue({ id: "armada-1", status: "READY" });
-    prisma.driver.findFirst.mockResolvedValue({ id: "driver-1", status: "READY" });
-    prisma.armada.update.mockResolvedValue({ id: "armada-1", status: "BOOKED" });
-    prisma.driver.update.mockResolvedValue({ id: "driver-1", status: "BOOKED" });
-    
+    prisma.armada.findFirst.mockResolvedValue({
+      id: "armada-1",
+      status: "READY",
+    });
+    prisma.driver.findFirst.mockResolvedValue({
+      id: "driver-1",
+      status: "READY",
+    });
+    prisma.armada.update.mockResolvedValue({
+      id: "armada-1",
+      status: "BOOKED",
+    });
+    prisma.driver.update.mockResolvedValue({
+      id: "driver-1",
+      status: "BOOKED",
+    });
+
     const mockApprovedTransaction = {
       ...currentTransaction,
       approval_status: "APPROVED",
@@ -826,7 +850,7 @@ describe("Approval Workflow - Status Transitions", () => {
       armada: { id: "armada-1", status: "READY" },
       driver: { id: "driver-1", status: "READY" },
     };
-    
+
     prisma.$transaction.mockImplementation(async (callback) => {
       const tx = {
         transaction: {
@@ -884,7 +908,7 @@ describe("Approval Workflow - Status Transitions", () => {
     prisma.transaction.findUnique.mockResolvedValue(currentTransaction);
     prisma.armada.update.mockResolvedValue({ id: "armada-1", status: "READY" });
     prisma.driver.update.mockResolvedValue({ id: "driver-1", status: "READY" });
-    
+
     const mockRejectedTransaction = {
       ...currentTransaction,
       approval_status: "REJECTED",
@@ -894,7 +918,7 @@ describe("Approval Workflow - Status Transitions", () => {
       armada: { id: "armada-1", status: "READY" },
       driver: { id: "driver-1", status: "READY" },
     };
-    
+
     // Clear previous mock implementation and set new one for reject
     prisma.$transaction.mockReset();
     prisma.$transaction.mockImplementation(async (callback) => {

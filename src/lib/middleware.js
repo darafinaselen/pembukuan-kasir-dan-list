@@ -39,7 +39,7 @@ export function getTokenFromRequest(request) {
   const cookies = request.headers.get("cookie");
   if (cookies) {
     // Try role-specific cookies first
-    const roleCookies = ['session_admin', 'session_operator'];
+    const roleCookies = ["session_admin", "session_operator"];
     for (const cookieName of roleCookies) {
       const match = cookies.match(new RegExp(`${cookieName}=([^;]+)`));
       if (match) return match[1];
@@ -174,10 +174,12 @@ export const permissions = {
   // Transaction edit approval/rejection permissions
   canApproveTransactionEdit: (user) => ["ADMIN"].includes(user?.role),
   canRejectTransactionEdit: (user) => ["ADMIN"].includes(user?.role),
-  canRequestTransactionEdit: (user) => ["ADMIN", "OPERATOR"].includes(user?.role),
+  canRequestTransactionEdit: (user) =>
+    ["ADMIN", "OPERATOR"].includes(user?.role),
 
   // Transaction edit approval permissions
-  canRequestTransactionEdit: (user) => ["ADMIN", "OPERATOR"].includes(user?.role),
+  canRequestTransactionEdit: (user) =>
+    ["ADMIN", "OPERATOR"].includes(user?.role),
   canApproveTransactionEdit: (user) => ["ADMIN"].includes(user?.role),
   canRejectTransactionEdit: (user) => ["ADMIN"].includes(user?.role),
 

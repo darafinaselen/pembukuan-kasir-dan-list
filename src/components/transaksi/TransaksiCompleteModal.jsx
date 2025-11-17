@@ -316,9 +316,7 @@ export default function TransaksiCompleteModal({
                   </div>
                   <hr className="my-2" />
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">
-                      Sisa Tagihan:
-                    </span>
+                    <span className="text-sm font-medium">Sisa Tagihan:</span>
                     <span className="font-bold text-green-600">
                       {formatCurrency(0)} (LUNAS)
                     </span>

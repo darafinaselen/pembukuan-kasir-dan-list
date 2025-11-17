@@ -12,7 +12,17 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { AlertCircle, CheckCircle, XCircle, Edit, Trash2, FileText, Calendar, DollarSign, Info } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle,
+  XCircle,
+  Edit,
+  Trash2,
+  FileText,
+  Calendar,
+  DollarSign,
+  Info,
+} from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
@@ -137,7 +147,8 @@ export default function ExpenseApprovalDialog({
           </DialogTitle>
           <DialogDescription className="text-sm leading-relaxed">
             Tinjau detail permintaan dan putuskan untuk menyetujui atau menolak
-            perubahan {isEditRequest ? "edit" : "penghapusan"} yang diajukan operator
+            perubahan {isEditRequest ? "edit" : "penghapusan"} yang diajukan
+            operator
           </DialogDescription>
         </DialogHeader>
 
@@ -150,7 +161,7 @@ export default function ExpenseApprovalDialog({
               </div>
               <h3 className="font-bold text-slate-900">Detail Pengeluaran</h3>
             </div>
-            
+
             <div className="space-y-4">
               <div className="flex justify-between items-start gap-4">
                 <span className="text-sm text-slate-600 flex items-center gap-2">
@@ -163,7 +174,7 @@ export default function ExpenseApprovalDialog({
                   {CATEGORY_LABELS[expense.category] || expense.category}
                 </Badge>
               </div>
-              
+
               <div className="flex justify-between items-start gap-4">
                 <span className="text-sm text-slate-600 flex items-center gap-2">
                   <div className="p-1.5 rounded-lg bg-blue-50 ring-1 ring-blue-200">
@@ -175,7 +186,7 @@ export default function ExpenseApprovalDialog({
                   {expense.description}
                 </span>
               </div>
-              
+
               <div className="flex justify-between items-start gap-4">
                 <span className="text-sm text-slate-600 flex items-center gap-2">
                   <div className="p-1.5 rounded-lg bg-green-50 ring-1 ring-green-200">
@@ -183,9 +194,11 @@ export default function ExpenseApprovalDialog({
                   </div>
                   Tanggal
                 </span>
-                <span className="font-medium text-slate-900">{formatDate(expense.date)}</span>
+                <span className="font-medium text-slate-900">
+                  {formatDate(expense.date)}
+                </span>
               </div>
-              
+
               <div className="flex justify-between items-start gap-4 pt-2 border-t border-slate-200">
                 <span className="text-sm text-slate-600 flex items-center gap-2">
                   <div className="p-1.5 rounded-lg bg-red-50 ring-1 ring-red-200">
@@ -197,7 +210,7 @@ export default function ExpenseApprovalDialog({
                   {formatCurrency(expense.amount)}
                 </span>
               </div>
-              
+
               {expense.armada && (
                 <div className="flex justify-between items-start gap-4 pt-2 border-t border-slate-200">
                   <span className="text-sm text-slate-600">Armada</span>
@@ -206,18 +219,22 @@ export default function ExpenseApprovalDialog({
                   </Badge>
                 </div>
               )}
-              
+
               {expense.driver && (
                 <div className="flex justify-between items-start gap-4">
                   <span className="text-sm text-slate-600">Sopir</span>
-                  <span className="font-medium text-slate-900">{expense.driver.name}</span>
+                  <span className="font-medium text-slate-900">
+                    {expense.driver.name}
+                  </span>
                 </div>
               )}
-              
+
               {expense.staff && (
                 <div className="flex justify-between items-start gap-4">
                   <span className="text-sm text-slate-600">Staff</span>
-                  <span className="font-medium text-slate-900">{expense.staff.name}</span>
+                  <span className="font-medium text-slate-900">
+                    {expense.staff.name}
+                  </span>
                 </div>
               )}
             </div>
@@ -233,26 +250,33 @@ export default function ExpenseApprovalDialog({
                 Detail Permintaan
               </span>
             </div>
-            
+
             <div className="space-y-3">
               {expense.requested_by && (
                 <div className="flex justify-between items-center gap-4 bg-white/60 p-3 rounded-lg border border-blue-100">
-                  <span className="text-sm text-blue-700 font-medium">Diajukan oleh</span>
-                  <Badge variant="secondary" className="bg-blue-100 text-blue-900 border-blue-200">
+                  <span className="text-sm text-blue-700 font-medium">
+                    Diajukan oleh
+                  </span>
+                  <Badge
+                    variant="secondary"
+                    className="bg-blue-100 text-blue-900 border-blue-200"
+                  >
                     {expense.requested_by.name}
                   </Badge>
                 </div>
               )}
-              
+
               {expense.requested_at && (
                 <div className="flex justify-between items-center gap-4 bg-white/60 p-3 rounded-lg border border-blue-100">
-                  <span className="text-sm text-blue-700 font-medium">Waktu pengajuan</span>
+                  <span className="text-sm text-blue-700 font-medium">
+                    Waktu pengajuan
+                  </span>
                   <span className="text-sm font-semibold text-blue-900">
                     {new Date(expense.requested_at).toLocaleString("id-ID")}
                   </span>
                 </div>
               )}
-              
+
               <div className="pt-2 space-y-2">
                 <Label className="text-sm text-blue-700 font-semibold flex items-center gap-2">
                   <Info className="h-4 w-4" />
@@ -271,15 +295,21 @@ export default function ExpenseApprovalDialog({
 
           {/* Warning untuk delete */}
           {isDeleteRequest && (
-            <Alert variant="destructive" className="border-l-4 border-red-600 bg-gradient-to-r from-red-50 to-red-100/50 shadow-sm">
+            <Alert
+              variant="destructive"
+              className="border-l-4 border-red-600 bg-gradient-to-r from-red-50 to-red-100/50 shadow-sm"
+            >
               <div className="flex gap-3">
                 <div className="p-2 rounded-lg bg-red-100 ring-1 ring-red-200 h-fit">
                   <AlertCircle className="h-5 w-5 text-red-600" />
                 </div>
                 <AlertDescription className="text-red-900 leading-relaxed pt-1">
-                  <strong className="font-bold text-red-800">⚠️ Perhatian:</strong> Persetujuan penghapusan akan menghapus
-                  data pengeluaran secara permanen. Tindakan ini tidak dapat dibatalkan.
-                  Pastikan semua detail telah ditinjau dengan cermat sebelum memutuskan.
+                  <strong className="font-bold text-red-800">
+                    ⚠️ Perhatian:
+                  </strong>{" "}
+                  Persetujuan penghapusan akan menghapus data pengeluaran secara
+                  permanen. Tindakan ini tidak dapat dibatalkan. Pastikan semua
+                  detail telah ditinjau dengan cermat sebelum memutuskan.
                 </AlertDescription>
               </div>
             </Alert>
@@ -299,33 +329,44 @@ export default function ExpenseApprovalDialog({
 
               <div className="bg-white/80 p-4 rounded-xl border-2 border-green-200 shadow-sm space-y-3">
                 <div className="flex justify-between items-center gap-4 p-2 bg-green-50/50 rounded-lg">
-                  <span className="text-sm text-green-700 font-medium">Jumlah</span>
+                  <span className="text-sm text-green-700 font-medium">
+                    Jumlah
+                  </span>
                   <span className="font-bold text-green-900">
                     {formatCurrency(expense.proposed_changes.amount)}
                   </span>
                 </div>
                 <div className="flex justify-between items-start gap-4 p-2 bg-green-50/50 rounded-lg">
-                  <span className="text-sm text-green-700 font-medium">Deskripsi</span>
+                  <span className="text-sm text-green-700 font-medium">
+                    Deskripsi
+                  </span>
                   <span className="font-medium text-green-900 text-right">
                     {expense.proposed_changes.description}
                   </span>
                 </div>
-                {expense.proposed_changes.category && expense.proposed_changes.category !== expense.category && (
-                  <div className="flex justify-between items-start gap-4 p-2 bg-green-50/50 rounded-lg">
-                    <span className="text-sm text-green-700 font-medium">Kategori</span>
-                    <span className="font-medium text-green-900 text-right">
-                      {CATEGORY_LABELS[expense.proposed_changes.category] || expense.proposed_changes.category}
-                    </span>
-                  </div>
-                )}
-                {expense.proposed_changes.date && expense.proposed_changes.date !== expense.date && (
-                  <div className="flex justify-between items-start gap-4 p-2 bg-green-50/50 rounded-lg">
-                    <span className="text-sm text-green-700 font-medium">Tanggal</span>
-                    <span className="font-medium text-green-900 text-right">
-                      {formatDate(expense.proposed_changes.date)}
-                    </span>
-                  </div>
-                )}
+                {expense.proposed_changes.category &&
+                  expense.proposed_changes.category !== expense.category && (
+                    <div className="flex justify-between items-start gap-4 p-2 bg-green-50/50 rounded-lg">
+                      <span className="text-sm text-green-700 font-medium">
+                        Kategori
+                      </span>
+                      <span className="font-medium text-green-900 text-right">
+                        {CATEGORY_LABELS[expense.proposed_changes.category] ||
+                          expense.proposed_changes.category}
+                      </span>
+                    </div>
+                  )}
+                {expense.proposed_changes.date &&
+                  expense.proposed_changes.date !== expense.date && (
+                    <div className="flex justify-between items-start gap-4 p-2 bg-green-50/50 rounded-lg">
+                      <span className="text-sm text-green-700 font-medium">
+                        Tanggal
+                      </span>
+                      <span className="font-medium text-green-900 text-right">
+                        {formatDate(expense.proposed_changes.date)}
+                      </span>
+                    </div>
+                  )}
               </div>
 
               <Alert className="bg-green-50 border-green-200">
@@ -351,25 +392,33 @@ export default function ExpenseApprovalDialog({
 
               <div className="bg-white/80 p-4 rounded-xl border-2 border-amber-200 shadow-sm space-y-3">
                 <div className="flex justify-between items-center gap-4 p-2 bg-amber-50/50 rounded-lg">
-                  <span className="text-sm text-amber-700 font-medium">Jumlah</span>
+                  <span className="text-sm text-amber-700 font-medium">
+                    Jumlah
+                  </span>
                   <span className="font-bold text-amber-900">
                     {formatCurrency(expense.amount)}
                   </span>
                 </div>
                 <div className="flex justify-between items-start gap-4 p-2 bg-amber-50/50 rounded-lg">
-                  <span className="text-sm text-amber-700 font-medium">Deskripsi</span>
+                  <span className="text-sm text-amber-700 font-medium">
+                    Deskripsi
+                  </span>
                   <span className="font-medium text-amber-900 text-right">
                     {expense.description}
                   </span>
                 </div>
                 <div className="flex justify-between items-start gap-4 p-2 bg-amber-50/50 rounded-lg">
-                  <span className="text-sm text-amber-700 font-medium">Kategori</span>
+                  <span className="text-sm text-amber-700 font-medium">
+                    Kategori
+                  </span>
                   <span className="font-medium text-amber-900 text-right">
                     {CATEGORY_LABELS[expense.category] || expense.category}
                   </span>
                 </div>
                 <div className="flex justify-between items-start gap-4 p-2 bg-amber-50/50 rounded-lg">
-                  <span className="text-sm text-amber-700 font-medium">Tanggal</span>
+                  <span className="text-sm text-amber-700 font-medium">
+                    Tanggal
+                  </span>
                   <span className="font-medium text-amber-900 text-right">
                     {formatDate(expense.date)}
                   </span>
@@ -387,7 +436,10 @@ export default function ExpenseApprovalDialog({
 
           {/* Error Message */}
           {error && (
-            <Alert variant="destructive" className="border-l-4 border-red-600 bg-gradient-to-r from-red-50 to-red-100/50 shadow-sm">
+            <Alert
+              variant="destructive"
+              className="border-l-4 border-red-600 bg-gradient-to-r from-red-50 to-red-100/50 shadow-sm"
+            >
               <div className="flex gap-3">
                 <div className="p-2 rounded-lg bg-red-100 ring-1 ring-red-200 h-fit">
                   <AlertCircle className="h-5 w-5 text-red-600" />
@@ -401,7 +453,10 @@ export default function ExpenseApprovalDialog({
 
           {/* Rejection Reason Input */}
           <div className="space-y-3">
-            <Label htmlFor="rejection-reason" className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+            <Label
+              htmlFor="rejection-reason"
+              className="text-sm font-semibold text-slate-900 flex items-center gap-2"
+            >
               <Info className="h-4 w-4 text-slate-600" />
               Alasan Penolakan
               <span className="text-xs font-normal text-slate-500">
@@ -423,7 +478,9 @@ export default function ExpenseApprovalDialog({
                 <span className="text-slate-500">
                   Minimal 10 karakter untuk penolakan
                 </span>
-                <span className={`font-medium ${rejectionReason.length > 450 ? 'text-red-600' : 'text-slate-400'}`}>
+                <span
+                  className={`font-medium ${rejectionReason.length > 450 ? "text-red-600" : "text-slate-400"}`}
+                >
                   {rejectionReason.length}/500
                 </span>
               </div>
@@ -437,47 +494,47 @@ export default function ExpenseApprovalDialog({
         />
 
         <DialogFooter className="flex gap-3 sm:gap-3 flex-shrink-0 bg-gradient-to-r from-slate-50 to-slate-100/50 -mx-6 -mb-6 px-6 py-4 border-t rounded-b-lg">
-           <Button
-             type="button"
-             variant="outline"
-             onClick={onClose}
-             disabled={isSubmitting}
-             className="rounded-xl px-6 py-2.5 border-2 hover:bg-slate-50"
-           >
-             Batal
-           </Button>
-           <Button
-             type="button"
-             variant="destructive"
-             onClick={handleReject}
-             disabled={isSubmitting || !rejectionReason.trim()}
-             className="gap-2 rounded-xl px-6 py-2.5 bg-red-600 hover:bg-red-700 shadow-sm"
-           >
-             {isSubmitting ? (
-               <Spinner size="sm" />
-             ) : (
-               <XCircle className="h-4 w-4" />
-             )}
-             Tolak Permintaan
-           </Button>
-           <Button
-             type="button"
-             onClick={handleApprove}
-             disabled={isSubmitting}
-             className={`gap-2 rounded-xl px-6 py-2.5 shadow-sm ${
-               isDeleteRequest
-                 ? "bg-red-600 hover:bg-red-700"
-                 : "bg-green-600 hover:bg-green-700"
-             }`}
-           >
-             {isSubmitting ? (
-               <Spinner size="sm" />
-             ) : (
-               <CheckCircle className="h-4 w-4" />
-             )}
-             {isDeleteRequest ? "Setujui Penghapusan" : "Setujui Perubahan"}
-           </Button>
-         </DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="rounded-xl px-6 py-2.5 border-2 hover:bg-slate-50"
+          >
+            Batal
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={handleReject}
+            disabled={isSubmitting || !rejectionReason.trim()}
+            className="gap-2 rounded-xl px-6 py-2.5 bg-red-600 hover:bg-red-700 shadow-sm"
+          >
+            {isSubmitting ? (
+              <Spinner size="sm" />
+            ) : (
+              <XCircle className="h-4 w-4" />
+            )}
+            Tolak Permintaan
+          </Button>
+          <Button
+            type="button"
+            onClick={handleApprove}
+            disabled={isSubmitting}
+            className={`gap-2 rounded-xl px-6 py-2.5 shadow-sm ${
+              isDeleteRequest
+                ? "bg-red-600 hover:bg-red-700"
+                : "bg-green-600 hover:bg-green-700"
+            }`}
+          >
+            {isSubmitting ? (
+              <Spinner size="sm" />
+            ) : (
+              <CheckCircle className="h-4 w-4" />
+            )}
+            {isDeleteRequest ? "Setujui Penghapusan" : "Setujui Perubahan"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

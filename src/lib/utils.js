@@ -47,6 +47,7 @@ export function exportToExcel(data, fileName) {
  * Rules:
  * - minPax and maxPax must be integers >= 1
  * - maxPax >= minPax
+ * - price must be a valid number > 0
  * - ranges must not overlap or touch (cur.min <= prev.max => invalid)
  *
  * Returns { ok: boolean, message?: string }
@@ -57,7 +58,13 @@ export function validatePriceRangesForTier(priceRanges) {
   const normalized = priceRanges.map((r, idx) => {
     const min = Number(r?.minPax ?? r?.min ?? 0);
     const max = Number(r?.maxPax ?? r?.max ?? 0);
-    const price = Number(r?.price ?? 0);
+    // Handle price more carefully - could be string from CurrencyInput
+    let price = r?.price;
+    if (typeof price === "string") {
+      price = price.trim() === "" ? 0 : Number(price);
+    } else {
+      price = Number(price || 0);
+    }
     return { min, max, price, idx };
   });
 
@@ -73,6 +80,12 @@ export function validatePriceRangesForTier(priceRanges) {
     }
     if (r.max < r.min) {
       return { ok: false, message: `maxPax harus >= minPax` };
+    }
+    if (!Number.isFinite(r.price) || r.price <= 0) {
+      return {
+        ok: false,
+        message: `Harga harus berupa angka yang valid dan > 0`,
+      };
     }
   }
 
@@ -104,7 +117,16 @@ export function getPriceRangeConflicts(priceRanges) {
   const normalized = priceRanges.map((r, idx) => ({
     min: Number(r?.minPax ?? r?.min ?? 0),
     max: Number(r?.maxPax ?? r?.max ?? 0),
-    price: Number(r?.price ?? 0),
+    // Handle price more carefully - could be string from CurrencyInput
+    price: (() => {
+      let p = r?.price;
+      if (typeof p === "string") {
+        p = p.trim() === "" ? 0 : Number(p);
+      } else {
+        p = Number(p || 0);
+      }
+      return p;
+    })(),
     idx,
   }));
 
@@ -115,6 +137,12 @@ export function getPriceRangeConflicts(priceRanges) {
       result.errors.push({ index: r.idx, message: `minPax harus >= 1` });
     } else if (r.max < r.min) {
       result.errors.push({ index: r.idx, message: `maxPax harus >= minPax` });
+    }
+    if (!Number.isFinite(r.price) || r.price <= 0) {
+      result.errors.push({
+        index: r.idx,
+        message: `Harga harus valid dan > 0`,
+      });
     }
   });
 

@@ -40,6 +40,7 @@ async function handleGetTransactions(request) {
             },
           },
         },
+        hotelTier: true,
         armada: true,
         driver: true,
       },

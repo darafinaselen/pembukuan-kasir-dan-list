@@ -169,7 +169,11 @@ export function PackageForm({
 
       // Transform hotelTiers from database format to form format
       let tarifHotelVal = [];
-      if (pkg.hotelTiers && Array.isArray(pkg.hotelTiers) && pkg.hotelTiers.length > 0) {
+      if (
+        pkg.hotelTiers &&
+        Array.isArray(pkg.hotelTiers) &&
+        pkg.hotelTiers.length > 0
+      ) {
         // Always prefer database format if available
         console.log("Transforming hotelTiers from DB:", pkg.hotelTiers);
         // For TOUR_PACKAGE, prices are stored in thousands; for others, in full rupiah
@@ -197,7 +201,11 @@ export function PackageForm({
 
       // Transform itineraries from database format to form format
       let itineraryVal = [];
-      if (pkg.itineraries && Array.isArray(pkg.itineraries) && pkg.itineraries.length > 0) {
+      if (
+        pkg.itineraries &&
+        Array.isArray(pkg.itineraries) &&
+        pkg.itineraries.length > 0
+      ) {
         // Always prefer database format if available
         console.log("Transforming itineraries from DB:", pkg.itineraries);
         itineraryVal = pkg.itineraries.map((it) => ({
@@ -246,9 +254,10 @@ export function PackageForm({
         reset(resetData);
 
         // Set itinerary separately to avoid duplication issues
-        const finalItinerary = Array.isArray(itineraryVal) && itineraryVal.length > 0
-          ? itineraryVal
-          : [{ hari: 1, aktivitas: "" }];
+        const finalItinerary =
+          Array.isArray(itineraryVal) && itineraryVal.length > 0
+            ? itineraryVal
+            : [{ hari: 1, aktivitas: "" }];
         setValue("itinerary", finalItinerary);
       } else if (mappedTipe === "Full Day Trip") {
         // Full day: include price/overtime and itinerary; clear hotel tiers
@@ -262,9 +271,10 @@ export function PackageForm({
         });
 
         // Set itinerary separately to avoid duplication issues
-        const finalItinerary = Array.isArray(itineraryVal) && itineraryVal.length > 0
-          ? itineraryVal
-          : [{ hari: 1, aktivitas: "" }];
+        const finalItinerary =
+          Array.isArray(itineraryVal) && itineraryVal.length > 0
+            ? itineraryVal
+            : [{ hari: 1, aktivitas: "" }];
         setValue("itinerary", finalItinerary);
       } else if (mappedTipe === "Harga Custom") {
         // Custom pricing: no fixed price or duration, just basic info
@@ -1280,11 +1290,15 @@ export function PackageForm({
                                             render={({ field }) => (
                                               <CurrencyInput
                                                 className={`w-40 ${
-                                                  fieldError ? "border-red-500" : ""
+                                                  fieldError
+                                                    ? "border-red-500"
+                                                    : ""
                                                 }`}
                                                 value={field.value}
                                                 onChange={(e) => {
-                                                  field.onChange(e.target.value);
+                                                  field.onChange(
+                                                    e.target.value
+                                                  );
                                                 }}
                                                 placeholder="Harga"
                                               />

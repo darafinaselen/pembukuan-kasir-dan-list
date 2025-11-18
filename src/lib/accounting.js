@@ -4,6 +4,65 @@
  */
 
 /**
+ * Calculate CUSTOM_PRICING package price
+ * @param {Object} transaction - Transaction object with custom pricing
+ * @returns {number} Custom price for the package
+ */
+function calculateCustomPackagePrice(transaction) {
+  if (!transaction.package || transaction.package.type !== "CUSTOM_PRICING") {
+    return transaction.all_in_rate || 0;
+  }
+
+  // For CUSTOM_PRICING, use the custom_price field if available
+  // Otherwise fall back to all_in_rate
+  return transaction.custom_price || transaction.all_in_rate || 0;
+}
+
+/**
+ * Calculate TOUR_PACKAGE pricing based on hotel tier and pax count
+ * @param {Object} packageObj - Package object with hotelTiers
+ * @param {string} hotelTierId - Selected hotel tier ID
+ * @param {number} paxCount - Number of passengers
+ * @returns {number} Calculated price for the TOUR_PACKAGE
+ */
+export function calculateTourPackagePriceFromParams(packageObj, hotelTierId, paxCount) {
+  if (!packageObj || packageObj.type !== "TOUR_PACKAGE") {
+    return 0;
+  }
+
+  if (!hotelTierId || !paxCount) {
+    return 0;
+  }
+
+  // Find the selected hotel tier
+  const selectedTier = packageObj.hotelTiers?.find(
+    (tier) => tier.id === hotelTierId
+  );
+
+  if (!selectedTier || !selectedTier.priceRanges) {
+    return 0;
+  }
+
+  const pax = parseInt(paxCount) || 0;
+  if (pax <= 0) {
+    return 0;
+  }
+
+  // Find the appropriate price range for the pax count
+  const applicableRange = selectedTier.priceRanges.find(
+    (range) => pax >= range.minPax && pax <= range.maxPax
+  );
+
+  if (!applicableRange) {
+    return 0;
+  }
+
+  // Calculate total price: price per pax * number of pax
+  // Note: 'price' field in DB represents price per pax
+  return applicableRange.price * pax;
+}
+
+/**
  * Calculate TOUR_PACKAGE pricing based on hotel tier and pax count
  * @param {Object} transaction - Transaction object with package and hotel_tier_id
  * @returns {number} Calculated price for the TOUR_PACKAGE
@@ -13,35 +72,11 @@ function calculateTourPackagePrice(transaction) {
     return transaction.all_in_rate || 0;
   }
 
-  if (!transaction.hotel_tier_id || !transaction.pax_count) {
-    return 0;
-  }
-
-  // Find the selected hotel tier
-  const selectedTier = transaction.package.hotelTiers?.find(
-    (tier) => tier.id === transaction.hotel_tier_id
+  return calculateTourPackagePriceFromParams(
+    transaction.package,
+    transaction.hotel_tier_id,
+    transaction.pax_count
   );
-
-  if (!selectedTier || !selectedTier.priceRanges) {
-    return 0;
-  }
-
-  const paxCount = parseInt(transaction.pax_count) || 0;
-  if (paxCount <= 0) {
-    return 0;
-  }
-
-  // Find the appropriate price range for the pax count
-  const applicableRange = selectedTier.priceRanges.find(
-    (range) => paxCount >= range.minPax && paxCount <= range.maxPax
-  );
-
-  if (!applicableRange) {
-    return 0;
-  }
-
-  // Calculate total price: price per pax * number of pax
-  return applicableRange.pricePerPax * paxCount;
 }
 
 /**
@@ -50,11 +85,14 @@ function calculateTourPackagePrice(transaction) {
  * @returns {Object} Calculated financial metrics
  */
 export function calculateTransactionFinancials(transaction) {
-  // Default duration is 12 hours if no package specified
-  const durasiPaketJam = transaction.package?.durationHours || 12;
+  // Package duration: use package duration if exists, otherwise undefined for custom rentals
+  const durasiPaketJam = transaction.package?.durationHours;
 
+  // Use actual checkin time if transaction is completed, otherwise use planned time
   const start = new Date(transaction.checkout_datetime);
-  const end = new Date(transaction.checkin_datetime);
+  const end = transaction.actual_checkin_datetime
+    ? new Date(transaction.actual_checkin_datetime)
+    : new Date(transaction.checkin_datetime);
 
   // Validate dates are valid Date objects
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
@@ -85,21 +123,30 @@ export function calculateTransactionFinancials(transaction) {
   const diffMs = end.getTime() - start.getTime();
   const lamaSewaJam = Math.round(diffMs / (1000 * 60 * 60));
 
-  // For TOUR_PACKAGE, no overtime calculation
-  const isTourPackage = transaction.package?.type === "TOUR_PACKAGE";
-  const lamaOvertimeJam = isTourPackage
+  // For TOUR_PACKAGE and FULL_DAY_TRIP, no overtime calculation (flat rate)
+  // For custom rentals without packages, also no overtime (no package duration to exceed)
+  const packageType = transaction.package?.type;
+  const hasNoOvertime =
+    packageType === "TOUR_PACKAGE" ||
+    packageType === "FULL_DAY_TRIP" ||
+    !durasiPaketJam; // No package duration means custom rental
+
+  const lamaOvertimeJam = hasNoOvertime
     ? 0
     : Math.max(0, lamaSewaJam - durasiPaketJam);
 
-  // Calculate overtime fee (0 for TOUR_PACKAGE)
-  const totalOvertimeFee = isTourPackage
+  // Calculate overtime fee (0 for TOUR_PACKAGE and FULL_DAY_TRIP)
+  const totalOvertimeFee = hasNoOvertime
     ? 0
     : lamaOvertimeJam * (transaction.overtime_rate_per_hour || 0);
 
-  // Calculate base revenue (use TOUR_PACKAGE pricing if applicable)
-  const baseRevenue = isTourPackage
-    ? calculateTourPackagePrice(transaction)
-    : transaction.all_in_rate || 0;
+  // Calculate base revenue (use appropriate pricing based on package type)
+  const baseRevenue =
+    packageType === "TOUR_PACKAGE"
+      ? calculateTourPackagePrice(transaction)
+      : packageType === "CUSTOM_PRICING"
+        ? calculateCustomPackagePrice(transaction)
+        : transaction.all_in_rate || 0;
 
   // Calculate total revenue (base rate + overtime)
   const totalPendapatan = baseRevenue + totalOvertimeFee;

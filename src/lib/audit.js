@@ -4,6 +4,7 @@
  */
 
 import { prisma } from "./prisma";
+import { formatCurrency } from "./accounting";
 
 /**
  * Create audit log entry
@@ -57,9 +58,16 @@ export async function logAuthEvent(
   userAgent,
   success = true
 ) {
-  const description = success
-    ? `User ${action.toLowerCase()} successful`
-    : `User ${action.toLowerCase()} failed`;
+  let description = "";
+  if (action === "LOGIN") {
+    description = success ? "Login berhasil" : "Login gagal";
+  } else if (action === "LOGOUT") {
+    description = "Logout";
+  } else {
+    description = success
+      ? `Autentikasi ${action.toLowerCase()} berhasil`
+      : `Autentikasi ${action.toLowerCase()} gagal`;
+  }
 
   return await createAuditLog({
     userId,
@@ -82,40 +90,65 @@ export async function logAuthEvent(
  * @param {string} ipAddress - Client IP
  * @param {string} userAgent - User agent
  */
-export async function logTransactionEvent(
-  userId,
-  action,
-  transactionId,
-  changes,
-  ipAddress,
-  userAgent
-) {
+export async function logTransactionEvent(user, action, transaction, request) {
   let description = "";
+  const invoice_code = transaction?.invoice_code || transaction?.id || "N/A";
+  const customer_name = transaction?.customer_name || "N/A";
+  const package_type = transaction?.package?.type || "N/A";
+  const amount = transaction?.all_in_rate || 0;
+  const formattedAmount = formatCurrency(amount);
 
   switch (action) {
     case "CREATE":
-      description = `Created transaction ${changes.invoice_code}`;
+      description = `Membuat transaksi ${invoice_code} - ${customer_name}, ${formattedAmount}, ${package_type}`;
       break;
     case "UPDATE":
-      description = `Updated transaction ${changes.invoice_code}`;
+      description = `Mengubah transaksi ${invoice_code} - ${customer_name}, ${formattedAmount}, ${package_type}`;
       break;
     case "DELETE":
-      description = `Deleted transaction ${changes.invoice_code}`;
+      description = `Menghapus transaksi ${invoice_code} - ${customer_name}, ${formattedAmount}, ${package_type}`;
       break;
     case "VIEW":
-      description = `Viewed transaction ${changes.invoice_code}`;
+      description = `Melihat transaksi ${invoice_code} - ${customer_name}, ${formattedAmount}, ${package_type}`;
+      break;
+    case "COMPLETE":
+      description = `Menyelesaikan transaksi ${invoice_code} - ${customer_name}, ${formattedAmount}, ${package_type}`;
+      break;
+    case "SUBMIT_APPROVAL":
+      description = `Mengajukan persetujuan transaksi ${invoice_code} - ${customer_name}, ${formattedAmount}, ${package_type}`;
+      break;
+    case "APPROVE":
+      description = `Menyetujui transaksi ${invoice_code} - ${customer_name}, ${formattedAmount}, ${package_type}`;
+      break;
+    case "REJECT":
+      description = `Menolak transaksi ${invoice_code} - ${customer_name}, ${formattedAmount}, ${package_type}`;
+      break;
+    case "REQUEST_EDIT":
+      description = `Meminta persetujuan edit transaksi ${invoice_code} - ${customer_name}, ${formattedAmount}, ${package_type}`;
+      break;
+    case "APPROVE_EDIT":
+      description = `Menyetujui edit transaksi ${invoice_code} - ${customer_name}, ${formattedAmount}, ${package_type}`;
+      break;
+    case "REJECT_EDIT":
+      description = `Menolak edit transaksi ${invoice_code} - ${customer_name}, ${formattedAmount}, ${package_type}`;
       break;
     default:
-      description = `${action} transaction ${transactionId}`;
+      description = `${action} transaksi ${invoice_code} - ${customer_name}, ${formattedAmount}, ${package_type}`;
   }
 
+  const ipAddress =
+    request?.headers?.get("x-forwarded-for") ||
+    request?.headers?.get("x-real-ip") ||
+    "unknown";
+  const userAgent = request?.headers?.get("user-agent") || "unknown";
+
   return await createAuditLog({
-    userId,
+    userId: user?.id ? String(user.id) : user?.email || "unknown",
     action,
     resource: "Transaction",
-    resourceId: transactionId,
+    resourceId: transaction?.id,
     description,
-    metadata: changes,
+    metadata: transaction,
     ipAddress,
     userAgent,
   });
@@ -138,9 +171,25 @@ export async function logExpenseEvent(
   ipAddress,
   userAgent
 ) {
-  const description = changes
-    ? `${action} expense: ${changes.category} - ${changes.description}`
-    : `${action} expense ID: ${expenseId}`;
+  let description = "";
+  const category = changes?.category || "N/A";
+  const expenseDescription = changes?.description || "N/A";
+  const amount = changes?.amount || 0;
+  const formattedAmount = formatCurrency(amount);
+
+  switch (action) {
+    case "CREATE":
+      description = `Membuat pengeluaran: ${category} - ${expenseDescription}, ${formattedAmount}`;
+      break;
+    case "UPDATE":
+      description = `Mengubah pengeluaran: ${category} - ${expenseDescription}, ${formattedAmount}`;
+      break;
+    case "DELETE":
+      description = `Menghapus pengeluaran: ${category} - ${expenseDescription}, ${formattedAmount}`;
+      break;
+    default:
+      description = `${action} pengeluaran: ${category} - ${expenseDescription}, ${formattedAmount}`;
+  }
 
   return await createAuditLog({
     userId,
@@ -149,6 +198,71 @@ export async function logExpenseEvent(
     resourceId: expenseId,
     description,
     metadata: changes || {},
+    ipAddress,
+    userAgent,
+  });
+}
+
+/**
+ * Log expense approval event
+ * @param {object} user - User object performing action
+ * @param {string} action - REQUEST_EDIT, REQUEST_DELETE, APPROVE_EDIT, APPROVE_DELETE, REJECT
+ * @param {object} expense - Expense object
+ * @param {object} request - Request object for IP/UA
+ * @param {object} metadata - Additional metadata (reason, changes, etc.)
+ */
+export async function logExpenseApprovalEvent(
+  user,
+  action,
+  expense,
+  request,
+  metadata = {}
+) {
+  let description = "";
+  const expenseInfo = expense?.description || expense?.id || "N/A";
+  const category = expense?.category || "N/A";
+  const amount = expense?.amount || 0;
+  const formattedAmount = formatCurrency(amount);
+
+  switch (action) {
+    case "REQUEST_EDIT":
+      description = `Meminta persetujuan edit pengeluaran: ${category} - ${expenseInfo}, ${formattedAmount}`;
+      break;
+    case "REQUEST_DELETE":
+      description = `Meminta persetujuan hapus pengeluaran: ${category} - ${expenseInfo}, ${formattedAmount}`;
+      break;
+    case "APPROVE_EDIT":
+      description = `Menyetujui edit pengeluaran: ${category} - ${expenseInfo}, ${formattedAmount}`;
+      break;
+    case "APPROVE_DELETE":
+      description = `Menyetujui hapus pengeluaran: ${category} - ${expenseInfo}, ${formattedAmount}`;
+      break;
+    case "REJECT":
+      description = `Menolak permintaan persetujuan pengeluaran: ${category} - ${expenseInfo}, ${formattedAmount}`;
+      break;
+    default:
+      description = `${action} persetujuan pengeluaran: ${category} - ${expenseInfo}, ${formattedAmount}`;
+  }
+
+  const ipAddress =
+    request?.headers?.get("x-forwarded-for") ||
+    request?.headers?.get("x-real-ip") ||
+    "unknown";
+  const userAgent = request?.headers?.get("user-agent") || "unknown";
+
+  return await createAuditLog({
+    userId: user?.id ? String(user.id) : user?.email || "unknown",
+    action,
+    resource: "Expense",
+    resourceId: expense?.id,
+    description,
+    metadata: {
+      category: expense?.category,
+      amount: expense?.amount,
+      date: expense?.date,
+      approval_status: expense?.approval_status,
+      ...metadata,
+    },
     ipAddress,
     userAgent,
   });
@@ -174,7 +288,7 @@ export async function logReportAccess(
     action: "VIEW",
     resource: "Report",
     resourceId: null,
-    description: `Accessed ${reportType} report`,
+    description: `Mengakses laporan ${reportType}`,
     metadata: { reportType, filters },
     ipAddress,
     userAgent,
@@ -201,8 +315,243 @@ export async function logDataExport(
     action: "EXPORT",
     resource: dataType,
     resourceId: null,
-    description: `Exported ${dataType} data`,
+    description: `Mengekspor data ${dataType}`,
     metadata: { filters, exportedAt: new Date().toISOString() },
+    ipAddress,
+    userAgent,
+  });
+}
+
+/**
+ * Log armada (vehicle) event
+ * @param {string} userId - User ID
+ * @param {string} action - CREATE, UPDATE, DELETE
+ * @param {string} armadaId - Armada ID
+ * @param {object} changes - Changed data
+ * @param {string} ipAddress - Client IP
+ * @param {string} userAgent - User agent
+ */
+export async function logArmadaEvent(
+  userId,
+  action,
+  armadaId,
+  changes,
+  ipAddress,
+  userAgent
+) {
+  let description = "";
+  const licensePlate = changes?.license_plate || "N/A";
+  const brand = changes?.brand || "";
+  const model = changes?.model || "";
+
+  switch (action) {
+    case "CREATE":
+      description = `Membuat armada: ${licensePlate} (${brand} ${model})`;
+      break;
+    case "UPDATE":
+      description = `Mengubah armada: ${licensePlate} (${brand} ${model})`;
+      break;
+    case "DELETE":
+      description = `Menghapus armada: ${licensePlate} (${brand} ${model})`;
+      break;
+    default:
+      description = `${action} armada: ${licensePlate} (${brand} ${model})`;
+  }
+
+  return await createAuditLog({
+    userId,
+    action,
+    resource: "Armada",
+    resourceId: armadaId,
+    description,
+    metadata: changes || {},
+    ipAddress,
+    userAgent,
+  });
+}
+
+/**
+ * Log driver event
+ * @param {string} userId - User ID
+ * @param {string} action - CREATE, UPDATE, DELETE
+ * @param {string} driverId - Driver ID
+ * @param {object} changes - Changed data
+ * @param {string} ipAddress - Client IP
+ * @param {string} userAgent - User agent
+ */
+export async function logDriverEvent(
+  userId,
+  action,
+  driverId,
+  changes,
+  ipAddress,
+  userAgent
+) {
+  let description = "";
+  const name = changes?.name || "N/A";
+
+  switch (action) {
+    case "CREATE":
+      description = `Membuat sopir: ${name}`;
+      break;
+    case "UPDATE":
+      description = `Mengubah sopir: ${name}`;
+      break;
+    case "DELETE":
+      description = `Menghapus sopir: ${name}`;
+      break;
+    default:
+      description = `${action} sopir: ${name}`;
+  }
+
+  return await createAuditLog({
+    userId,
+    action,
+    resource: "Driver",
+    resourceId: driverId,
+    description,
+    metadata: changes || {},
+    ipAddress,
+    userAgent,
+  });
+}
+
+/**
+ * Log user management event
+ * @param {string} userId - User ID (admin performing action)
+ * @param {string} action - CREATE, UPDATE, DELETE
+ * @param {string} targetUserId - Target user ID
+ * @param {object} changes - Changed data
+ * @param {string} ipAddress - Client IP
+ * @param {string} userAgent - User agent
+ */
+export async function logUserEvent(
+  userId,
+  action,
+  targetUserId,
+  changes,
+  ipAddress,
+  userAgent
+) {
+  let description = "";
+  const username = changes?.username || "N/A";
+  const name = changes?.name || "";
+
+  switch (action) {
+    case "CREATE":
+      description = `Membuat pengguna: ${username} (${name})`;
+      break;
+    case "UPDATE":
+      description = `Mengubah pengguna: ${username} (${name})`;
+      break;
+    case "DELETE":
+      description = `Menghapus pengguna: ${username} (${name})`;
+      break;
+    default:
+      description = `${action} pengguna: ${username} (${name})`;
+  }
+
+  return await createAuditLog({
+    userId,
+    action,
+    resource: "User",
+    resourceId: targetUserId,
+    description,
+    metadata: changes || {},
+    ipAddress,
+    userAgent,
+  });
+}
+
+/**
+ * Log staff event
+ * @param {string} userId - User ID
+ * @param {string} action - CREATE, UPDATE, DELETE
+ * @param {string} staffId - Staff ID
+ * @param {object} changes - Changed data
+ * @param {string} ipAddress - Client IP
+ * @param {string} userAgent - User agent
+ */
+export async function logStaffEvent(
+  userId,
+  action,
+  staffId,
+  changes,
+  ipAddress,
+  userAgent
+) {
+  let description = "";
+  const staffName = changes?.staff_name || "N/A";
+  const position = changes?.position || "";
+
+  switch (action) {
+    case "CREATE":
+      description = `Membuat staf: ${staffName} (${position})`;
+      break;
+    case "UPDATE":
+      description = `Mengubah staf: ${staffName} (${position})`;
+      break;
+    case "DELETE":
+      description = `Menghapus staf: ${staffName} (${position})`;
+      break;
+    default:
+      description = `${action} staf: ${staffName} (${position})`;
+  }
+
+  return await createAuditLog({
+    userId,
+    action,
+    resource: "Staff",
+    resourceId: staffId,
+    description,
+    metadata: changes || {},
+    ipAddress,
+    userAgent,
+  });
+}
+
+/**
+ * Log package event
+ * @param {string} userId - User ID
+ * @param {string} action - CREATE, UPDATE, DELETE
+ * @param {string} packageId - Package ID
+ * @param {object} changes - Changed data
+ * @param {string} ipAddress - Client IP
+ * @param {string} userAgent - User agent
+ */
+export async function logPackageEvent(
+  userId,
+  action,
+  packageId,
+  changes,
+  ipAddress,
+  userAgent
+) {
+  let description = "";
+  const name = changes?.name || "N/A";
+  const type = changes?.type || "";
+
+  switch (action) {
+    case "CREATE":
+      description = `Membuat paket: ${name} (${type})`;
+      break;
+    case "UPDATE":
+      description = `Mengubah paket: ${name} (${type})`;
+      break;
+    case "DELETE":
+      description = `Menghapus paket: ${name} (${type})`;
+      break;
+    default:
+      description = `${action} paket: ${name} (${type})`;
+  }
+
+  return await createAuditLog({
+    userId,
+    action,
+    resource: "Package",
+    resourceId: packageId,
+    description,
+    metadata: changes || {},
     ipAddress,
     userAgent,
   });

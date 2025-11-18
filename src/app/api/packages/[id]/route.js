@@ -5,7 +5,10 @@ import {
   protectedRoute,
   successResponse,
   errorResponse,
+  getClientIp,
+  getUserAgent,
 } from "@/lib/middleware";
+import { logPackageEvent } from "@/lib/audit";
 
 const prisma = new PrismaClient();
 
@@ -70,8 +73,10 @@ async function handleUpdatePackage(request, { params }) {
       tipePaket === "Paket Tour"
         ? "TOUR_PACKAGE"
         : tipePaket === "Full Day Trip"
-        ? "FULL_DAY_TRIP"
-        : "CAR_RENTAL";
+          ? "FULL_DAY_TRIP"
+          : tipePaket === "Harga Custom"
+            ? "CUSTOM_PRICING"
+            : "CAR_RENTAL";
 
     console.log("Mapped type:", type);
     console.log("durasiHari received:", durasiHari);
@@ -118,18 +123,19 @@ async function handleUpdatePackage(request, { params }) {
       );
     } else if (type === "FULL_DAY_TRIP") {
       // Full day trips use durationHours, price, and overtimeRate
+      // Convert from thousands to full rupiah (CurrencyInput sends in thousands)
       updateData.price =
         typeof hargaDefault === "number"
-          ? hargaDefault
+          ? hargaDefault * 1000
           : hargaDefault
-          ? Number(hargaDefault)
-          : null;
+            ? Number(hargaDefault) * 1000
+            : null;
       updateData.overtimeRate =
         typeof tarifOvertime === "number"
-          ? tarifOvertime
+          ? tarifOvertime * 1000
           : tarifOvertime
-          ? Number(tarifOvertime)
-          : null;
+            ? Number(tarifOvertime) * 1000
+            : null;
       updateData.durationHours = durasiHari ? Number(durasiHari) : null;
       updateData.durationDays = null;
       updateData.durationNights = null;
@@ -139,20 +145,29 @@ async function handleUpdatePackage(request, { params }) {
         "price =",
         updateData.price
       );
+    } else if (type === "CUSTOM_PRICING") {
+      // Custom pricing packages don't have fixed pricing or duration
+      updateData.price = null;
+      updateData.durationHours = null;
+      updateData.overtimeRate = null;
+      updateData.durationDays = null;
+      updateData.durationNights = null;
+      console.log("CUSTOM_PRICING: clearing all pricing and duration fields");
     } else if (type === "CAR_RENTAL") {
       // Car rentals use durationHours, price, and overtimeRate
+      // Convert from thousands to full rupiah (CurrencyInput sends in thousands)
       updateData.price =
         typeof hargaDefault === "number"
-          ? hargaDefault
+          ? hargaDefault * 1000
           : hargaDefault
-          ? Number(hargaDefault)
-          : null;
+            ? Number(hargaDefault) * 1000
+            : null;
       updateData.overtimeRate =
         typeof tarifOvertime === "number"
-          ? tarifOvertime
+          ? tarifOvertime * 1000
           : tarifOvertime
-          ? Number(tarifOvertime)
-          : null;
+            ? Number(tarifOvertime) * 1000
+            : null;
       updateData.durationHours = durasiHari ? Number(durasiHari) : null;
       updateData.durationDays = null;
       updateData.durationNights = null;
@@ -183,33 +198,29 @@ async function handleUpdatePackage(request, { params }) {
 
     console.log("Existing package found:", existingPackage.name);
 
-    // Smartly update hotel tiers and itineraries
+    // Fetch existing package with all relations for diff calculation
+    const existingPackageWithRelations = await prisma.servicePackage.findUnique({
+      where: { id },
+      include: {
+        hotelTiers: {
+          include: {
+            hotels: true,
+            priceRanges: true,
+          },
+        },
+        itineraries: true,
+      },
+    });
+
+    if (!existingPackageWithRelations) {
+      console.error("Package not found:", id);
+      return errorResponse("Package not found", 404);
+    }
+
+    // Update hotel tiers and itineraries with diff-based logic
     const tx = [];
 
-    // Delete old data first (only related data, not the package itself)
-    console.log("Deleting old hotel tiers and itineraries...");
-    tx.push(
-      prisma.hotelPriceRange.deleteMany({
-        where: { hotelTier: { servicePackageId: id } },
-      })
-    );
-    tx.push(
-      prisma.hotel.deleteMany({
-        where: { hotelTier: { servicePackageId: id } },
-      })
-    );
-    tx.push(
-      prisma.hotelTier.deleteMany({
-        where: { servicePackageId: id },
-      })
-    );
-    tx.push(
-      prisma.itineraryDay.deleteMany({
-        where: { servicePackageId: id },
-      })
-    );
-
-    // Then, update the main package data
+    // Update the main package data first
     console.log("Updating main package data...");
     tx.push(
       prisma.servicePackage.update({
@@ -218,18 +229,28 @@ async function handleUpdatePackage(request, { params }) {
       })
     );
 
-    // Then, create new hotel tiers and itineraries if they exist
-    if (
-      type === "TOUR_PACKAGE" &&
-      hotelTiers &&
-      Array.isArray(hotelTiers) &&
-      hotelTiers.length > 0
-    ) {
-      console.log("Creating new hotel tiers...", hotelTiers.length);
-      // validate priceRanges for each tier
-      for (let i = 0; i < hotelTiers.length; i++) {
-        const tier = hotelTiers[i];
-        if (tier.priceRanges) {
+    // Handle hotel tiers for TOUR_PACKAGE
+    if (type === "TOUR_PACKAGE") {
+      if (hotelTiers && Array.isArray(hotelTiers) && hotelTiers.length > 0) {
+        console.log("Processing hotel tiers...", hotelTiers.length);
+
+        // Validate all tiers first
+        for (let i = 0; i < hotelTiers.length; i++) {
+          const tier = hotelTiers[i];
+
+          // Ensure priceRanges exist and is not empty
+          if (
+            !tier.priceRanges ||
+            !Array.isArray(tier.priceRanges) ||
+            tier.priceRanges.length === 0
+          ) {
+            return errorResponse(
+              `Tingkat hotel ke-${i + 1} harus memiliki minimal satu rentang harga`,
+              400
+            );
+          }
+
+          // Validate price ranges
           const v = validatePriceRangesForTier(tier.priceRanges);
           if (!v.ok) {
             console.error("Price range validation failed:", v.message);
@@ -238,30 +259,99 @@ async function handleUpdatePackage(request, { params }) {
               400
             );
           }
-        }
-      }
 
-      tx.push(
-        ...hotelTiers.map((tier, idx) => {
-          console.log(`Creating hotel tier ${idx + 1}:`, tier);
-          return prisma.hotelTier.create({
-            data: {
-              servicePackageId: id,
-              starRating: (() => {
-                const m = String(tier.tingkat || "").match(/\d+/);
-                return m ? Number(m[0]) : tier.starRating || 0;
-              })(),
-              pricePerPax: tier.tarifPerPax ? Number(tier.tarifPerPax) : 0,
-              hotels:
-                tier.daftarHotel && Array.isArray(tier.daftarHotel)
+          // Ensure at least one price range has valid price > 0
+          const hasValidPrice = tier.priceRanges.some((r) => {
+            const price =
+              typeof r.price === "string"
+                ? Number(r.price.trim() || 0)
+                : Number(r.price || 0);
+            return price > 0;
+          });
+
+          if (!hasValidPrice) {
+            return errorResponse(
+              `Tingkat hotel ke-${i + 1} harus memiliki minimal satu rentang harga dengan nilai > 0`,
+              400
+            );
+          }
+        }
+
+        // Compute diff for hotel tiers
+        const existingTierIds = new Set(existingPackageWithRelations.hotelTiers.map(t => t.id));
+        const incomingTierIds = new Set(hotelTiers.filter(t => t.id).map(t => t.id));
+
+        const tiersToDelete = [...existingTierIds].filter(id => !incomingTierIds.has(id));
+        const tiersToUpdate = [...existingTierIds].filter(id => incomingTierIds.has(id));
+        const tiersToCreate = hotelTiers.filter(t => !t.id);
+
+        console.log(`Hotel tiers - Delete: ${tiersToDelete.length}, Update: ${tiersToUpdate.length}, Create: ${tiersToCreate.length}`);
+
+        // Delete removed hotel tiers (with cascade)
+        for (const tierId of tiersToDelete) {
+          console.log(`Deleting hotel tier ${tierId}`);
+          tx.push(prisma.hotelTier.delete({ where: { id: tierId } }));
+        }
+
+        // Update existing hotel tiers
+        for (const tier of hotelTiers.filter(t => t.id && tiersToUpdate.includes(t.id))) {
+          const starRating = (() => {
+            const m = String(tier.tingkat || "").match(/\d+/);
+            return m ? Number(m[0]) : tier.starRating || 0;
+          })();
+
+          console.log(`Updating hotel tier ${tier.id}`);
+          tx.push(
+            prisma.hotelTier.update({
+              where: { id: tier.id },
+              data: {
+                starRating,
+                // Handle hotels - delete all and recreate
+                hotels: tier.daftarHotel && Array.isArray(tier.daftarHotel)
                   ? {
-                      create: tier.daftarHotel.map((hotelName) => ({
-                        name: String(hotelName),
+                      deleteMany: {},
+                      create: tier.daftarHotel.map((hotel) => ({
+                        name: typeof hotel === 'string' ? hotel : hotel.name,
+                      })),
+                    }
+                  : { deleteMany: {} },
+                // Handle price ranges - delete all and recreate
+                priceRanges: tier.priceRanges && Array.isArray(tier.priceRanges)
+                  ? {
+                      deleteMany: {},
+                      create: tier.priceRanges.map((r) => ({
+                        minPax: Number(r.minPax || 0),
+                        maxPax: Number(r.maxPax || 0),
+                        price: Number(r.price || 0),
+                      })),
+                    }
+                  : { deleteMany: {} },
+              },
+            })
+          );
+        }
+
+        // Create new hotel tiers
+        for (const tier of tiersToCreate) {
+          const starRating = (() => {
+            const m = String(tier.tingkat || "").match(/\d+/);
+            return m ? Number(m[0]) : tier.starRating || 0;
+          })();
+
+          console.log(`Creating new hotel tier`);
+          tx.push(
+            prisma.hotelTier.create({
+              data: {
+                servicePackageId: id,
+                starRating,
+                hotels: tier.daftarHotel && Array.isArray(tier.daftarHotel)
+                  ? {
+                      create: tier.daftarHotel.map((hotel) => ({
+                        name: typeof hotel === 'string' ? hotel : hotel.name,
                       })),
                     }
                   : undefined,
-              priceRanges:
-                tier.priceRanges && Array.isArray(tier.priceRanges)
+                priceRanges: tier.priceRanges && Array.isArray(tier.priceRanges)
                   ? {
                       create: tier.priceRanges.map((r) => ({
                         minPax: Number(r.minPax || 0),
@@ -270,30 +360,94 @@ async function handleUpdatePackage(request, { params }) {
                       })),
                     }
                   : undefined,
-            },
-          });
+              },
+            })
+          );
+        }
+      } else {
+        // No hotel tiers provided, delete all existing ones
+        console.log("Deleting all hotel tiers...");
+        tx.push(
+          prisma.hotelTier.deleteMany({
+            where: { servicePackageId: id },
+          })
+        );
+      }
+    } else {
+      // Not TOUR_PACKAGE, ensure no hotel tiers exist
+      console.log("Deleting all hotel tiers (not TOUR_PACKAGE)...");
+      tx.push(
+        prisma.hotelTier.deleteMany({
+          where: { servicePackageId: id },
         })
       );
     }
 
-    if (
-      (type === "TOUR_PACKAGE" || type === "FULL_DAY_TRIP") &&
-      itineraries &&
-      Array.isArray(itineraries) &&
-      itineraries.length > 0
-    ) {
-      console.log("Creating new itineraries...", itineraries.length);
+    // Handle itineraries for TOUR_PACKAGE and FULL_DAY_TRIP
+    if (type === "TOUR_PACKAGE" || type === "FULL_DAY_TRIP") {
+      if (itineraries && Array.isArray(itineraries) && itineraries.length > 0) {
+        console.log("Processing itineraries...", itineraries.length);
+
+        // Compute diff for itineraries
+        const existingItineraryIds = new Set(existingPackageWithRelations.itineraries.map(i => i.id));
+        const incomingItineraryIds = new Set(itineraries.filter(i => i.id).map(i => i.id));
+
+        const itinerariesToDelete = [...existingItineraryIds].filter(id => !incomingItineraryIds.has(id));
+        const itinerariesToUpdate = [...existingItineraryIds].filter(id => incomingItineraryIds.has(id));
+        const itinerariesToCreate = itineraries.filter(i => !i.id);
+
+        console.log(`Itineraries - Delete: ${itinerariesToDelete.length}, Update: ${itinerariesToUpdate.length}, Create: ${itinerariesToCreate.length}`);
+
+        // Delete removed itineraries
+        for (const itineraryId of itinerariesToDelete) {
+          console.log(`Deleting itinerary ${itineraryId}`);
+          tx.push(prisma.itineraryDay.delete({ where: { id: itineraryId } }));
+        }
+
+        // Update existing itineraries
+        for (const itinerary of itineraries.filter(i => i.id && itinerariesToUpdate.includes(i.id))) {
+          console.log(`Updating itinerary ${itinerary.id}`);
+          tx.push(
+            prisma.itineraryDay.update({
+              where: { id: itinerary.id },
+              data: {
+                day: itinerary.hari ? Number(itinerary.hari) : 0,
+                title: itinerary.aktivitas || String(itinerary.title || ""),
+                description: itinerary.deskripsi || null,
+              },
+            })
+          );
+        }
+
+        // Create new itineraries
+        for (const itinerary of itinerariesToCreate) {
+          console.log(`Creating new itinerary`);
+          tx.push(
+            prisma.itineraryDay.create({
+              data: {
+                servicePackageId: id,
+                day: itinerary.hari ? Number(itinerary.hari) : 0,
+                title: itinerary.aktivitas || String(itinerary.title || ""),
+                description: itinerary.deskripsi || null,
+              },
+            })
+          );
+        }
+      } else {
+        // No itineraries provided, delete all existing ones
+        console.log("Deleting all itineraries...");
+        tx.push(
+          prisma.itineraryDay.deleteMany({
+            where: { servicePackageId: id },
+          })
+        );
+      }
+    } else {
+      // Not TOUR_PACKAGE or FULL_DAY_TRIP, ensure no itineraries exist
+      console.log("Deleting all itineraries (not TOUR_PACKAGE or FULL_DAY_TRIP)...");
       tx.push(
-        ...itineraries.map((it, idx) => {
-          console.log(`Creating itinerary ${idx + 1}:`, it);
-          return prisma.itineraryDay.create({
-            data: {
-              servicePackageId: id,
-              day: it.hari ? Number(it.hari) : 0,
-              title: it.aktivitas || String(it.title || ""),
-              description: it.deskripsi || null,
-            },
-          });
+        prisma.itineraryDay.deleteMany({
+          where: { servicePackageId: id },
         })
       );
     }
@@ -315,6 +469,16 @@ async function handleUpdatePackage(request, { params }) {
       },
     });
 
+    // Log audit event
+    await logPackageEvent(
+      request.auth.user.id,
+      "UPDATE",
+      id,
+      { name: result.name, type: result.type },
+      getClientIp(request),
+      getUserAgent(request)
+    );
+
     console.log("Updated package result:", result?.name);
     return successResponse(result);
   } catch (error) {
@@ -331,9 +495,29 @@ async function handleDeletePackage(request, { params }) {
   try {
     const { id } = await params;
 
+    // Get package data before deletion for audit log
+    const existingPackage = await prisma.servicePackage.findUnique({
+      where: { id },
+      select: { id: true, name: true, type: true },
+    });
+
+    if (!existingPackage) {
+      return errorResponse("Package not found", 404);
+    }
+
     await prisma.servicePackage.delete({
       where: { id },
     });
+
+    // Log audit event
+    await logPackageEvent(
+      request.auth.user.id,
+      "DELETE",
+      id,
+      { name: existingPackage.name, type: existingPackage.type },
+      getClientIp(request),
+      getUserAgent(request)
+    );
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {
@@ -342,17 +526,17 @@ async function handleDeletePackage(request, { params }) {
   }
 }
 
-// All roles can view packages
+// ADMIN and OPERATOR can view packages
 export const GET = protectedRoute(handleGetPackage, {
-  roles: ["ADMIN", "MANAGER", "OPERATOR"],
+  roles: ["ADMIN", "OPERATOR"],
 });
 
-// Only ADMIN and MANAGER can update packages
+// Only ADMIN can update packages
 export const PUT = protectedRoute(handleUpdatePackage, {
-  roles: ["ADMIN", "MANAGER"],
+  roles: ["ADMIN"],
 });
 
-// Only ADMIN and MANAGER can delete packages
+// Only ADMIN can delete packages
 export const DELETE = protectedRoute(handleDeletePackage, {
-  roles: ["ADMIN", "MANAGER"],
+  roles: ["ADMIN"],
 });

@@ -175,6 +175,68 @@ export async function deleteAllUserSessions(userId) {
 }
 
 /**
+ * Refresh/extend session expiry
+ * @param {string} token - Current session token
+ * @returns {Promise<object|null>} Updated session or null if invalid
+ */
+export async function refreshSession(token) {
+  if (!token) return null;
+
+  try {
+    // Verify token first
+    await verifyToken(token);
+
+    // Get current session
+    const session = await prisma.session.findUnique({
+      where: { token },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            username: true,
+            name: true,
+            role: true,
+            isActive: true,
+          },
+        },
+      },
+    });
+
+    // Check if session exists and user is active
+    if (!session || !session.user.isActive) {
+      return null;
+    }
+
+    // Calculate new expiry date
+    const newExpiresAt = new Date();
+    newExpiresAt.setDate(newExpiresAt.getDate() + SESSION_EXPIRY_DAYS);
+
+    // Update session expiry
+    const updatedSession = await prisma.session.update({
+      where: { token },
+      data: { expiresAt: newExpiresAt },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            username: true,
+            name: true,
+            role: true,
+            isActive: true,
+          },
+        },
+      },
+    });
+
+    return updatedSession;
+  } catch (error) {
+    return null;
+  }
+}
+
+/**
  * Clean up expired sessions
  * @returns {Promise<number>} Number of deleted sessions
  */

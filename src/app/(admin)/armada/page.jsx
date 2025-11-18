@@ -2,14 +2,12 @@
 
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useAlertDialog } from "@/components/ui/alert-dialog-provider";
 import ArmadaHeader from "@/components/armada/ArmadaHeader";
 import ArmadaFilters from "@/components/armada/ArmadaFilters";
 import ArmadaCard from "@/components/armada/ArmadaCard";
 import ArmadaDialog from "@/components/armada/ArmadaDialog";
 
 export default function ArmadaPage() {
-  const { showConfirm } = useAlertDialog();
   const [armadas, setArmadas] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -33,8 +31,8 @@ export default function ArmadaPage() {
       });
       if (!res.ok) throw new Error("fetch failed");
       const result = await res.json();
-      // API returns { success, data, message }
       const data = result.data || result;
+      console.log("Fetched armadas:", data);
       setArmadas(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Failed to load armadas", err);
@@ -114,15 +112,6 @@ export default function ArmadaPage() {
   };
 
   const handleDelete = async (id) => {
-    const confirmed = await showConfirm({
-      message: "Hapus armada ini?",
-      title: "Konfirmasi Hapus",
-      confirmText: "Hapus",
-      cancelText: "Batal",
-    });
-
-    if (!confirmed) return;
-
     try {
       const res = await fetch(`/api/vehicles/${id}`, {
         method: "DELETE",
@@ -201,15 +190,20 @@ export default function ArmadaPage() {
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredArmadas.map((a) => (
-              <ArmadaCard
-                key={a.id}
-                armada={a}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                onMaintenance={handleMaintenance}
-              />
-            ))}
+            {filteredArmadas.map((a) => {
+              const isArmadaInUse =
+                a.status === "BOOKED" || a.status === "ON_TRIP";
+              return (
+                <ArmadaCard
+                  key={a.id}
+                  armada={a}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onMaintenance={handleMaintenance}
+                  isDisabled={isArmadaInUse}
+                />
+              );
+            })}
           </div>
         )}
       </div>

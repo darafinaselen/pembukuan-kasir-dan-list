@@ -39,18 +39,22 @@ import {
   DollarSign,
   BarChart3,
 } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 import { formatCurrency } from "@/lib/transaction-utils";
+import { exportIncomeReport } from "@/lib/excel-export";
 
 const PACKAGE_TYPE_LABELS = {
   CAR_RENTAL: "Sewa Mobil",
   TOUR_PACKAGE: "Paket Wisata",
   FULL_DAY_TRIP: "Trip Sehari Penuh",
+  CUSTOM_PRICING: "Harga Custom",
 };
 
 const PACKAGE_TYPE_COLORS = {
   CAR_RENTAL: "bg-blue-100 text-blue-800",
   TOUR_PACKAGE: "bg-green-100 text-green-800",
   FULL_DAY_TRIP: "bg-purple-100 text-purple-800",
+  CUSTOM_PRICING: "bg-orange-100 text-orange-800",
 };
 
 export default function LaporanPemasukanTab({
@@ -61,6 +65,7 @@ export default function LaporanPemasukanTab({
 }) {
   const [selectedPackageType, setSelectedPackageType] = useState("all");
   const [expandedPackages, setExpandedPackages] = useState(new Set());
+  const [isExporting, setIsExporting] = useState(false);
 
   // Filter data based on selected package type
   const filteredData = data
@@ -92,12 +97,13 @@ export default function LaporanPemasukanTab({
     setExpandedPackages(newExpanded);
   };
 
-  const handleExport = async () => {
-    if (!dateRange?.from || !dateRange?.to) {
-      console.error("Date range not available for export");
+  const handleExport = () => {
+    if (!filteredData) {
+      console.error("No data available for export");
       return;
     }
 
+    setIsExporting(true);
     try {
       const formatDate = (date) => {
         const year = date.getFullYear();
@@ -109,40 +115,15 @@ export default function LaporanPemasukanTab({
       const fromStr = formatDate(dateRange.from);
       const toStr = formatDate(dateRange.to);
 
-      const params = new URLSearchParams({
-        from: fromStr,
-        to: toStr,
-        format: "csv",
-      });
+      const reportDateRange = { from: fromStr, to: toStr };
+      const filters = selectedPackageType !== "all" ? { packageType: selectedPackageType } : {};
 
-      if (selectedPackageType !== "all") {
-        params.append("packageType", selectedPackageType);
-      }
-
-      const response = await fetch(
-        `/api/reports/income/export?${params.toString()}`,
-        {
-          credentials: "include",
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to export report");
-      }
-
-      // Create download link
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `laporan-pemasukan-${fromStr}-to-${toStr}${selectedPackageType !== "all" ? `-${selectedPackageType}` : ""}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      exportIncomeReport(filteredData, reportDateRange, filters);
     } catch (error) {
       console.error("Export failed:", error);
       // TODO: Show error toast
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -194,11 +175,21 @@ export default function LaporanPemasukanTab({
               <SelectItem value="CAR_RENTAL">Sewa Mobil</SelectItem>
               <SelectItem value="TOUR_PACKAGE">Paket Wisata</SelectItem>
               <SelectItem value="FULL_DAY_TRIP">Trip Sehari Penuh</SelectItem>
+              <SelectItem value="CUSTOM_PRICING">Harga Custom</SelectItem>
             </SelectContent>
           </Select>
-          <Button onClick={handleExport} variant="outline" size="sm">
-            <Download className="w-4 h-4 mr-2" />
-            Export
+          <Button
+            onClick={handleExport}
+            variant="outline"
+            size="sm"
+            disabled={isExporting}
+          >
+            {isExporting ? (
+              <Spinner size="sm" className="mr-2" />
+            ) : (
+              <Download className="w-4 h-4 mr-2" />
+            )}
+            {isExporting ? "Mengekspor..." : "Export"}
           </Button>
         </div>
       </div>

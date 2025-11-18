@@ -3,7 +3,7 @@ import path from "path";
 import { minioClient, BUCKET_NAME, ensureBucket } from "./minio.js";
 
 // Storage mode: 'local' or 'minio'
-const STORAGE_MODE = process.env.FILE_STORAGE_MODE || "local";
+export const STORAGE_MODE = process.env.FILE_STORAGE_MODE || "local";
 const LOCAL_UPLOAD_DIR = path.join(process.cwd(), "public", "uploads");
 
 console.log(`🗄️  File Storage Mode: ${STORAGE_MODE.toUpperCase()}`);

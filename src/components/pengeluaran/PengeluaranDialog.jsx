@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Upload, X, FileText, Image as ImageIcon } from "lucide-react";
 import ExpenseFilePreview from "./ExpenseFilePreview";
+import { Spinner } from "@/components/ui/spinner";
 
 const kategoriOptions = [
   { value: "LISTRIK", label: "Listrik" },
@@ -89,6 +90,10 @@ export default function PengeluaranDialog({
   isLoadingDependencies,
   existingAttachments = [],
   expenseId,
+  isLoading = false,
+  userRole,
+  originalData,
+  onRequestApproval,
 }) {
   const [insentifType, setInsentifType] = React.useState("custom");
 
@@ -102,12 +107,20 @@ export default function PengeluaranDialog({
     }
   }, [formData.staffId, formData.driverId]);
 
+  const isOperatorRequest = userRole === "OPERATOR" && isEditing;
+
   const armadaCategories = ["BBM", "PERAWATAN_ARMADA", "PAJAK"];
   const stafCategories = ["GAJI_STAF_OPERASIONAL", "GAJI_STAF_ADMIN"];
   const insentifCategories = ["INSENTIF_BONUS"];
 
+  const handleOpenChange = (newOpen) => {
+    // Prevent closing dialog when loading
+    if (isLoading && !newOpen) return;
+    onOpenChange(newOpen);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[800px] max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
@@ -117,7 +130,14 @@ export default function PengeluaranDialog({
 
         <form
           id="pengeluaran-form"
-          onSubmit={handleSubmit}
+          onSubmit={
+            isOperatorRequest
+              ? (e) => {
+                  e.preventDefault();
+                  onRequestApproval();
+                }
+              : handleSubmit
+          }
           className="space-y-4 py-4"
         >
           <div className="space-y-2">
@@ -129,6 +149,7 @@ export default function PengeluaranDialog({
               onChange={handleInputChange}
               placeholder="Pilih tanggal pengeluaran..."
               required
+              disabled={isLoading}
             />
           </div>
           <div className="space-y-2">
@@ -159,6 +180,7 @@ export default function PengeluaranDialog({
               value={formData.category}
               onValueChange={(value) => handleSelectChange("category", value)}
               required
+              disabled={isLoading}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Pilih kategori..." />
@@ -194,6 +216,7 @@ export default function PengeluaranDialog({
               onChange={handleInputChange}
               placeholder="Masukkan deskripsi pengeluaran..."
               required
+              disabled={isLoading}
             />
           </div>
 
@@ -512,12 +535,26 @@ export default function PengeluaranDialog({
 
         <DialogFooter>
           <DialogClose asChild>
-            <Button type="button" variant="outline">
+            <Button type="button" variant="outline" disabled={isLoading}>
               Batal
             </Button>
           </DialogClose>
-          <Button type="submit" form="pengeluaran-form">
-            Simpan
+          <Button
+            type={isOperatorRequest ? "button" : "submit"}
+            form="pengeluaran-form"
+            disabled={isLoading}
+            onClick={isOperatorRequest ? onRequestApproval : undefined}
+          >
+            {isLoading ? (
+              <>
+                <Spinner size="sm" className="mr-2" />
+                {isOperatorRequest ? "Mengajukan..." : "Menyimpan..."}
+              </>
+            ) : isOperatorRequest ? (
+              "Ajukan Persetujuan"
+            ) : (
+              "Simpan"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

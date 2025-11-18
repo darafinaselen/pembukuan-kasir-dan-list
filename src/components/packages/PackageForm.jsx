@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Form,
   FormField,
@@ -45,6 +45,7 @@ export function PackageForm({
   onSubmit: onSubmitProp,
   defaultValues,
 }) {
+  const [isLoadingData, setIsLoadingData] = useState(false);
   const {
     register,
     handleSubmit,
@@ -63,8 +64,8 @@ export function PackageForm({
       tarifHotel: [
         {
           tingkat: "Bintang 3",
-          tarifPerPax: 0,
           daftarHotel: [],
+          priceRanges: [],
         },
       ],
       itinerary: [{ hari: 1, aktivitas: "" }],
@@ -137,16 +138,19 @@ export function PackageForm({
     console.log("PackageForm useEffect - Received package:", pkg);
 
     if (pkg) {
+      setIsLoadingData(true);
       // support both English- and Indonesian-shaped package objects
       const namaPaket = pkg.namaPaket ?? pkg.name ?? "";
       const typeMap = {
         CAR_RENTAL: "Sewa Mobil",
         FULL_DAY_TRIP: "Full Day Trip",
         TOUR_PACKAGE: "Paket Tour",
+        CUSTOM_PRICING: "Harga Custom",
         // passthrough for already-localized labels
         "Sewa Mobil": "Sewa Mobil",
         "Full Day Trip": "Full Day Trip",
         "Paket Tour": "Paket Tour",
+        "Harga Custom": "Harga Custom",
       };
 
       const rawTipe = pkg.type ?? pkg.tipePaket ?? "Sewa Mobil";
@@ -164,43 +168,56 @@ export function PackageForm({
       const exclude = pkg.exclude ?? pkg.excludes ?? "";
 
       // Transform hotelTiers from database format to form format
-      let tarifHotelVal = pkg.tarifHotel ?? [];
-      if (!tarifHotelVal || tarifHotelVal.length === 0) {
-        // Check if we have hotelTiers from database (English format)
-        const dbHotelTiers = pkg.hotelTiers ?? [];
-        console.log("Transforming hotelTiers from DB:", dbHotelTiers);
-        if (Array.isArray(dbHotelTiers) && dbHotelTiers.length > 0) {
-          tarifHotelVal = dbHotelTiers.map((tier) => ({
-            tingkat: `Bintang ${tier.starRating}`,
-            tarifPerPax: tier.pricePerPax ?? 0,
-            daftarHotel: Array.isArray(tier.hotels)
-              ? tier.hotels.map((h) => h.name)
-              : [],
-            priceRanges: Array.isArray(tier.priceRanges)
-              ? tier.priceRanges.map((pr) => ({
-                  minPax: pr.minPax,
-                  maxPax: pr.maxPax,
-                  price: pr.price,
-                }))
-              : [],
-          }));
-          console.log("Transformed tarifHotelVal:", tarifHotelVal);
-        }
+      let tarifHotelVal = [];
+      if (
+        pkg.hotelTiers &&
+        Array.isArray(pkg.hotelTiers) &&
+        pkg.hotelTiers.length > 0
+      ) {
+        // Always prefer database format if available
+        console.log("Transforming hotelTiers from DB:", pkg.hotelTiers);
+        // For TOUR_PACKAGE, prices are stored in thousands; for others, in full rupiah
+        const isTourPackage = rawTipe === "TOUR_PACKAGE";
+        tarifHotelVal = pkg.hotelTiers.map((tier) => ({
+          id: tier.id, // Preserve the database ID for updates
+          tingkat: `Bintang ${tier.starRating}`,
+          daftarHotel: Array.isArray(tier.hotels)
+            ? tier.hotels.map((h) => ({ id: h.id, name: h.name })) // Include hotel IDs
+            : [],
+          priceRanges: Array.isArray(tier.priceRanges)
+            ? tier.priceRanges.map((pr) => ({
+                id: pr.id, // Preserve price range ID
+                minPax: pr.minPax,
+                maxPax: pr.maxPax,
+                price: isTourPackage ? pr.price : pr.price / 1000, // TOUR_PACKAGE already in thousands, others convert from full rupiah
+              }))
+            : [],
+        }));
+        console.log("Transformed tarifHotelVal:", tarifHotelVal);
+      } else if (pkg.tarifHotel && Array.isArray(pkg.tarifHotel)) {
+        // Fallback to existing tarifHotel format
+        tarifHotelVal = pkg.tarifHotel;
       }
 
       // Transform itineraries from database format to form format
-      let itineraryVal = pkg.itinerary ?? [];
-      if (!itineraryVal || itineraryVal.length === 0) {
-        const dbItineraries = pkg.itineraries ?? [];
-        console.log("Transforming itineraries from DB:", dbItineraries);
-        if (Array.isArray(dbItineraries) && dbItineraries.length > 0) {
-          itineraryVal = dbItineraries.map((it) => ({
-            hari: it.day,
-            aktivitas: it.title || "",
-            deskripsi: it.description || "",
-          }));
-          console.log("Transformed itineraryVal:", itineraryVal);
-        }
+      let itineraryVal = [];
+      if (
+        pkg.itineraries &&
+        Array.isArray(pkg.itineraries) &&
+        pkg.itineraries.length > 0
+      ) {
+        // Always prefer database format if available
+        console.log("Transforming itineraries from DB:", pkg.itineraries);
+        itineraryVal = pkg.itineraries.map((it) => ({
+          id: it.id, // Preserve the database ID for updates
+          hari: it.day,
+          aktivitas: it.title || "",
+          deskripsi: it.description || "",
+        }));
+        console.log("Transformed itineraryVal:", itineraryVal);
+      } else if (pkg.itinerary && Array.isArray(pkg.itinerary)) {
+        // Fallback to existing itinerary format
+        itineraryVal = pkg.itinerary;
       }
 
       // Build reset payload depending on package type so we don't prefill irrelevant data
@@ -228,17 +245,20 @@ export function PackageForm({
               : [
                   {
                     tingkat: "Bintang 3",
-                    tarifPerPax: 0,
                     daftarHotel: [],
+                    priceRanges: [],
                   },
                 ],
-          itinerary:
-            Array.isArray(itineraryVal) && itineraryVal.length > 0
-              ? itineraryVal
-              : [{ hari: 1, aktivitas: "" }],
         };
         console.log("Resetting form for Paket Tour with data:", resetData);
         reset(resetData);
+
+        // Set itinerary separately to avoid duplication issues
+        const finalItinerary =
+          Array.isArray(itineraryVal) && itineraryVal.length > 0
+            ? itineraryVal
+            : [{ hari: 1, aktivitas: "" }];
+        setValue("itinerary", finalItinerary);
       } else if (mappedTipe === "Full Day Trip") {
         // Full day: include price/overtime and itinerary; clear hotel tiers
         reset({
@@ -248,11 +268,25 @@ export function PackageForm({
           hargaDefault: hargaDefault || 0,
           tarifOvertime: tarifOvertime || 0,
           tarifHotel: [],
-          itinerary:
-            Array.isArray(itineraryVal) && itineraryVal.length > 0
-              ? itineraryVal
-              : [{ hari: 1, aktivitas: "" }],
         });
+
+        // Set itinerary separately to avoid duplication issues
+        const finalItinerary =
+          Array.isArray(itineraryVal) && itineraryVal.length > 0
+            ? itineraryVal
+            : [{ hari: 1, aktivitas: "" }];
+        setValue("itinerary", finalItinerary);
+      } else if (mappedTipe === "Harga Custom") {
+        // Custom pricing: no fixed price or duration, just basic info
+        reset({
+          ...base,
+          durasiHari: 0,
+          durasiMalam: 0,
+          hargaDefault: 0,
+          tarifOvertime: 0,
+          tarifHotel: [],
+        });
+        setValue("itinerary", [{ hari: 1, aktivitas: "" }]);
       } else {
         // Sewa Mobil / default: include price/overtime; clear tour-specific fields
         reset({
@@ -262,8 +296,8 @@ export function PackageForm({
           hargaDefault: hargaDefault || 0,
           tarifOvertime: tarifOvertime || 0,
           tarifHotel: [],
-          itinerary: [{ hari: 1, aktivitas: "" }],
         });
+        setValue("itinerary", [{ hari: 1, aktivitas: "" }]);
       }
     } else {
       reset({
@@ -279,9 +313,11 @@ export function PackageForm({
         include: "",
         exclude: "",
         tarifHotel: [],
-        itinerary: [{ hari: 1, aktivitas: "" }],
       });
+      setValue("itinerary", [{ hari: 1, aktivitas: "" }]);
     }
+
+    setIsLoadingData(false);
   }, [package_, defaultValues, reset, open]);
 
   // When the user changes the package type in the form, clear or set fields
@@ -293,7 +329,7 @@ export function PackageForm({
       const currentHotel = getValues("tarifHotel");
       if (!Array.isArray(currentHotel) || currentHotel.length === 0) {
         setValue("tarifHotel", [
-          { tingkat: "Bintang 3", tarifPerPax: 0, daftarHotel: [] },
+          { tingkat: "Bintang 3", daftarHotel: [], priceRanges: [] },
         ]);
       }
       const it = getValues("itinerary");
@@ -322,6 +358,14 @@ export function PackageForm({
       if (getValues("durasiMalam") === undefined) {
         setValue("durasiMalam", 0);
       }
+    } else if (tipePaket === "Harga Custom") {
+      // Custom pricing: no fixed price or duration, clear all pricing and duration fields
+      setValue("hargaDefault", 0);
+      setValue("tarifOvertime", 0);
+      setValue("tarifHotel", []);
+      setValue("itinerary", [{ hari: 1, aktivitas: "" }]);
+      setValue("durasiHari", 0);
+      setValue("durasiMalam", 0);
     } else {
       // Sewa Mobil or other: clear tour-specific data
       setValue("tarifHotel", []);
@@ -394,31 +438,71 @@ export function PackageForm({
   const onSubmit = async (data) => {
     // client-side validation for priceRanges when Paket Tour
     if (data.tipePaket === "Paket Tour" && Array.isArray(data.tarifHotel)) {
+      let hasValidPriceRange = false;
+
       for (let i = 0; i < data.tarifHotel.length; i++) {
         const tier = data.tarifHotel[i];
-        if (tier.priceRanges) {
-          const v = validatePriceRangesForTier(tier.priceRanges);
-          if (!v.ok) {
-            // set form error on the nested field and abort submit
-            setError(`tarifHotel.${i}.priceRanges`, {
-              type: "manual",
-              message: v.message,
-            });
-            return;
-          } else {
-            clearErrors(`tarifHotel.${i}.priceRanges`);
+
+        // Ensure priceRanges exist and is an array
+        if (!tier.priceRanges || !Array.isArray(tier.priceRanges)) {
+          setError(`tarifHotel.${i}.priceRanges`, {
+            type: "manual",
+            message: "Tarif hotel harus memiliki rentang harga",
+          });
+          return;
+        }
+
+        // Ensure priceRanges is not empty
+        if (tier.priceRanges.length === 0) {
+          setError(`tarifHotel.${i}.priceRanges`, {
+            type: "manual",
+            message: "Minimal satu rentang harga harus diisi",
+          });
+          return;
+        }
+
+        // Validate each price range
+        const v = validatePriceRangesForTier(tier.priceRanges);
+        if (!v.ok) {
+          // set form error on the nested field and abort submit
+          setError(`tarifHotel.${i}.priceRanges`, {
+            type: "manual",
+            message: v.message,
+          });
+          return;
+        } else {
+          clearErrors(`tarifHotel.${i}.priceRanges`);
+          // Check if this tier has at least one valid price range with price > 0
+          if (
+            tier.priceRanges.some((pr) => {
+              const price =
+                typeof pr.price === "string"
+                  ? Number(pr.price.trim() || 0)
+                  : Number(pr.price || 0);
+              return price > 0;
+            })
+          ) {
+            hasValidPriceRange = true;
           }
         }
+      }
+
+      // Ensure at least one tier has valid price ranges
+      if (!hasValidPriceRange) {
+        setError("tarifHotel", {
+          type: "manual",
+          message:
+            "Paket Tour harus memiliki setidaknya satu rentang harga yang valid (harga > 0)",
+        });
+        return;
+      } else {
+        clearErrors("tarifHotel");
       }
     }
     const packageData = {
       namaPaket: data.namaPaket,
       tipePaket: data.tipePaket,
       deskripsi: data.deskripsi,
-      durasi: {
-        hari: data.durasiHari,
-        malam: data.durasiMalam,
-      },
       isCustomizable: data.isCustomizable,
       customizableItems: data.isCustomizable
         ? data.customizableItems
@@ -426,6 +510,14 @@ export function PackageForm({
       include: data.include,
       exclude: data.exclude,
     };
+
+    // Only include duration for non-custom pricing packages
+    if (data.tipePaket !== "Harga Custom") {
+      packageData.durasi = {
+        hari: data.durasiHari,
+        malam: data.durasiMalam,
+      };
+    }
 
     if (data.tipePaket === "Sewa Mobil" || data.tipePaket === "Full Day Trip") {
       packageData.hargaDefault = data.hargaDefault;
@@ -437,6 +529,7 @@ export function PackageForm({
       packageData.tarifHotel = data.tarifHotel;
       packageData.itinerary = data.itinerary;
     }
+    // CUSTOM_PRICING doesn't need special fields - it's just a template
 
     // preserve id whether caller passed package_ or defaultValues
     if (package_?.id) {
@@ -470,6 +563,14 @@ export function PackageForm({
           </DialogDescription>
         </DialogHeader>
         <Form onSubmit={handleSubmit(onSubmit)}>
+          {isLoadingData && (
+            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-50 rounded-lg">
+              <div className="flex items-center gap-2 text-gray-600">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-teal-600"></div>
+                <span>Memuat data...</span>
+              </div>
+            </div>
+          )}
           <div className="grid gap-4 py-4">
             <FormField>
               <FormItem>
@@ -549,6 +650,11 @@ export function PackageForm({
                             price > 0 ||
                             overtime > 0
                           );
+                        }
+
+                        // Custom pricing -> switching away doesn't lose data
+                        if (oldType === "Harga Custom") {
+                          return false;
                         }
 
                         return false;
@@ -634,6 +740,9 @@ export function PackageForm({
                               <SelectItem value="Paket Tour">
                                 Paket Tour (Multi Hari)
                               </SelectItem>
+                              <SelectItem value="Harga Custom">
+                                Harga Custom
+                              </SelectItem>
                             </SelectContent>
                           </Select>
 
@@ -712,6 +821,15 @@ export function PackageForm({
                                         )}
                                       </>
                                     )}
+
+                                  {field.value === "Harga Custom" && (
+                                    <>
+                                      <li className="text-green-600">
+                                        Paket harga custom tidak memiliki data
+                                        yang akan hilang
+                                      </li>
+                                    </>
+                                  )}
 
                                   <li className="text-gray-600">
                                     Data lain yang relevan dengan tipe saat ini
@@ -878,80 +996,90 @@ export function PackageForm({
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField>
-                <FormItem>
-                  <FormLabel htmlFor="durasiHari">
-                    {tipePaket === "Sewa Mobil"
-                      ? "Durasi (Jam)"
-                      : "Durasi (Hari)"}{" "}
-                    <span className="text-red-500">*</span>
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      id="durasiHari"
-                      type="number"
-                      placeholder={tipePaket === "Sewa Mobil" ? "24" : "4"}
-                      {...register("durasiHari", {
-                        required:
-                          tipePaket === "Sewa Mobil"
-                            ? "Durasi jam harus diisi"
-                            : "Durasi hari harus diisi",
-                        min: {
-                          value: 1,
-                          message:
-                            tipePaket === "Sewa Mobil"
-                              ? "Minimal 1 jam"
-                              : "Minimal 1 hari",
-                        },
-                        valueAsNumber: true,
-                      })}
-                    />
-                  </FormControl>
-                  {errors.durasiHari && (
-                    <FormMessage className="text-red-500">
-                      {errors.durasiHari.message}
-                    </FormMessage>
-                  )}
-                </FormItem>
-              </FormField>
-
-              {tipePaket === "Paket Tour" || tipePaket === "Full Day Trip" ? (
+            {tipePaket === "Harga Custom" ? (
+              <div className="flex items-center justify-center p-4 bg-yellow-50 rounded-lg border-2 border-dashed border-yellow-200">
+                <p className="text-sm text-yellow-700 text-center">
+                  Paket harga custom tidak memerlukan durasi tetap
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
                 <FormField>
                   <FormItem>
-                    <FormLabel htmlFor="durasiMalam">
-                      Durasi (Malam) <span className="text-red-500">*</span>
+                    <FormLabel htmlFor="durasiHari">
+                      {tipePaket === "Sewa Mobil"
+                        ? "Durasi (Jam)"
+                        : "Durasi (Hari)"}{" "}
+                      <span className="text-red-500">*</span>
                     </FormLabel>
                     <FormControl>
                       <Input
-                        id="durasiMalam"
+                        id="durasiHari"
                         type="number"
-                        placeholder={tipePaket === "Full Day Trip" ? "0" : "3"}
-                        {...register("durasiMalam", {
-                          required: "Durasi malam harus diisi",
+                        placeholder={tipePaket === "Sewa Mobil" ? "24" : "4"}
+                        {...register("durasiHari", {
+                          required:
+                            tipePaket === "Sewa Mobil"
+                              ? "Durasi jam harus diisi"
+                              : "Durasi hari harus diisi",
                           min: {
-                            value: 0,
-                            message: "Minimal 0 malam",
+                            value: 1,
+                            message:
+                              tipePaket === "Sewa Mobil"
+                                ? "Minimal 1 jam"
+                                : "Minimal 1 hari",
                           },
                           valueAsNumber: true,
                         })}
                       />
                     </FormControl>
-                    {errors.durasiMalam && (
+                    {errors.durasiHari && (
                       <FormMessage className="text-red-500">
-                        {errors.durasiMalam.message}
+                        {errors.durasiHari.message}
                       </FormMessage>
                     )}
                   </FormItem>
                 </FormField>
-              ) : (
-                <div className="flex items-center justify-center p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-                  <p className="text-sm text-gray-500 text-center">
-                    Sewa Mobil tidak memiliki durasi malam
-                  </p>
-                </div>
-              )}
-            </div>
+
+                {tipePaket === "Paket Tour" || tipePaket === "Full Day Trip" ? (
+                  <FormField>
+                    <FormItem>
+                      <FormLabel htmlFor="durasiMalam">
+                        Durasi (Malam) <span className="text-red-500">*</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          id="durasiMalam"
+                          type="number"
+                          placeholder={
+                            tipePaket === "Full Day Trip" ? "0" : "3"
+                          }
+                          {...register("durasiMalam", {
+                            required: "Durasi malam harus diisi",
+                            min: {
+                              value: 0,
+                              message: "Minimal 0 malam",
+                            },
+                            valueAsNumber: true,
+                          })}
+                        />
+                      </FormControl>
+                      {errors.durasiMalam && (
+                        <FormMessage className="text-red-500">
+                          {errors.durasiMalam.message}
+                        </FormMessage>
+                      )}
+                    </FormItem>
+                  </FormField>
+                ) : (
+                  <div className="flex items-center justify-center p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+                    <p className="text-sm text-gray-500 text-center">
+                      Sewa Mobil tidak memiliki durasi malam
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <FormField>
@@ -984,6 +1112,21 @@ export function PackageForm({
             </div>
 
             <div className="space-y-4">
+              {tipePaket === "Harga Custom" && (
+                <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                    <h3 className="font-medium text-yellow-900">
+                      Paket Harga Custom
+                    </h3>
+                  </div>
+                  <p className="text-yellow-700 mt-2">
+                    Paket ini memungkinkan harga yang disesuaikan per transaksi.
+                    Harga akan ditentukan saat membuat transaksi.
+                  </p>
+                </div>
+              )}
+
               {tipePaket === "Paket Tour" && (
                 <div className="space-y-4">
                   <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
@@ -1058,29 +1201,6 @@ export function PackageForm({
                                               </SelectItem>
                                             </SelectContent>
                                           </Select>
-                                        )}
-                                      />
-                                    </FormControl>
-                                  </FormItem>
-                                </FormField>
-
-                                <FormField>
-                                  <FormItem>
-                                    <FormLabel>Tarif per PAX</FormLabel>
-                                    <FormControl>
-                                      <CurrencyInput
-                                        placeholder="1.500.000"
-                                        {...register(
-                                          `tarifHotel.${index}.tarifPerPax`,
-                                          {
-                                            required:
-                                              "Tarif per PAX harus diisi",
-                                            min: {
-                                              value: 0,
-                                              message: "Tarif minimal 0",
-                                            },
-                                            valueAsNumber: true,
-                                          }
                                         )}
                                       />
                                     </FormControl>
@@ -1164,15 +1284,25 @@ export function PackageForm({
                                             )}
                                             placeholder="max"
                                           />
-                                          <CurrencyInput
-                                            className={`w-40 ${
-                                              fieldError ? "border-red-500" : ""
-                                            }`}
-                                            {...register(
-                                              `tarifHotel.${index}.priceRanges.${ri}.price`,
-                                              { valueAsNumber: true }
+                                          <Controller
+                                            name={`tarifHotel.${index}.priceRanges.${ri}.price`}
+                                            control={control}
+                                            render={({ field }) => (
+                                              <CurrencyInput
+                                                className={`w-40 ${
+                                                  fieldError
+                                                    ? "border-red-500"
+                                                    : ""
+                                                }`}
+                                                value={field.value}
+                                                onChange={(e) => {
+                                                  field.onChange(
+                                                    e.target.value
+                                                  );
+                                                }}
+                                                placeholder="Harga"
+                                              />
                                             )}
-                                            placeholder="Harga"
                                           />
                                           <Button
                                             type="button"
@@ -1253,7 +1383,6 @@ export function PackageForm({
                           onClick={() =>
                             appendHotel({
                               tingkat: "Bintang 3",
-                              tarifPerPax: 0,
                               daftarHotel: [],
                               priceRanges: [],
                             })
@@ -1336,123 +1465,146 @@ export function PackageForm({
                 </div>
               )}
 
-              {(tipePaket === "Sewa Mobil" ||
-                tipePaket === "Full Day Trip") && (
-                <>
-                  <div className="space-y-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                      <h3 className="font-medium text-blue-900">
-                        {tipePaket === "Sewa Mobil"
-                          ? "Konfigurasi Sewa Mobil"
-                          : "Konfigurasi Full Day Trip"}
-                      </h3>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField>
-                        <FormItem>
-                          <FormLabel htmlFor="hargaDefault">
-                            Harga Default (per PAX){" "}
-                            <span className="text-red-500">*</span>
-                          </FormLabel>
-                          <FormControl>
-                            <CurrencyInput
-                              id="hargaDefault"
-                              placeholder="500.000"
-                              {...register("hargaDefault", {
-                                required:
-                                  tipePaket === "Sewa Mobil" ||
-                                  tipePaket === "Full Day Trip"
-                                    ? "Harga harus diisi"
-                                    : false,
-                                min: {
-                                  value: 0,
-                                  message: "Harga minimal 0",
-                                },
-                                valueAsNumber: true,
-                              })}
-                            />
-                          </FormControl>
-                          {errors.hargaDefault && (
-                            <FormMessage className="text-red-500">
-                              {errors.hargaDefault.message}
-                            </FormMessage>
-                          )}
-                        </FormItem>
-                      </FormField>
-
-                      <FormField>
-                        <FormItem>
-                          <FormLabel htmlFor="tarifOvertime">
-                            Tarif Overtime (per Jam)
-                          </FormLabel>
-                          <FormControl>
-                            <CurrencyInput
-                              id="tarifOvertime"
-                              placeholder="50.000"
-                              {...register("tarifOvertime", {
-                                min: {
-                                  value: 0,
-                                  message: "Tarif minimal 0",
-                                },
-                                valueAsNumber: true,
-                              })}
-                            />
-                          </FormControl>
-                          {errors.tarifOvertime && (
-                            <FormMessage className="text-red-500">
-                              {errors.tarifOvertime.message}
-                            </FormMessage>
-                          )}
-                        </FormItem>
-                      </FormField>
-                    </div>
-                  </div>
-
-                  {tipePaket === "Full Day Trip" && (
-                    <div className="space-y-3 p-4 bg-green-50 rounded-lg border border-green-200">
+              {(tipePaket === "Sewa Mobil" || tipePaket === "Full Day Trip") &&
+                tipePaket !== "Harga Custom" && (
+                  <>
+                    <div className="space-y-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                       <div className="flex items-center gap-2">
-                        <Map className="h-4 w-4 text-green-600" />
-                        <h3 className="font-medium text-green-900">
-                          Itinerary Full Day Trip
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        <h3 className="font-medium text-blue-900">
+                          {tipePaket === "Sewa Mobil"
+                            ? "Konfigurasi Sewa Mobil"
+                            : "Konfigurasi Full Day Trip"}
                         </h3>
                       </div>
-                      {itineraryFields.map((field, index) => (
-                        <div
-                          key={field.id}
-                          className="p-3 bg-white rounded-lg border space-y-2"
-                        >
-                          <FormField>
-                            <FormItem>
-                              <FormLabel>Aktivitas</FormLabel>
-                              <FormControl>
-                                <Textarea
-                                  placeholder="Deskripsi aktivitas sepanjang hari..."
-                                  rows={4}
-                                  {...register(`itinerary.${index}.aktivitas`, {
-                                    required: "Aktivitas harus diisi",
-                                  })}
-                                />
-                              </FormControl>
-                              {errors?.itinerary?.[index]?.aktivitas && (
-                                <FormMessage className="text-red-500">
-                                  {errors.itinerary[index].aktivitas.message}
-                                </FormMessage>
-                              )}
-                              <input
-                                type="hidden"
-                                {...register(`itinerary.${index}.hari`)}
-                                value={1}
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField>
+                          <FormItem>
+                            <FormLabel htmlFor="hargaDefault">
+                              Harga Default{" "}
+                              <span className="text-red-500">*</span>
+                            </FormLabel>
+                            <FormControl>
+                              <Controller
+                                name="hargaDefault"
+                                control={control}
+                                rules={{
+                                  required:
+                                    tipePaket === "Sewa Mobil" ||
+                                    tipePaket === "Full Day Trip"
+                                      ? "Harga harus diisi"
+                                      : false,
+                                  validate: (value) => {
+                                    const num = Number(value || 0);
+                                    if (num < 0) return "Harga minimal 0";
+                                    return true;
+                                  },
+                                }}
+                                render={({ field }) => (
+                                  <CurrencyInput
+                                    id="hargaDefault"
+                                    placeholder="500.000"
+                                    value={field.value}
+                                    onChange={(e) => {
+                                      field.onChange(e.target.value);
+                                    }}
+                                  />
+                                )}
                               />
-                            </FormItem>
-                          </FormField>
-                        </div>
-                      ))}
+                            </FormControl>
+                            {errors.hargaDefault && (
+                              <FormMessage className="text-red-500">
+                                {errors.hargaDefault.message}
+                              </FormMessage>
+                            )}
+                          </FormItem>
+                        </FormField>
+
+                        <FormField>
+                          <FormItem>
+                            <FormLabel htmlFor="tarifOvertime">
+                              Tarif Overtime (per Jam)
+                            </FormLabel>
+                            <FormControl>
+                              <Controller
+                                name="tarifOvertime"
+                                control={control}
+                                rules={{
+                                  validate: (value) => {
+                                    const num = Number(value || 0);
+                                    if (num < 0) return "Tarif minimal 0";
+                                    return true;
+                                  },
+                                }}
+                                render={({ field }) => (
+                                  <CurrencyInput
+                                    id="tarifOvertime"
+                                    placeholder="50.000"
+                                    value={field.value}
+                                    onChange={(e) => {
+                                      field.onChange(e.target.value);
+                                    }}
+                                  />
+                                )}
+                              />
+                            </FormControl>
+                            {errors.tarifOvertime && (
+                              <FormMessage className="text-red-500">
+                                {errors.tarifOvertime.message}
+                              </FormMessage>
+                            )}
+                          </FormItem>
+                        </FormField>
+                      </div>
                     </div>
-                  )}
-                </>
-              )}
+
+                    {tipePaket === "Full Day Trip" && (
+                      <div className="space-y-3 p-4 bg-green-50 rounded-lg border border-green-200">
+                        <div className="flex items-center gap-2">
+                          <Map className="h-4 w-4 text-green-600" />
+                          <h3 className="font-medium text-green-900">
+                            Itinerary Full Day Trip
+                          </h3>
+                        </div>
+                        {itineraryFields.map((field, index) => (
+                          <div
+                            key={field.id}
+                            className="p-3 bg-white rounded-lg border space-y-2"
+                          >
+                            <FormField>
+                              <FormItem>
+                                <FormLabel>Aktivitas</FormLabel>
+                                <FormControl>
+                                  <Textarea
+                                    placeholder="Deskripsi aktivitas sepanjang hari..."
+                                    rows={4}
+                                    {...register(
+                                      `itinerary.${index}.aktivitas`,
+                                      {
+                                        required: "Aktivitas harus diisi",
+                                      }
+                                    )}
+                                  />
+                                </FormControl>
+                                {errors?.itinerary?.[index]?.aktivitas && (
+                                  <FormMessage className="text-red-500">
+                                    {errors.itinerary[index].aktivitas.message}
+                                  </FormMessage>
+                                )}
+                                <input
+                                  type="hidden"
+                                  {...register(`itinerary.${index}.hari`)}
+                                  value={1}
+                                />
+                              </FormItem>
+                            </FormField>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
             </div>
             <Button
               type="button"

@@ -10,7 +10,8 @@ import { PackageDetail } from "@/components/packages/PackageDetail";
 import { DeleteConfirmation } from "@/components/packages/DeleteConfirmation";
 
 export default function PackagesPage() {
-  const [packages, setPackages] = useState([]);
+  const [packages, setPackages] = useState(null); // null = loading, [] = empty, [...] = loaded
+  const [isLoading, setIsLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
@@ -18,6 +19,7 @@ export default function PackagesPage() {
 
   const fetchPackages = useCallback(async () => {
     try {
+      setIsLoading(true);
       const res = await fetch("/api/packages", {
         credentials: "include",
       });
@@ -50,6 +52,8 @@ export default function PackagesPage() {
     } catch (err) {
       console.error("Error fetching packages:", err);
       setPackages([]);
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -162,7 +166,7 @@ export default function PackagesPage() {
       <PackageHeader onAdd={openCreateForm} />
 
       <div className="p-4">
-        {packages === null ? (
+        {isLoading ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (
               <div

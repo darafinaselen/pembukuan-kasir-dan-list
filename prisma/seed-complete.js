@@ -44,19 +44,7 @@ async function main() {
     },
   });
 
-  const manager = await prisma.user.create({
-    data: {
-      username: "manager",
-      email: "manager@pembukuan.com",
-      password: hashedPassword,
-      name: "Manager Operasional",
-      role: "MANAGER",
-      isActive: true,
-    },
-  });
-
-  console.log(`✅ Created ${admin.name} (ADMIN)`);
-  console.log(`✅ Created ${manager.name} (MANAGER)\n`);
+  console.log(`✅ Created ${admin.name} (ADMIN)\n`);
 
   // ========================================
   // 3. CREATE SERVICE PACKAGES
@@ -236,7 +224,7 @@ async function main() {
           // Hotel Tier 3 Bintang
           {
             starRating: 3,
-            pricePerPax: 2500000, // Base price per pax
+
             hotels: {
               create: [
                 { name: "Hotel Puri Bali" },
@@ -258,7 +246,7 @@ async function main() {
           // Hotel Tier 4 Bintang
           {
             starRating: 4,
-            pricePerPax: 3200000, // Base price per pax
+
             hotels: {
               create: [
                 { name: "Ayodya Resort Bali" },
@@ -281,7 +269,7 @@ async function main() {
           // Hotel Tier 5 Bintang
           {
             starRating: 5,
-            pricePerPax: 4500000, // Base price per pax
+
             hotels: {
               create: [
                 { name: "St. Regis Bali Resort" },
@@ -368,7 +356,7 @@ async function main() {
           // Hotel Tier 3 Bintang
           {
             starRating: 3,
-            pricePerPax: 2800000,
+
             hotels: {
               create: [
                 { name: "Hotel Ibis Styles Yogyakarta" },
@@ -390,7 +378,7 @@ async function main() {
           // Hotel Tier 4 Bintang
           {
             starRating: 4,
-            pricePerPax: 3500000,
+
             hotels: {
               create: [
                 { name: "The Phoenix Hotel Yogyakarta" },
@@ -412,7 +400,7 @@ async function main() {
           // Hotel Tier 5 Bintang
           {
             starRating: 5,
-            pricePerPax: 4800000,
+
             hotels: {
               create: [
                 { name: "Platinum Yogyakarta" },
@@ -502,7 +490,7 @@ async function main() {
           // Hotel Tier 3 Bintang
           {
             starRating: 3,
-            pricePerPax: 1800000,
+
             hotels: {
               create: [
                 { name: "Hotel Ibis Bandung" },
@@ -524,7 +512,7 @@ async function main() {
           // Hotel Tier 4 Bintang
           {
             starRating: 4,
-            pricePerPax: 2400000,
+
             hotels: {
               create: [
                 { name: "Hotel Padma Bandung" },
@@ -546,7 +534,7 @@ async function main() {
           // Hotel Tier 5 Bintang
           {
             starRating: 5,
-            pricePerPax: 3500000,
+
             hotels: {
               create: [
                 { name: "The Trans Luxury Hotel" },
@@ -606,6 +594,71 @@ async function main() {
     },
   });
 
+  // Custom Pricing Package Examples
+  const paketCustomWedding = await prisma.servicePackage.create({
+    data: {
+      name: "Paket Pernikahan Custom",
+      type: "CUSTOM_PRICING",
+      description: "Paket pernikahan dengan harga nego dan custom requirements",
+      includes: [
+        "Mewah",
+        "Sopir berpengalaman",
+        "Dekorasi dasar",
+        "Air minum mineral",
+      ],
+      excludes: ["Makanan", "Foto profesional", "Musik live"],
+      isCustomizable: true,
+      customizableItems: [
+        "Jumlah jam",
+        "Rute perjalanan",
+        "Tipe dekorasi",
+        "Package add-ons",
+      ],
+      price: 5000000, // Base price (can be overridden)
+    },
+  });
+
+  const paketCustomTour = await prisma.servicePackage.create({
+    data: {
+      name: "Paket Wisata Custom",
+      type: "CUSTOM_PRICING",
+      description: "Paket wisata dengan harga fleksibel berdasarkan request",
+      includes: ["Sopir lokal", "BBM", "Parkir", "Air minum"],
+      excludes: ["Tiket masuk objek wisata", "Makanan", "Penginapan"],
+      isCustomizable: true,
+      customizableItems: [
+        "Destinasi",
+        "Jumlah hari",
+        "Jumlah peserta",
+        "Transportasi tambahan",
+      ],
+      price: 1500000, // Base price (can be overridden)
+    },
+  });
+
+  const paketCorporateEvent = await prisma.servicePackage.create({
+    data: {
+      name: "Paket Korporasi Custom",
+      type: "CUSTOM_PRICING",
+      description: "Transportasi untuk event korporasi dengan harga nego",
+      includes: [
+        "Mewah",
+        "Sopir formal",
+        "WiFi dalam mobil",
+        "Botol air mineral",
+      ],
+      excludes: ["Tol", "Parkir", "BBM"],
+      isCustomizable: true,
+      customizableItems: [
+        "Jumlah mobil",
+        "Jam operasional",
+        "Rute pickup/drop",
+        "Service level",
+      ],
+      price: 2000000, // Base price (can be overridden)
+    },
+  });
+
   console.log(`✅ Created package: ${paket12Jam.name}`);
   console.log(`✅ Created package: ${paket24Jam.name}`);
   console.log(`✅ Created package: ${paketLuarKota.name}`);
@@ -613,7 +666,10 @@ async function main() {
   console.log(`✅ Created package: ${paketAirport.name}`);
   console.log(`✅ Created package: ${paketWedding.name}`);
   console.log(`✅ Created package: ${paketCityTour.name}`);
-  console.log(`✅ Created package: ${paketMonthly.name}\n`);
+  console.log(`✅ Created package: ${paketMonthly.name}`);
+  console.log(`✅ Created package: ${paketCustomWedding.name}`);
+  console.log(`✅ Created package: ${paketCustomTour.name}`);
+  console.log(`✅ Created package: ${paketCorporateEvent.name}\n`);
 
   // ========================================
   // 4. CREATE ARMADA (Vehicles)
@@ -1339,7 +1395,7 @@ async function main() {
   const exp15 = await prisma.expense.create({
     data: {
       date: new Date("2025-10-01"),
-      category: "OPERASIONAL",
+      category: "OPERASIONAL_LAINNYA",
       description: "Sewa kantor bulan Oktober 2025",
       amount: 2000000,
       armadaId: null,
@@ -1349,7 +1405,7 @@ async function main() {
   const exp16 = await prisma.expense.create({
     data: {
       date: new Date("2025-10-15"),
-      category: "OPERASIONAL",
+      category: "LISTRIK",
       description: "Listrik dan air bulan Oktober",
       amount: 500000,
       armadaId: null,
@@ -1431,7 +1487,7 @@ async function main() {
   console.log("\n🎉 Database seeding completed successfully!\n");
   console.log("📊 SUMMARY:");
   console.log("─────────────────────────────────────────");
-  console.log(`✅ Users created: 2 (1 Admin, 1 Manager)`);
+  console.log(`✅ Users created: 1 (1 Admin)`);
   console.log(`✅ Service packages: 11 (8 CAR_RENTAL + 3 TOUR_PACKAGE)`);
   console.log(`✅ Vehicles (Armada): 4`);
   console.log(`✅ Drivers: 4`);

@@ -2,8 +2,11 @@ import {
   protectedRoute,
   successResponse,
   errorResponse,
+  getClientIp,
+  getUserAgent,
 } from "@/lib/middleware";
 import { prisma } from "@/lib/prisma";
+import { logDriverEvent } from "@/lib/audit";
 
 async function handleGetDrivers(request) {
   try {
@@ -26,8 +29,8 @@ async function handleGetDrivers(request) {
 
 async function handleCreateDriver(request) {
   try {
-    // Check permissions - only ADMIN and MANAGER can create
-    if (!["ADMIN", "MANAGER"].includes(request.auth.user.role)) {
+    // Check permissions - only ADMIN can create
+    if (!["ADMIN"].includes(request.auth.user.role)) {
       return errorResponse("Insufficient permissions", 403);
     }
 
@@ -48,6 +51,16 @@ async function handleCreateDriver(request) {
       },
     });
 
+    // Log audit event
+    await logDriverEvent(
+      request.auth.user.id,
+      "CREATE",
+      newDriver.id,
+      newDriver,
+      getClientIp(request),
+      getUserAgent(request)
+    );
+
     return successResponse(newDriver, 201);
   } catch (error) {
     console.error("Error creating driver:", error);
@@ -55,12 +68,12 @@ async function handleCreateDriver(request) {
   }
 }
 
-// All roles can view drivers
+// ADMIN and OPERATOR can view drivers (OPERATOR needs to select for transactions)
 export const GET = protectedRoute(handleGetDrivers, {
-  roles: ["ADMIN", "MANAGER", "OPERATOR"],
+  roles: ["ADMIN", "OPERATOR"],
 });
 
-// Only ADMIN and MANAGER can create drivers
+// Only ADMIN can create drivers
 export const POST = protectedRoute(handleCreateDriver, {
-  roles: ["ADMIN", "MANAGER"],
+  roles: ["ADMIN"],
 });

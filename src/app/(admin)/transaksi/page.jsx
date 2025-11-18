@@ -9,10 +9,12 @@ import TransaksiTable from "@/components/transaksi/TransaksiTable";
 import TransaksiDialog from "@/components/transaksi/TransaksiDialog";
 import TransaksiCompleteModal from "@/components/transaksi/TransaksiCompleteModal";
 import TransaksiDetailModal from "@/components/transaksi/TransaksiDetailModal";
+import ApprovalDialog from "@/components/transaksi/ApprovalDialog";
+import TransactionEditApprovalDialog from "@/components/transaksi/TransactionEditApprovalDialog";
 import { Pagination } from "@/components/ui/pagination";
 
 import { startOfMonth, startOfYear, endOfToday } from "date-fns";
-import { calculateTransactionFinancials } from "@/lib/accounting";
+import { calculateTransactionFinancials, calculateTourPackagePriceFromParams } from "@/lib/accounting";
 
 function getTodayDateString() {
   const today = new Date();
@@ -41,9 +43,11 @@ const INITIAL_FORM_STATE = {
   all_in_rate: 0,
   overtime_rate_per_hour: 0,
   dp_amount: 0,
+  payment_status: "UNPAID", // Default status
   hotel_name: "",
   pax_count: "",
   hotel_tier_id: "",
+  custom_price: 0,
 };
 
 // function calculateFinancials(formData) {
@@ -85,6 +89,7 @@ export default function TransaksiPage() {
   const { showConfirm } = useAlertDialog();
   const [data, setData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [userRole, setUserRole] = useState("OPERATOR");
   const [searchTerm, setSearchTerm] = useState("");
   const [quickFilter, setQuickFilter] = useState("all");
   const [dateRange, setDateRange] = useState({
@@ -94,9 +99,19 @@ export default function TransaksiPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isCompleteOpen, setIsCompleteOpen] = useState(false);
+  const [isApprovalOpen, setIsApprovalOpen] = useState(false);
   const [completingData, setCompletingData] = useState(null);
   const [editingData, setEditingData] = useState(null);
   const [viewingData, setViewingData] = useState(null);
+  const [approvingTransaction, setApprovingTransaction] = useState(null);
+  const [isSubmittingApproval, setIsSubmittingApproval] = useState(false);
+
+  // State untuk Edit Approval Dialog (Admin)
+  const [isEditApprovalOpen, setIsEditApprovalOpen] = useState(false);
+  const [approvingEditTransaction, setApprovingEditTransaction] =
+    useState(null);
+  const [isSubmittingEditApproval, setIsSubmittingEditApproval] =
+    useState(false);
 
   const [formData, setFormData] = useState(INITIAL_FORM_STATE);
   const [calculatedData, setCalculatedData] = useState({});
@@ -110,6 +125,27 @@ export default function TransaksiPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const itemsPerPage = 10;
+
+  // Fetch user role on mount
+  useEffect(() => {
+    async function fetchUserRole() {
+      try {
+        const res = await fetch("/api/auth/me", {
+          credentials: "include",
+        });
+        if (res.ok) {
+          const result = await res.json();
+          const userData = result.data?.user || result.data || result.user;
+          if (userData?.role) {
+            setUserRole(userData.role);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user role:", error);
+      }
+    }
+    fetchUserRole();
+  }, []);
 
   // --- Data Fetching ---
   async function fetchData(page = 1) {
@@ -255,6 +291,7 @@ export default function TransaksiPage() {
       "overtime_rate_per_hour",
       "dp_amount",
       "pax_count",
+      "custom_price",
     ];
 
     let newValue = value;
@@ -268,24 +305,30 @@ export default function TransaksiPage() {
     setFormData((prev) => {
       const updatedData = { ...prev, [id]: newValue };
 
+      // Auto-update payment_status based on dp_amount
+      if (id === "dp_amount") {
+        const dp = newValue;
+        const total = updatedData.all_in_rate;
+        if (dp >= total) {
+          updatedData.payment_status = "PAID";
+        } else if (dp > 0) {
+          updatedData.payment_status = "DOWN_PAYMENT";
+        } else {
+          updatedData.payment_status = "UNPAID";
+        }
+      }
+
       // For TOUR_PACKAGE, recalculate pricing when pax_count changes
       if (id === "pax_count") {
         const currentPackage = paketList.find((p) => p.id === prev.packageId);
         if (currentPackage?.type === "TOUR_PACKAGE" && prev.hotel_tier_id) {
-          const selectedTier = currentPackage.hotelTiers?.find(
-            (tier) => tier.id === prev.hotel_tier_id
+          const calculatedPrice = calculateTourPackagePriceFromParams(
+            currentPackage,
+            prev.hotel_tier_id,
+            newValue
           );
-          const paxCount = parseInt(newValue) || 0;
-
-          if (selectedTier && paxCount > 0) {
-            const applicableRange = selectedTier.priceRanges?.find(
-              (range) => paxCount >= range.minPax && paxCount <= range.maxPax
-            );
-
-            if (applicableRange) {
-              const calculatedPrice = applicableRange.price * paxCount;
-              updatedData.all_in_rate = calculatedPrice;
-            }
+          if (calculatedPrice > 0) {
+            updatedData.all_in_rate = calculatedPrice;
           }
         }
       }
@@ -300,14 +343,36 @@ export default function TransaksiPage() {
     checkinDatetime,
     excludeTransactionId = null
   ) => {
-    if (!checkoutDatetime || !checkinDatetime) {
-      // If dates are not set, fetch all READY vehicles/drivers
-      await fetchDependencies();
-      return;
-    }
-
     try {
       setIsLoadingDependencies(true);
+
+      // Always fetch packages first (not dependent on dates)
+      const packagesRes = await fetch("/api/packages", {
+        credentials: "include",
+      });
+      const packagesResult = await packagesRes.json();
+      const packagesData = packagesResult.data || packagesResult;
+      console.log("📦 Fetched packages:", packagesData?.length || 0, "items");
+      setPaketList(Array.isArray(packagesData) ? packagesData : []);
+
+      if (!checkoutDatetime || !checkinDatetime) {
+        // If dates are not set, fetch all READY vehicles/drivers
+        const [armadaRes, sopirRes] = await Promise.all([
+          fetch("/api/vehicles?status=READY", { credentials: "include" }),
+          fetch("/api/drivers?status=READY", { credentials: "include" }),
+        ]);
+
+        const armadaResult = await armadaRes.json();
+        const sopirResult = await sopirRes.json();
+
+        const armadaData = armadaResult.data || armadaResult;
+        const sopirData = sopirResult.data || sopirResult;
+
+        setArmadaList(Array.isArray(armadaData) ? armadaData : []);
+        setSopirList(Array.isArray(sopirData) ? sopirData : []);
+        return;
+      }
+
       const params = new URLSearchParams({
         checkout_datetime: checkoutDatetime,
         checkin_datetime: checkinDatetime,
@@ -336,7 +401,7 @@ export default function TransaksiPage() {
       setSopirList(driversData.available || []);
     } catch (err) {
       console.error("Failed to fetch available vehicles/drivers:", err);
-      // Fallback to fetching all READY items
+      // Fallback to fetching all items
       await fetchDependencies();
     } finally {
       setIsLoadingDependencies(false);
@@ -355,6 +420,30 @@ export default function TransaksiPage() {
   const handleFormDateChange = (id, value) => {
     setFormData((prev) => {
       const updated = { ...prev, [id]: value };
+
+      // Auto-update checkin_datetime when checkout_datetime changes and package is selected
+      if (id === "checkout_datetime" && prev.packageId) {
+        const selectedPackage = paketList.find((p) => p.id === prev.packageId);
+        if (selectedPackage) {
+          if (selectedPackage.durationHours) {
+            // For packages with hours duration
+            const checkoutDate = new Date(value);
+            const checkinDate = new Date(
+              checkoutDate.getTime() +
+                selectedPackage.durationHours * 60 * 60 * 1000
+            );
+            updated.checkin_datetime = getLocalDateTimeString(checkinDate);
+          } else if (selectedPackage.durationDays) {
+            // For packages with days duration
+            const checkoutDate = new Date(value);
+            const checkinDate = new Date(
+              checkoutDate.getTime() +
+                selectedPackage.durationDays * 24 * 60 * 60 * 1000
+            );
+            updated.checkin_datetime = getLocalDateTimeString(checkinDate);
+          }
+        }
+      }
 
       // Clear previous timeout
       if (availabilityCheckTimeoutRef.current) {
@@ -384,25 +473,49 @@ export default function TransaksiPage() {
   const handleFormSelectChange = (id, value) => {
     setFormData((prev) => ({ ...prev, [id]: value }));
 
-    // Logika Otomatis: Jika pilih paket, isi data keuangan
+    // Logika Otomatis: Jika pilih paket, isi data keuangan dan set checkin time
     if (id === "packageId" && value) {
       const selectedPackage = paketList.find((p) => p.id === value);
       if (selectedPackage) {
-        // For TOUR_PACKAGE, don't auto-set pricing - it will be calculated from tier selection
-        if (selectedPackage.type !== "TOUR_PACKAGE") {
-          setFormData((prev) => ({
-            ...prev,
-            all_in_rate: selectedPackage.price || 0,
-            overtime_rate_per_hour: selectedPackage.overtimeRate || 0,
-          }));
-        } else {
-          // For TOUR_PACKAGE, reset pricing fields to be calculated from tier/pax
-          setFormData((prev) => ({
-            ...prev,
-            all_in_rate: 0,
-            overtime_rate_per_hour: 0,
-          }));
-        }
+        setFormData((prev) => {
+          let updates = {};
+
+          // Calculate checkin_datetime based on package duration
+          if (selectedPackage.durationHours) {
+            // For packages with hours duration (CAR_RENTAL, FULL_DAY_TRIP)
+            const checkoutDate = new Date(prev.checkout_datetime);
+            const checkinDate = new Date(
+              checkoutDate.getTime() +
+                selectedPackage.durationHours * 60 * 60 * 1000
+            );
+            updates.checkin_datetime = getLocalDateTimeString(checkinDate);
+          } else if (selectedPackage.durationDays) {
+            // For packages with days duration (TOUR_PACKAGE)
+            const checkoutDate = new Date(prev.checkout_datetime);
+            const checkinDate = new Date(
+              checkoutDate.getTime() +
+                selectedPackage.durationDays * 24 * 60 * 60 * 1000
+            );
+            updates.checkin_datetime = getLocalDateTimeString(checkinDate);
+          }
+
+          // Set pricing based on package type
+          if (selectedPackage.type === "TOUR_PACKAGE") {
+            // For TOUR_PACKAGE, reset pricing fields to be calculated from tier/pax
+            updates.all_in_rate = 0;
+            updates.overtime_rate_per_hour = 0;
+          } else if (selectedPackage.type === "FULL_DAY_TRIP") {
+            // For FULL_DAY_TRIP, flat rate with no overtime
+            updates.all_in_rate = selectedPackage.price || 0;
+            updates.overtime_rate_per_hour = 0; // No overtime for full day trip
+          } else {
+            // For CAR_RENTAL, include overtime rate
+            updates.all_in_rate = selectedPackage.price || 0;
+            updates.overtime_rate_per_hour = selectedPackage.overtimeRate || 0;
+          }
+
+          return { ...prev, ...updates };
+        });
       }
     }
 
@@ -411,27 +524,18 @@ export default function TransaksiPage() {
       setFormData((prev) => {
         const currentPackage = paketList.find((p) => p.id === prev.packageId);
         if (currentPackage?.type === "TOUR_PACKAGE") {
-          // Calculate TOUR_PACKAGE price based on selected tier and pax
-          const selectedTier = currentPackage.hotelTiers?.find(
-            (tier) =>
-              tier.id === (id === "hotel_tier_id" ? value : prev.hotel_tier_id)
+          const hotelTierId = id === "hotel_tier_id" ? value : prev.hotel_tier_id;
+          const paxCount = id === "pax_count" ? value : prev.pax_count;
+          const calculatedPrice = calculateTourPackagePriceFromParams(
+            currentPackage,
+            hotelTierId,
+            paxCount
           );
-          const paxCount =
-            parseInt(id === "pax_count" ? value : prev.pax_count) || 0;
-
-          if (selectedTier && paxCount > 0) {
-            // Find applicable price range
-            const applicableRange = selectedTier.priceRanges?.find(
-              (range) => paxCount >= range.minPax && paxCount <= range.maxPax
-            );
-
-            if (applicableRange) {
-              const calculatedPrice = applicableRange.price * paxCount;
-              return {
-                ...prev,
-                all_in_rate: calculatedPrice,
-              };
-            }
+          if (calculatedPrice > 0) {
+            return {
+              ...prev,
+              all_in_rate: calculatedPrice,
+            };
           }
         }
         return prev;
@@ -478,6 +582,7 @@ export default function TransaksiPage() {
       all_in_rate: item.all_in_rate || 0,
       overtime_rate_per_hour: item.overtime_rate_per_hour || 0,
       dp_amount: item.dp_amount != null ? item.dp_amount : 0,
+      payment_status: item.payment_status || "UNPAID", // Ensure payment_status is set
       hotel_name: item.hotel_name || "",
       pax_count: item.pax_count || "",
       hotel_tier_id: item.hotel_tier_id || "",
@@ -529,6 +634,7 @@ export default function TransaksiPage() {
     });
 
     if (!confirmed) return;
+
     try {
       const res = await fetch(`/api/transactions/${id}`, {
         method: "DELETE",
@@ -630,9 +736,23 @@ export default function TransaksiPage() {
             ? Number(formData.dp_amount)
             : null,
 
+        // Status Pembayaran (otomatis berdasarkan DP)
+        payment_status: (() => {
+          const dp = formData.dp_amount ? Number(formData.dp_amount) : 0;
+          const total = Number(formData.all_in_rate) || 0;
+          if (dp >= total) {
+            return "PAID";
+          } else if (dp > 0) {
+            return "DOWN_PAYMENT";
+          } else {
+            return "UNPAID";
+          }
+        })(),
+
         // Data Tambahan untuk Paket Wisata (opsional)
         hotel_name: formData.hotel_name || null,
         pax_count: formData.pax_count ? Number(formData.pax_count) : null,
+        hotel_tier_id: formData.hotel_tier_id || null,
 
         // Relasi (ID)
         packageId: formData.packageId || null,
@@ -675,6 +795,186 @@ export default function TransaksiPage() {
 
   const handlePrintInvoice = (item) => {
     window.open(`/transaksi/cetak/${item.id}`, "_blank");
+  };
+
+  const handleSubmitForApproval = async (id) => {
+    const confirmed = await showConfirm({
+      message: "Ajukan transaksi ini untuk approval admin?",
+      title: "Konfirmasi Pengajuan",
+      confirmText: "Ajukan",
+      cancelText: "Batal",
+    });
+
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`/api/transactions/${id}/submit`, {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Gagal mengajukan approval");
+      }
+
+      await fetchData(currentPage);
+      toast.success("Transaksi Berhasil Diajukan", {
+        description: "Menunggu persetujuan dari admin",
+      });
+    } catch (err) {
+      console.error("Failed to submit for approval:", err);
+      toast.error("Gagal Mengajukan Approval", {
+        description: err.message,
+      });
+    }
+  };
+
+  const handleApprove = async (transactionId) => {
+    setIsSubmittingApproval(true);
+    try {
+      const res = await fetch(`/api/transactions/${transactionId}/approve`, {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Gagal menyetujui transaksi");
+      }
+
+      await fetchData(currentPage);
+      setIsApprovalOpen(false);
+      setApprovingTransaction(null);
+      toast.success("Transaksi Disetujui", {
+        description: "Transaksi telah disetujui dan armada/driver dikunci",
+      });
+    } catch (err) {
+      console.error("Failed to approve:", err);
+      toast.error("Gagal Menyetujui", {
+        description: err.message,
+      });
+      throw err;
+    } finally {
+      setIsSubmittingApproval(false);
+    }
+  };
+
+  const handleReject = async (transactionId, reason) => {
+    setIsSubmittingApproval(true);
+    try {
+      const res = await fetch(`/api/transactions/${transactionId}/reject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ rejection_reason: reason }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Gagal menolak transaksi");
+      }
+
+      await fetchData(currentPage);
+      setIsApprovalOpen(false);
+      setApprovingTransaction(null);
+      toast.success("Transaksi Ditolak", {
+        description: "Transaksi dikembalikan ke operator untuk revisi",
+      });
+    } catch (err) {
+      console.error("Failed to reject:", err);
+      toast.error("Gagal Menolak", {
+        description: err.message,
+      });
+      throw err;
+    } finally {
+      setIsSubmittingApproval(false);
+    }
+  };
+
+  const openApprovalDialog = (transactionId) => {
+    const transaction = data.find((t) => t.id === transactionId);
+    if (transaction) {
+      setApprovingTransaction(transaction);
+      setIsApprovalOpen(true);
+    }
+  };
+
+  // Handler: Admin review edit approval
+  const handleReviewEditApproval = (transaction) => {
+    setApprovingEditTransaction(transaction);
+    setIsEditApprovalOpen(true);
+  };
+
+  // Handler: Admin approve edit
+  const handleApproveEdit = async (transactionId) => {
+    setIsSubmittingEditApproval(true);
+    try {
+      const res = await fetch(
+        `/api/transactions/${transactionId}/approve-edit`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        }
+      );
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Gagal menyetujui edit");
+      }
+
+      await fetchData(currentPage);
+      setIsEditApprovalOpen(false);
+      setApprovingEditTransaction(null);
+      toast.success("Permintaan Edit Disetujui", {
+        description: "Perubahan transaksi telah diterapkan",
+      });
+    } catch (err) {
+      console.error("Failed to approve edit:", err);
+      toast.error("Gagal Menyetujui Edit", {
+        description: err.message,
+      });
+      throw err;
+    } finally {
+      setIsSubmittingEditApproval(false);
+    }
+  };
+
+  // Handler: Admin reject edit
+  const handleRejectEdit = async (transactionId, reason) => {
+    setIsSubmittingEditApproval(true);
+    try {
+      const res = await fetch(
+        `/api/transactions/${transactionId}/reject-edit`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ rejection_reason: reason }),
+        }
+      );
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Gagal menolak edit");
+      }
+
+      await fetchData(currentPage);
+      setIsEditApprovalOpen(false);
+      setApprovingEditTransaction(null);
+      toast.success("Permintaan Edit Ditolak", {
+        description: "Transaksi dikembalikan ke data sebelumnya",
+      });
+    } catch (err) {
+      console.error("Failed to reject edit:", err);
+      toast.error("Gagal Menolak Edit", {
+        description: err.message,
+      });
+      throw err;
+    } finally {
+      setIsSubmittingEditApproval(false);
+    }
   };
 
   const handleCompleteTransaction = async (completionData) => {
@@ -773,6 +1073,11 @@ export default function TransaksiPage() {
           onUpdateStatus={handleUpdateStatus}
           onPrint={handlePrintInvoice}
           onCompleteTransaction={openCompleteDialog}
+          onSubmitForApproval={handleSubmitForApproval}
+          onApprove={openApprovalDialog}
+          onReject={openApprovalDialog}
+          onReviewEditApproval={handleReviewEditApproval}
+          userRole={userRole}
         />
 
         <div className="mt-4">
@@ -799,6 +1104,7 @@ export default function TransaksiPage() {
         armadaList={armadaList}
         sopirList={sopirList}
         isLoadingDependencies={isLoadingDependencies}
+        userRole={userRole}
       />
 
       <TransaksiDetailModal
@@ -814,6 +1120,24 @@ export default function TransaksiPage() {
         transaction={completingData}
         onComplete={handleCompleteTransaction}
         isLoading={false}
+      />
+
+      <ApprovalDialog
+        isOpen={isApprovalOpen}
+        onClose={() => setIsApprovalOpen(false)}
+        transaction={approvingTransaction}
+        onApprove={handleApprove}
+        onReject={handleReject}
+        isSubmitting={isSubmittingApproval}
+      />
+
+      <TransactionEditApprovalDialog
+        isOpen={isEditApprovalOpen}
+        onClose={() => setIsEditApprovalOpen(false)}
+        transaction={approvingEditTransaction}
+        onApproveEdit={handleApproveEdit}
+        onRejectEdit={handleRejectEdit}
+        isSubmitting={isSubmittingEditApproval}
       />
     </div>
   );

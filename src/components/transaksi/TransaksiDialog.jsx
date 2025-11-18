@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import { DateTimePicker, DatePicker } from "@/components/ui/datetime-picker";
 
 function formatCurrency(amount) {
   if (typeof amount !== "number" || isNaN(amount)) {
@@ -48,12 +48,25 @@ export default function TransaksiDialog({
   armadaList,
   sopirList,
   isLoadingDependencies,
+  userRole,
 }) {
   // Cari paket yang dipilih untuk cek tipenya
   const selectedPackage = paketList.find(
     (pkg) => pkg.id === formData.packageId
   );
+
+  // Debug log
+  React.useEffect(() => {
+    console.log("📋 TransaksiDialog - paketList updated:", {
+      count: paketList.length,
+      items: paketList.map((p) => ({ id: p.id, name: p.name })),
+    });
+  }, [paketList]);
+
+  const isCustomPricing = selectedPackage?.type === "CUSTOM_PRICING";
   const isTourPackage = selectedPackage?.type === "TOUR_PACKAGE";
+  const isFullDayTrip = selectedPackage?.type === "FULL_DAY_TRIP";
+  const showOvertimeField = !isTourPackage && !isFullDayTrip;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -231,6 +244,49 @@ export default function TransaksiDialog({
                           </SelectContent>
                         </Select>
                       </div>
+                      {/* Hotel selection - only show if hotel tier is selected */}
+                      {formData.hotel_tier_id && (
+                        <div className="grid gap-1.5">
+                          <Label htmlFor="hotel_name">
+                            Pilih Hotel{" "}
+                            <span className="text-xs text-muted-foreground">
+                              (Wajib)
+                            </span>
+                          </Label>
+                          <Select
+                            value={formData.hotel_name || ""}
+                            onValueChange={(value) =>
+                              handleSelectChange("hotel_name", value)
+                            }
+                            disabled={isLoadingDependencies}
+                            required
+                          >
+                            <SelectTrigger id="hotel_name">
+                              <SelectValue placeholder="Pilih hotel..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {(() => {
+                                const selectedTier = selectedPackage?.hotelTiers?.find(
+                                  (tier) => tier.id === formData.hotel_tier_id
+                                );
+                                if (!selectedTier?.hotels?.length) {
+                                  return (
+                                    <SelectItem value="-" disabled>
+                                      Tidak ada hotel tersedia di tingkat ini
+                                    </SelectItem>
+                                  );
+                                }
+                                return selectedTier.hotels.map((hotel) => (
+                                  <SelectItem key={hotel.id} value={hotel.name}>
+                                    {hotel.name}
+                                  </SelectItem>
+                                ));
+                              })()}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+
                       <div className="grid gap-1.5">
                         <Label htmlFor="pax_count">
                           Jumlah Pax{" "}
@@ -262,11 +318,11 @@ export default function TransaksiDialog({
                         </div>
                       )}
 
-                      {/* Display pricing info for selected hotel tier */}
-                      {formData.hotel_tier_id && (
+                      {/* Display pricing info for selected hotel */}
+                      {formData.hotel_name && formData.hotel_tier_id && (
                         <div className="grid gap-1.5">
-                          <Label>Tarif Hotel</Label>
-                          <div className="text-sm bg-muted p-2 rounded space-y-1">
+                          <Label>Detail Hotel & Tarif</Label>
+                          <div className="text-sm bg-muted p-3 rounded space-y-2">
                             {(() => {
                               const selectedTier =
                                 selectedPackage?.hotelTiers?.find(
@@ -276,20 +332,28 @@ export default function TransaksiDialog({
 
                               return (
                                 <div>
-                                  <div className="font-medium">
+                                  <div className="font-medium text-base">
+                                    {formData.hotel_name}
+                                  </div>
+                                  <div className="text-muted-foreground">
                                     {selectedTier.starRating} Bintang
                                   </div>
-                                  {selectedTier.priceRanges?.map(
-                                    (range, idx) => (
-                                      <div
-                                        key={idx}
-                                        className="text-xs text-muted-foreground"
-                                      >
-                                        {range.minPax}-{range.maxPax} pax:{" "}
-                                        {formatCurrency(range.price)}/pax
-                                      </div>
-                                    )
-                                  )}
+                                  <div className="border-t pt-2 mt-2">
+                                    <div className="font-medium mb-1">Tarif per Pax:</div>
+                                    {selectedTier.priceRanges?.map(
+                                      (range, idx) => (
+                                        <div
+                                          key={idx}
+                                          className="text-xs text-muted-foreground flex justify-between"
+                                        >
+                                          <span>{range.minPax}-{range.maxPax} orang</span>
+                                          <span className="font-medium">
+                                            {formatCurrency(range.price)}/pax
+                                          </span>
+                                        </div>
+                                      )
+                                    )}
+                                  </div>
                                 </div>
                               );
                             })()}
@@ -310,38 +374,60 @@ export default function TransaksiDialog({
                 <div className="grid gap-3">
                   <div className="grid gap-1.5">
                     <Label htmlFor="booking_date">Tanggal Booking</Label>
-                    <Input
-                      id="booking_date"
-                      type="date"
-                      value={formData.booking_date}
-                      onChange={(e) =>
-                        handleDateChange("booking_date", e.target.value)
+                    <DatePicker
+                      date={
+                        formData.booking_date
+                          ? new Date(formData.booking_date)
+                          : undefined
                       }
-                      required
+                      setDate={(date) => {
+                        if (date) {
+                          const dateString = date.toISOString().split("T")[0];
+                          handleDateChange("booking_date", dateString);
+                        }
+                      }}
                     />
                   </div>
                   <div className="grid gap-1.5">
                     <Label htmlFor="checkout_datetime">Mobil Out (Jalan)</Label>
-                    <Input
-                      id="checkout_datetime"
-                      type="datetime-local"
-                      value={formData.checkout_datetime}
-                      onChange={(e) =>
-                        handleDateChange("checkout_datetime", e.target.value)
+                    <DateTimePicker
+                      date={
+                        formData.checkout_datetime
+                          ? new Date(formData.checkout_datetime)
+                          : undefined
                       }
-                      required
+                      setDate={(date) => {
+                        if (date) {
+                          const tzOffset = date.getTimezoneOffset() * 60000;
+                          const localISOTime = new Date(
+                            date.getTime() - tzOffset
+                          )
+                            .toISOString()
+                            .slice(0, 16);
+                          handleDateChange("checkout_datetime", localISOTime);
+                        }
+                      }}
                     />
                   </div>
                   <div className="grid gap-1.5">
                     <Label htmlFor="checkin_datetime">Mobil In (Selesai)</Label>
-                    <Input
-                      id="checkin_datetime"
-                      type="datetime-local"
-                      value={formData.checkin_datetime}
-                      onChange={(e) =>
-                        handleDateChange("checkin_datetime", e.target.value)
+                    <DateTimePicker
+                      date={
+                        formData.checkin_datetime
+                          ? new Date(formData.checkin_datetime)
+                          : undefined
                       }
-                      required
+                      setDate={(date) => {
+                        if (date) {
+                          const tzOffset = date.getTimezoneOffset() * 60000;
+                          const localISOTime = new Date(
+                            date.getTime() - tzOffset
+                          )
+                            .toISOString()
+                            .slice(0, 16);
+                          handleDateChange("checkin_datetime", localISOTime);
+                        }
+                      }}
                     />
                   </div>
                 </div>
@@ -351,41 +437,74 @@ export default function TransaksiDialog({
                 <legend className="-ml-1 px-1 text-sm font-medium text-muted-foreground">
                   Data Keuangan (Input)
                 </legend>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-4">
+                  {/* Primary pricing field - always shown */}
                   <div className="grid gap-1.5">
-                    <Label htmlFor="all_in_rate">Tarif Sewa</Label>
-                    <CurrencyInput
-                      id="all_in_rate"
-                      value={formData.all_in_rate}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                  {!isTourPackage && (
-                    <div className="grid gap-1.5">
-                      <Label htmlFor="overtime_rate_per_hour">
-                        Overtime/Jam
-                      </Label>
-                      <CurrencyInput
-                        id="overtime_rate_per_hour"
-                        value={formData.overtime_rate_per_hour}
-                        onChange={handleInputChange}
-                        required
-                      />
-                    </div>
-                  )}
-                  <div className="grid gap-1.5 col-span-2">
-                    <Label htmlFor="dp_amount">
-                      Jumlah DP (Down Payment){" "}
-                      <span className="text-xs text-muted-foreground">
-                        (Opsional, isi jika status DP)
-                      </span>
+                    <Label
+                      htmlFor={isCustomPricing ? "custom_price" : "all_in_rate"}
+                    >
+                      {isCustomPricing ? "Harga Custom" : "Tarif Sewa"}
+                      {!isCustomPricing && (
+                        <span className="text-xs text-muted-foreground ml-1">
+                          (dari paket)
+                        </span>
+                      )}
+                      {isCustomPricing && (
+                        <span className="text-xs text-muted-foreground ml-1">
+                          (Wajib untuk paket custom)
+                        </span>
+                      )}
                     </Label>
                     <CurrencyInput
-                      id="dp_amount"
-                      value={formData.dp_amount}
+                      id={isCustomPricing ? "custom_price" : "all_in_rate"}
+                      value={
+                        isCustomPricing
+                          ? formData.custom_price
+                          : formData.all_in_rate
+                      }
                       onChange={handleInputChange}
+                      required
+                      disabled={!isCustomPricing && selectedPackage}
+                      placeholder={
+                        isCustomPricing
+                          ? "Masukkan harga yang disepakati"
+                          : selectedPackage
+                            ? "Otomatis dari paket terpilih"
+                            : "Masukkan tarif sewa"
+                      }
                     />
+                  </div>
+
+                  {/* Secondary fields in a consistent 2-column layout */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {showOvertimeField && (
+                      <div className="grid gap-1.5">
+                        <Label htmlFor="overtime_rate_per_hour">
+                          Overtime/Jam
+                        </Label>
+                        <CurrencyInput
+                          id="overtime_rate_per_hour"
+                          value={formData.overtime_rate_per_hour}
+                          onChange={handleInputChange}
+                          required
+                        />
+                      </div>
+                    )}
+
+                    {/* DP Amount - spans full width when overtime is hidden, half width when shown */}
+                    <div
+                      className={`grid gap-1.5 ${showOvertimeField ? "" : "md:col-span-2"}`}
+                    >
+                      <Label htmlFor="dp_amount">
+                        Jumlah DP {" "}
+                        <span className="text-xs text-muted-foreground"></span>
+                      </Label>
+                      <CurrencyInput
+                        id="dp_amount"
+                        value={formData.dp_amount}
+                        onChange={handleInputChange}
+                      />
+                    </div>
                   </div>
                 </div>
               </fieldset>
@@ -440,7 +559,11 @@ export default function TransaksiDialog({
             </Button>
           </DialogClose>
           <Button type="submit" form="transaksi-form">
-            {isEditing ? "Simpan Perubahan" : "Simpan Transaksi"}
+            {isEditing
+              ? userRole === "OPERATOR"
+                ? "Ajukan Perubahan"
+                : "Simpan Perubahan"
+              : "Simpan Transaksi"}
           </Button>
         </DialogFooter>
       </DialogContent>

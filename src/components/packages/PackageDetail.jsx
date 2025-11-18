@@ -40,11 +40,13 @@ const takeWords = (text, limit = 20) => {
 export { formatCurrency, takeWords };
 
 export function PackageDetail({ open, onOpenChange, pkg }) {
-  if (!pkg) return null;
+   if (!pkg) return null;
 
-  const isCar = pkg?.type === "CAR_RENTAL";
-  const hotelTiers = pkg?.hotelTiers || [];
-  const itineraries = pkg?.itineraries || pkg?.itinerary || [];
+   const isCar = pkg?.type === "CAR_RENTAL";
+   const isCustomPricing = pkg?.type === "CUSTOM_PRICING";
+   const isFullDayTrip = pkg?.type === "FULL_DAY_TRIP";
+   const hotelTiers = pkg?.hotelTiers || [];
+   const itineraries = pkg?.itineraries || pkg?.itinerary || [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -67,7 +69,7 @@ export function PackageDetail({ open, onOpenChange, pkg }) {
             </p>
           </div>
 
-          {!isCar && pkg.durationDays && (
+          {!isCar && !isFullDayTrip && pkg.durationDays && (
             <div>
               <h3 className="text-gray-500 mb-2">Durasi</h3>
               <p className="text-gray-900">
@@ -77,14 +79,35 @@ export function PackageDetail({ open, onOpenChange, pkg }) {
             </div>
           )}
 
-          {!isCar && (
+          {isFullDayTrip && (
+            <div>
+              <h3 className="text-gray-500 mb-2">Durasi</h3>
+              <p className="text-gray-900">1 Hari</p>
+            </div>
+          )}
+
+          {!isCar && !isFullDayTrip && (
             <div>
               <h3 className="text-gray-500 mb-2">Tipe Paket</h3>
               <p className="text-gray-900">Paket Tour</p>
             </div>
           )}
 
-          {!isCar && pkg.price && (
+          {isFullDayTrip && (
+            <div>
+              <h3 className="text-gray-500 mb-2">Tipe Paket</h3>
+              <p className="text-gray-900">Full Day Trip</p>
+            </div>
+          )}
+
+          {isCustomPricing && (
+            <div>
+              <h3 className="text-yellow-600 mb-2">💰 Tipe Paket</h3>
+              <p className="text-gray-900">Harga Custom - Disesuaikan per transaksi</p>
+            </div>
+          )}
+
+          {!isCar && !isCustomPricing && !isFullDayTrip && pkg.price && (
             <div>
               <h3 className="text-gray-500 mb-2">Harga</h3>
               <p className="text-gray-900">{formatCurrency(pkg.price)}</p>
@@ -146,7 +169,16 @@ export function PackageDetail({ open, onOpenChange, pkg }) {
             </div>
           )}
 
-          {isCar ? (
+          {isCustomPricing ? (
+            <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-100">
+              <div className="text-center">
+                <p className="text-yellow-600 mb-1">💰 Harga Custom</p>
+                <p className="text-yellow-900 text-xl">
+                  Harga disesuaikan per transaksi
+                </p>
+              </div>
+            </div>
+          ) : isCar ? (
             <div className="grid grid-cols-3 gap-4">
               <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
                 <p className="text-blue-600 mb-1">Harga Paket</p>
@@ -169,6 +201,56 @@ export function PackageDetail({ open, onOpenChange, pkg }) {
                       ? `${pkg.durationDays} Hari`
                       : "-"}
                 </p>
+              </div>
+            </div>
+          ) : isFullDayTrip ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                  <p className="text-blue-600 mb-1">Harga Paket</p>
+                  <p className="text-blue-900 text-xl">
+                    {formatCurrency(pkg.price ?? pkg.hargaDefault)}
+                  </p>
+                </div>
+                <div className="p-4 bg-orange-50 rounded-lg border border-orange-100">
+                  <p className="text-orange-600 mb-1">Tarif Overtime</p>
+                  <p className="text-orange-900 text-xl">
+                    {formatCurrency(pkg.overtimeRate ?? pkg.tarifOvertime)}/jam
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Map className="h-4 w-4 text-green-600" />
+                  <h3 className="text-green-600">Itinerary Full Day Trip</h3>
+                </div>
+                <div className="space-y-4">
+                  {itineraries.map((day, index) => (
+                    <div
+                      key={day.id ?? index}
+                      className="p-4 bg-emerald-50 rounded-lg border border-emerald-100"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="shrink-0 w-10 h-10 bg-emerald-600 text-white rounded-full flex items-center justify-center">
+                          {day.day ?? day.hari}
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-emerald-600 mb-1">
+                            Hari ke-{day.day ?? day.hari}
+                          </p>
+                          <p className="text-gray-900">
+                            {day.title ?? day.aktivitas}
+                          </p>
+                          {(day.description ?? day.deskripsi) ? (
+                            <p className="text-gray-700 mt-1">
+                              {day.description ?? day.deskripsi}
+                            </p>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           ) : (
@@ -206,10 +288,18 @@ export function PackageDetail({ open, onOpenChange, pkg }) {
                             </p>
                           </div>
                           <p className="text-amber-900">
-                            {formatCurrency(
-                              tier.pricePerPax ?? tier.tarifPerPax
-                            )}{" "}
-                            / PAX
+                            {(() => {
+                              // Get minimum price from priceRanges for this tier
+                              let minPrice = null;
+                              if (tier.priceRanges && Array.isArray(tier.priceRanges)) {
+                                for (const range of tier.priceRanges) {
+                                  if (range.price && (minPrice === null || range.price < minPrice)) {
+                                    minPrice = range.price;
+                                  }
+                                }
+                              }
+                              return minPrice ? `${formatCurrency(minPrice)} / PAX` : "-";
+                            })()}
                           </p>
                         </div>
                         {(tier.hotels || tier.daftarHotel) &&

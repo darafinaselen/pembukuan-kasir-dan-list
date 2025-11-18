@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronRight } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import {
   Collapsible,
@@ -19,6 +20,34 @@ import {
 } from "@/components/ui/sidebar";
 
 export function NavMain({ items }) {
+  // Initialize state from localStorage
+  const [openItems, setOpenItems] = useState(() => {
+    if (typeof window !== "undefined") {
+      const persistedState = localStorage.getItem("sidebar-expanded-items");
+      if (persistedState) {
+        try {
+          return JSON.parse(persistedState);
+        } catch (error) {
+          console.error("Error parsing sidebar state:", error);
+          return {};
+        }
+      }
+    }
+    return {};
+  });
+
+  // Save state to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem("sidebar-expanded-items", JSON.stringify(openItems));
+  }, [openItems]);
+
+  const toggleItem = (itemTitle) => {
+    setOpenItems((prev) => ({
+      ...prev,
+      [itemTitle]: !prev[itemTitle],
+    }));
+  };
+
   return (
     <SidebarGroup>
       <SidebarGroupLabel>Platform</SidebarGroupLabel>
@@ -43,7 +72,8 @@ export function NavMain({ items }) {
             <Collapsible
               key={item.title}
               asChild
-              defaultOpen={item.isActive}
+              open={openItems[item.title] ?? item.isActive}
+              onOpenChange={() => toggleItem(item.title)}
               className="group/collapsible"
             >
               <SidebarMenuItem>

@@ -1,15 +1,21 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { protectedRoute, rateLimitPresets } from "@/lib/middleware";
+import {
+  protectedRoute,
+  rateLimitPresets,
+  getClientIp,
+  getUserAgent,
+} from "@/lib/middleware";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { logUserEvent } from "@/lib/audit";
 
 const userUpdateSchema = z.object({
   email: z.string().email("Email tidak valid").optional(),
   username: z.string().min(3, "Username minimal 3 karakter").optional(),
   name: z.string().min(1, "Nama tidak boleh kosong").optional(),
   password: z.string().min(8, "Password minimal 8 karakter").optional(),
-  role: z.enum(["ADMIN", "MANAGER", "OPERATOR"]).optional(),
+  role: z.enum(["ADMIN", "OPERATOR"]).optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -157,6 +163,16 @@ async function handler(req, { params }) {
         },
       });
 
+      // Log audit event
+      await logUserEvent(
+        req.auth.user.id,
+        "UPDATE",
+        id,
+        { before: existingUser, after: user },
+        getClientIp(req),
+        getUserAgent(req)
+      );
+
       return NextResponse.json({
         success: true,
         data: user,
@@ -205,12 +221,26 @@ async function handler(req, { params }) {
       }
 
       // Prevent deleting yourself (optional safety check)
-      // You would need to get current user from session
-      // For now, we'll allow deletion
+      if (req.auth.user.id === id) {
+        return NextResponse.json(
+          { success: false, message: "Anda tidak dapat menghapus akun Anda sendiri." },
+          { status: 400 }
+        );
+      }
 
       await prisma.user.delete({
         where: { id },
       });
+
+      // Log audit event
+      await logUserEvent(
+        req.auth.user.id,
+        "DELETE",
+        id,
+        { username: existingUser.username, name: existingUser.name },
+        getClientIp(req),
+        getUserAgent(req)
+      );
 
       return NextResponse.json({
         success: true,

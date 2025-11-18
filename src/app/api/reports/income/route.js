@@ -15,7 +15,7 @@ import { logReportAccess } from "@/lib/audit";
  */
 async function handleGetIncomeReport(request) {
   try {
-    // Check permissions - only ADMIN and MANAGER can view reports
+    // Check permissions - only ADMIN can view reports (financial data)
     if (!permissions.canViewReports(request.auth.user)) {
       return errorResponse("Insufficient permissions", 403);
     }
@@ -41,6 +41,15 @@ async function handleGetIncomeReport(request) {
       booking_date: { gte: fromDate, lte: toDate },
       // Only include transactions that have a package (paid services)
       packageId: { not: null },
+      approval_status: "APPROVED",
+      OR: [
+        // Include completed transactions (have actual_checkin_datetime)
+        { actual_checkin_datetime: { not: null } },
+        // Include transactions with down payment
+        {
+          AND: [{ payment_status: "DOWN_PAYMENT" }, { dp_amount: { gt: 0 } }],
+        },
+      ],
     };
 
     // Add package type filter if specified
@@ -106,19 +115,21 @@ async function handleGetIncomeReport(request) {
 
       const group = packageGroups.get(packageId);
       const financials = calculateTransactionFinancials(tx);
+      const baseRevenue =
+        financials.totalPendapatan - financials.totalOvertimeFee;
 
       group.transactionCount += 1;
       group.totalRevenue += financials.totalPendapatan;
-      group.totalOvertimeRevenue += financials.biayaOvertime || 0;
-      group.totalBaseRevenue += financials.tarifSewa || 0;
+      group.totalOvertimeRevenue += financials.totalOvertimeFee;
+      group.totalBaseRevenue += baseRevenue;
       group.transactions.push({
         id: tx.id,
         invoice_code: tx.invoice_code,
         customer_name: tx.customer_name,
         booking_date: tx.booking_date,
         totalRevenue: financials.totalPendapatan,
-        overtimeRevenue: financials.biayaOvertime || 0,
-        baseRevenue: financials.tarifSewa || 0,
+        overtimeRevenue: financials.totalOvertimeFee,
+        baseRevenue: baseRevenue,
         armada: tx.armada,
         driver: tx.driver,
       });
@@ -184,8 +195,8 @@ async function handleGetIncomeReport(request) {
   }
 }
 
-// Only ADMIN and MANAGER can view income reports
+// Only ADMIN can view income reports (financial data)
 export const GET = protectedRoute(handleGetIncomeReport, {
-  roles: ["ADMIN", "MANAGER"],
+  roles: ["ADMIN"],
   rateLimit: rateLimitPresets.reports, // 600 requests per minute
 });

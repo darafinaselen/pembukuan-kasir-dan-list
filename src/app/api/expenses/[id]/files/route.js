@@ -112,9 +112,9 @@ async function handleUploadFile(request, { params }) {
 }
 
 export const GET = protectedRoute(handleGetFiles, {
-  roles: ["ADMIN", "MANAGER"],
+  roles: ["ADMIN", "OPERATOR"],
 });
 
 export const POST = protectedRoute(handleUploadFile, {
-  roles: ["ADMIN", "MANAGER"],
+  roles: ["ADMIN", "OPERATOR"],
 });

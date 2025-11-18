@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { exportToExcel } from "@/lib/utils";
+import { exportTransactionReport } from "@/lib/excel-export";
 import { cn } from "@/lib/utils";
 
 const formatCurrency = (amount) =>
@@ -14,36 +14,64 @@ const formatCurrency = (amount) =>
     minimumFractionDigits: 0,
   }).format(amount || 0);
 
-export default function LaporanTransaksiTab({ data, isLoading }) {
-  const handleDownload = () => {
+export default function LaporanTransaksiTab({ data, isLoading, dateRange }) {
+  const [isExporting, setIsExporting] = React.useState(false);
+
+  const handleDownload = async () => {
     if (!data) return;
+
+    setIsExporting(true);
     try {
-      const excelData = [
-        {
-          Deskripsi: "Total Transaksi (Order)",
-          Jumlah: data.totalTransaksi,
-        },
-        {
-          Deskripsi: "Total Pemasukan Sewa",
-          Jumlah: data.totalPemasukan,
-        },
-        {
-          Deskripsi: "Total Pengeluaran (BBM + Gaji)",
-          Jumlah: data.totalPengeluaranOps,
-        },
-        {
-          Deskripsi: "Total Laba Kotor",
-          Jumlah: data.totalLabaKotor,
-        },
-      ];
-      exportToExcel(excelData, "Laporan_Transaksi_Laba_Kotor");
+      const reportDateRange = dateRange
+        ? {
+            from: dateRange.from.toISOString().split("T")[0],
+            to: dateRange.to.toISOString().split("T")[0],
+          }
+        : {
+            from: new Date().toISOString().split("T")[0],
+            to: new Date().toISOString().split("T")[0],
+          };
+
+      // Fetch detailed transaction data (without pagination for export)
+      const params = new URLSearchParams({
+        from: reportDateRange.from,
+        to: reportDateRange.to,
+        limit: "10000", // Large limit to get all transactions
+      });
+
+      const res = await fetch(`/api/transactions?${params.toString()}`, {
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        throw new Error("Gagal mengambil data transaksi detail");
+      }
+
+      const result = await res.json();
+      const transactions = result.data || [];
+
+      // Filter only approved transactions
+      const approvedTransactions = transactions.filter(
+        (tx) => tx.approval_status === "APPROVED"
+      );
+
+      // Combine summary data with detailed transactions
+      const exportData = {
+        ...data,
+        transactions: approvedTransactions,
+      };
+
+      await exportTransactionReport(exportData, reportDateRange);
       toast.success("Laporan berhasil diunduh!", {
-        description: "File Excel telah tersimpan",
+        description: "File Excel dengan multiple sheet telah tersimpan",
       });
     } catch (error) {
+      console.error("Export error:", error);
       toast.error("Gagal mengunduh laporan", {
         description: error.message,
       });
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -62,9 +90,14 @@ export default function LaporanTransaksiTab({ data, isLoading }) {
   return (
     <div className="rounded-md border">
       <div className="p-4">
-        <Button onClick={handleDownload} size="sm" className="mb-4">
+        <Button
+          onClick={handleDownload}
+          size="sm"
+          className="mb-4"
+          disabled={isExporting || !data}
+        >
           <Download className="mr-2 h-4 w-4" />
-          Download Laporan (Excel)
+          {isExporting ? "Mengunduh..." : "Download Laporan (Excel)"}
         </Button>
       </div>
 

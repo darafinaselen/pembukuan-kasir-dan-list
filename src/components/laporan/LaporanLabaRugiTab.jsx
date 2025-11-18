@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Download, TrendingUp, TrendingDown } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { exportToExcel } from "@/lib/utils";
+import { exportIncomeStatement } from "@/lib/excel-export";
 import { cn } from "@/lib/utils";
 
 const formatCurrency = (amount) =>
@@ -14,22 +14,21 @@ const formatCurrency = (amount) =>
     minimumFractionDigits: 0,
   }).format(amount || 0);
 
-export default function LaporanLabaRugiTab({ data, isLoading }) {
+export default function LaporanLabaRugiTab({ data, isLoading, dateRange }) {
   const handleDownload = () => {
     if (!data) return;
-    const excelData = [
-      { Kategori: "Total Pemasukan Sewa", Jumlah: data.totalPemasukanSewa },
-      {
-        Kategori: "Total Biaya Operasional (Transaksi)",
-        Jumlah: -data.totalBiayaOps,
-      },
-      {
-        Kategori: "Total Biaya Operasional (Kantor)",
-        Jumlah: -data.totalBiayaKantor,
-      },
-      { Kategori: "LABA / RUGI BERSIH", Jumlah: data.labaRugiBersih },
-    ];
-    exportToExcel(excelData, "Laporan_Laba_Rugi");
+
+    const reportDateRange = dateRange
+      ? {
+          from: dateRange.from.toISOString().split("T")[0],
+          to: dateRange.to.toISOString().split("T")[0],
+        }
+      : {
+          from: new Date().toISOString().split("T")[0],
+          to: new Date().toISOString().split("T")[0],
+        };
+
+    exportIncomeStatement(data, reportDateRange);
   };
 
   if (isLoading) {

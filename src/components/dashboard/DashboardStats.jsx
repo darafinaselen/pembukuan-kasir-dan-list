@@ -8,10 +8,13 @@ import {
   Car,
   Loader2,
 } from "lucide-react";
+import { useUser } from "@/hooks/useUser";
 
 export function DashboardStats({ stats, loading }) {
+  const { user } = useUser();
   console.log("DashboardStats - stats:", stats);
   console.log("DashboardStats - loading:", loading);
+  console.log("DashboardStats - user role:", user?.role);
 
   if (loading) {
     return (
@@ -111,32 +114,42 @@ export function DashboardStats({ stats, loading }) {
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      {statCards.map((stat) => (
-        <Card
-          key={stat.title}
-          className="hover:shadow-lg transition-shadow overflow-hidden"
-        >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium pr-2">
-              {stat.title}
-            </CardTitle>
-            <div className={`p-2 rounded-lg ${stat.bgColor} shrink-0`}>
-              <stat.icon className={`h-4 w-4 ${stat.color}`} />
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-1">
-            <div className="text-lg sm:text-xl font-bold wrap-break-word">
-              {stat.value}
-            </div>
-            <p className="text-xs text-muted-foreground wrap-break-word">
-              {stat.description}
-            </p>
-            <p className="text-xs font-medium text-gray-600 wrap-break-word">
-              {stat.detail}
-            </p>
-          </CardContent>
-        </Card>
-      ))}
+      {statCards
+        .filter((stat) => {
+          // Hide "Total Pemasukan" and "Laba Kotor" from OPERATOR
+          if (user?.role === "OPERATOR") {
+            return (
+              stat.title !== "Total Pemasukan" && stat.title !== "Laba Kotor"
+            );
+          }
+          return true;
+        })
+        .map((stat) => (
+          <Card
+            key={stat.title}
+            className="hover:shadow-lg transition-shadow overflow-hidden"
+          >
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium pr-2">
+                {stat.title}
+              </CardTitle>
+              <div className={`p-2 rounded-lg ${stat.bgColor} shrink-0`}>
+                <stat.icon className={`h-4 w-4 ${stat.color}`} />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-1">
+              <div className="text-lg sm:text-xl font-bold wrap-break-word">
+                {stat.value}
+              </div>
+              <p className="text-xs text-muted-foreground wrap-break-word">
+                {stat.description}
+              </p>
+              <p className="text-xs font-medium text-gray-600 wrap-break-word">
+                {stat.detail}
+              </p>
+            </CardContent>
+          </Card>
+        ))}
     </div>
   );
 }

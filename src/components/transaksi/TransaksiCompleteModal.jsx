@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CurrencyInput } from "@/components/ui/currency-input";
+import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Car, User, Calculator } from "lucide-react";
@@ -105,9 +105,12 @@ export default function TransaksiCompleteModal({
       return;
     }
 
+    // When completing transaction, all payments are considered settled (lunas)
+    // remaining_payment is always 0 for completed transactions
     onComplete({
       actual_checkin_datetime: checkinDateTime,
       actual_overtime_cost: overtimeCost,
+      remaining_payment: 0, // Always 0 when completing transaction
     });
   };
 
@@ -117,6 +120,10 @@ export default function TransaksiCompleteModal({
   const totalDuration = calculatedOvertimeHours + packageDuration;
   const baseRate = transaction.all_in_rate || 0;
   const totalAmount = baseRate + overtimeCost;
+
+  // Calculate remaining payment (sisa tagihan)
+  const dpAmount = transaction.dp_amount || 0;
+  const sisaTagihan = totalAmount - dpAmount;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -197,13 +204,22 @@ export default function TransaksiCompleteModal({
                 >
                   Jam Pulang Aktual *
                 </Label>
-                <Input
-                  id="actualCheckinTime"
-                  type="datetime-local"
-                  value={actualCheckinTime}
-                  onChange={handleCheckinTimeChange}
+                <DateTimePicker
+                  date={
+                    actualCheckinTime ? new Date(actualCheckinTime) : undefined
+                  }
+                  setDate={(date) => {
+                    if (date) {
+                      const tzOffset = date.getTimezoneOffset() * 60000;
+                      const localISOTime = new Date(date.getTime() - tzOffset)
+                        .toISOString()
+                        .slice(0, 16);
+                      handleCheckinTimeChange({
+                        target: { value: localISOTime },
+                      });
+                    }
+                  }}
                   className="mt-1"
-                  required
                 />
               </div>
             </CardContent>
@@ -291,6 +307,22 @@ export default function TransaksiCompleteModal({
                   {formatCurrency(totalAmount)}
                 </span>
               </div>
+
+              {dpAmount > 0 && (
+                <>
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>DP Sudah Dibayar:</span>
+                    <span>-{formatCurrency(dpAmount)}</span>
+                  </div>
+                  <hr className="my-2" />
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Sisa Tagihan:</span>
+                    <span className="font-bold text-green-600">
+                      {formatCurrency(0)} (LUNAS)
+                    </span>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>

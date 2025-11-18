@@ -2,9 +2,12 @@ import {
   protectedRoute,
   successResponse,
   errorResponse,
+  getClientIp,
+  getUserAgent,
 } from "@/lib/middleware";
 import { prisma } from "@/lib/prisma";
 import { validatePriceRangesForTier } from "@/lib/utils";
+import { logPackageEvent } from "@/lib/audit";
 
 async function handleGetPackages(request) {
   try {
@@ -33,7 +36,6 @@ async function handleGetPackages(request) {
           select: {
             id: true,
             starRating: true,
-            pricePerPax: true,
             createdAt: true,
             updatedAt: true,
             hotels: {
@@ -95,10 +97,6 @@ async function handleGetPackages(request) {
 
 async function handleCreatePackage(request) {
   try {
-    // Check permissions - only ADMIN and MANAGER can create
-    if (!["ADMIN", "MANAGER"].includes(request.auth.user.role)) {
-      return errorResponse("Insufficient permissions", 403);
-    }
 
     const data = await request.json();
     const {
@@ -127,7 +125,9 @@ async function handleCreatePackage(request) {
         ? "TOUR_PACKAGE"
         : tipePaket === "Full Day Trip"
           ? "FULL_DAY_TRIP"
-          : "CAR_RENTAL";
+          : tipePaket === "Harga Custom"
+            ? "CUSTOM_PRICING"
+            : "CAR_RENTAL";
 
     const includes =
       typeof include === "string"
@@ -156,17 +156,18 @@ async function handleCreatePackage(request) {
     };
 
     if (type === "CAR_RENTAL" || type === "FULL_DAY_TRIP") {
+      // Convert from thousands to full rupiah (CurrencyInput sends in thousands)
       prismaData.price =
         typeof hargaDefault === "number"
-          ? hargaDefault
+          ? hargaDefault * 1000
           : hargaDefault
-            ? Number(hargaDefault)
+            ? Number(hargaDefault) * 1000
             : null;
       prismaData.overtimeRate =
         typeof tarifOvertime === "number"
-          ? tarifOvertime
+          ? tarifOvertime * 1000
           : tarifOvertime
-            ? Number(tarifOvertime)
+            ? Number(tarifOvertime) * 1000
             : null;
       // For CAR_RENTAL and FULL_DAY_TRIP, durasiHari represents hours
       const hours = nestedDurasiHari ?? durasiHari;
@@ -183,14 +184,42 @@ async function handleCreatePackage(request) {
         // validate priceRanges for each tier
         for (let i = 0; i < hotelTiers.length; i++) {
           const tier = hotelTiers[i];
-          if (tier.priceRanges) {
-            const v = validatePriceRangesForTier(tier.priceRanges);
-            if (!v.ok) {
-              return errorResponse(
-                `Validasi priceRanges gagal di tingkat ke-${i + 1}: ${v.message}`,
-                400
-              );
-            }
+
+          // Ensure priceRanges exist and is not empty
+          if (
+            !tier.priceRanges ||
+            !Array.isArray(tier.priceRanges) ||
+            tier.priceRanges.length === 0
+          ) {
+            return errorResponse(
+              `Tingkat hotel ke-${i + 1} harus memiliki minimal satu rentang harga`,
+              400
+            );
+          }
+
+          // Validate price ranges
+          const v = validatePriceRangesForTier(tier.priceRanges);
+          if (!v.ok) {
+            return errorResponse(
+              `Validasi priceRanges gagal di tingkat ke-${i + 1}: ${v.message}`,
+              400
+            );
+          }
+
+          // Ensure at least one price range has valid price > 0
+          const hasValidPrice = tier.priceRanges.some((r) => {
+            const price =
+              typeof r.price === "string"
+                ? Number(r.price.trim() || 0)
+                : Number(r.price || 0);
+            return price > 0;
+          });
+
+          if (!hasValidPrice) {
+            return errorResponse(
+              `Tingkat hotel ke-${i + 1} harus memiliki minimal satu rentang harga dengan nilai > 0`,
+              400
+            );
           }
         }
 
@@ -201,7 +230,6 @@ async function handleCreatePackage(request) {
               const m = String(tier.tingkat || "").match(/\d+/);
               return m ? Number(m[0]) : tier.starRating || 0;
             })(),
-            pricePerPax: tier.tarifPerPax ? Number(tier.tarifPerPax) : 0,
             hotels:
               tier.daftarHotel && Array.isArray(tier.daftarHotel)
                 ? {
@@ -216,6 +244,7 @@ async function handleCreatePackage(request) {
                     create: tier.priceRanges.map((r) => ({
                       minPax: Number(r.minPax || 0),
                       maxPax: Number(r.maxPax || 0),
+                      // TOUR_PACKAGE prices are already in thousands from CurrencyInput, no need to multiply by 1000
                       price: Number(r.price || 0),
                     })),
                   }
@@ -250,6 +279,16 @@ async function handleCreatePackage(request) {
       },
     });
 
+    // Log audit event
+    await logPackageEvent(
+      request.auth.user.id,
+      "CREATE",
+      newPackage.id,
+      { name: newPackage.name, type: newPackage.type },
+      getClientIp(request),
+      getUserAgent(request)
+    );
+
     return successResponse(newPackage, 201);
   } catch (error) {
     console.error(error);
@@ -257,12 +296,12 @@ async function handleCreatePackage(request) {
   }
 }
 
-// All roles can view packages
+// ADMIN and OPERATOR can view packages (OPERATOR needs to select for transactions)
 export const GET = protectedRoute(handleGetPackages, {
-  roles: ["ADMIN", "MANAGER", "OPERATOR"],
+  permissions: ["canViewPackages"],
 });
 
-// Only ADMIN and MANAGER can create packages
+// Only ADMIN can create packages
 export const POST = protectedRoute(handleCreatePackage, {
-  roles: ["ADMIN", "MANAGER"],
+  permissions: ["canManagePackages"],
 });

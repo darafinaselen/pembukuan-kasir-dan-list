@@ -17,6 +17,7 @@ enum PackageType {
   CAR_RENTAL
   TOUR_PACKAGE
   FULL_DAY_TRIP
+  CUSTOM_PRICING
 }
 
 enum ArmadaStatus {
@@ -28,6 +29,7 @@ enum ArmadaStatus {
 
 enum DriverStatus {
   READY
+  BOOKED
   ON_TRIP
   OFF_DUTY
 }
@@ -38,9 +40,23 @@ enum PaymentStatus {
   PAID
 }
 
+enum ApprovalStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+  PENDING_EDIT
+}
+
+enum ExpenseApprovalStatus {
+  APPROVED
+  PENDING_EDIT
+  PENDING_DELETE
+  REJECTED
+}
+
 enum UserRole {
   ADMIN
-  MANAGER
   OPERATOR
 }
 
@@ -53,6 +69,13 @@ enum AuditAction {
   VIEW
   EXPORT
   COMPLETE
+  SUBMIT_APPROVAL
+  APPROVE
+  REJECT
+  REQUEST_EDIT
+  REQUEST_DELETE
+  APPROVE_EDIT
+  APPROVE_DELETE
 }
 
 enum StaffStatus {
@@ -60,6 +83,24 @@ enum StaffStatus {
   INACTIVE
   ON_LEAVE
   TERMINATED
+}
+
+enum ExpenseCategory {
+  LISTRIK
+  INTERNET
+  PAKET_DATA
+  KONSUMSI
+  GAJI_STAF_OPERASIONAL
+  GAJI_STAF_ADMIN
+  INSENTIF_BONUS
+  PAJAK
+  ALAT_TULIS_KANTOR
+  KOMPUTER_SUPPLIES
+  OPERASIONAL_LAINNYA
+  BBM
+  PERAWATAN_ARMADA
+  GAJI_SOPIR
+  LAINNYA
 }
 
 // Modul 2.5: Manajemen Paket Jasa
@@ -96,11 +137,11 @@ model ServicePackage {
 model HotelTier {
   id               String            @id @default(uuid())
   starRating       Int
-  pricePerPax      Int
   servicePackageId String
   servicePackage   ServicePackage    @relation(fields: [servicePackageId], references: [id], onDelete: Cascade)
   hotels           Hotel[]
   priceRanges      HotelPriceRange[]
+  transactions     Transaction[] // Relasi balik dari Transaction
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -154,6 +195,10 @@ model Armada {
   license_plate String       @unique
   brand         String
   model         String
+  vehicle_type  String? // Tipe kendaraan (MPV, SUV, Sedan, dll)
+  year          Int? // Tahun pembuatan
+  color         String? // Warna kendaraan
+  capacity      Int? // Kapasitas penumpang
   status        ArmadaStatus @default(READY)
 
   // Relasi: Satu armada bisa ada di banyak transaksi
@@ -190,10 +235,10 @@ model Driver {
 
 // Modul 5: Manajemen Pengeluaran Operasional
 model Expense {
-  id           String    @id @default(uuid())
-  date         DateTime  @db.Date
-  paymentMonth DateTime? @db.Date // Bulan untuk periode pembayaran
-  category     String // Misal: "Servis", "Biaya Kantor", "Gaji Admin"
+  id           String          @id @default(uuid())
+  date         DateTime        @db.Date
+  paymentMonth DateTime?       @db.Date // Bulan untuk periode pembayaran
+  category     ExpenseCategory // Kategori pengeluaran menggunakan enum
   description  String
   amount       Int
 
@@ -212,12 +257,32 @@ model Expense {
 
   namaPenerima String? // Nama penerima insentif/bonus (untuk kategori INSENTIF_BONUS)
 
+  // Approval workflow fields
+  approval_status       ExpenseApprovalStatus @default(APPROVED) // Default APPROVED untuk backward compatibility
+  edit_request_reason   String? // Alasan operator request edit
+  delete_request_reason String? // Alasan operator request delete
+  rejection_reason      String? // Alasan admin reject
+  original_data         Json? // Backup data sebelum edit (untuk restore jika rejected)
+  proposed_changes      Json? // Perubahan yang diusulkan operator (untuk review admin)
+
+  // User relations untuk approval workflow
+  requested_by_id String?
+  requested_by    User?   @relation("ExpenseRequestedBy", fields: [requested_by_id], references: [id], onDelete: SetNull)
+
+  approved_by_id String?
+  approved_by    User?   @relation("ExpenseApprovedBy", fields: [approved_by_id], references: [id], onDelete: SetNull)
+
+  requested_at DateTime?
+  approved_at  DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([armadaId])
   @@index([driverId])
   @@index([staffId])
+  @@index([requested_by_id])
+  @@index([approved_by_id])
   @@map("expenses")
 }
 
@@ -259,8 +324,34 @@ model Transaction {
   actual_overtime_cost    Int? // Biaya overtime yang dikenakan
 
   // Data Tambahan untuk Paket Wisata
-  hotel_name String? // Nama hotel yang dipilih (opsional, untuk TOUR_PACKAGE)
-  pax_count  Int? // Jumlah penumpang/pax (opsional, untuk TOUR_PACKAGE)
+  hotel_name   String? // Nama hotel yang dipilih (opsional, untuk TOUR_PACKAGE)
+  pax_count    Int? // Jumlah penumpang/pax (opsional, untuk TOUR_PACKAGE)
+  custom_price Int? // Harga custom untuk paket CUSTOM_PRICING (opsional)
+
+  // Relasi ke HotelTier yang dipilih (opsional, untuk TOUR_PACKAGE)
+  hotel_tier_id String?
+  hotelTier     HotelTier? @relation(fields: [hotel_tier_id], references: [id], onDelete: SetNull)
+
+  // Approval Workflow
+  approval_status  ApprovalStatus @default(DRAFT)
+  submitted_at     DateTime? // Waktu submit untuk persetujuan
+  submitted_by_id  String?
+  submitted_by     User?     @relation("TransactionSubmittedBy", fields: [submitted_by_id], references: [id], onDelete: SetNull)
+  approved_at      DateTime? // Waktu disetujui
+  approved_by_id   String?
+  approved_by      User?     @relation("TransactionApprovedBy", fields: [approved_by_id], references: [id], onDelete: SetNull)
+  rejected_at      DateTime? // Waktu ditolak
+  rejected_by_id   String?
+  rejected_by      User?     @relation("TransactionRejectedBy", fields: [rejected_by_id], references: [id], onDelete: SetNull)
+  rejection_reason String? // Alasan penolakan
+
+  // Edit Request Workflow
+  edit_request_reason String? // Alasan operator request edit
+  original_data       Json? // Backup data sebelum edit (untuk restore jika rejected)
+  proposed_changes    Json? // Perubahan yang diusulkan operator (untuk review admin)
+  requested_by_id     String?
+  requested_by        User?     @relation("TransactionRequestedBy", fields: [requested_by_id], references: [id], onDelete: SetNull)
+  requested_at        DateTime? // Waktu request edit
 
   // --- Relasi (Foreign Keys) ---
 
@@ -281,6 +372,10 @@ model Transaction {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([submitted_by_id])
+  @@index([approved_by_id])
+  @@index([rejected_by_id])
+  @@index([requested_by_id])
   @@map("transactions")
 }
 
@@ -307,6 +402,16 @@ model User {
   // Relasi
   sessions  Session[]
   auditLogs AuditLog[]
+
+  // Relasi untuk expense approval workflow
+  expensesRequested Expense[] @relation("ExpenseRequestedBy")
+  expensesApproved  Expense[] @relation("ExpenseApprovedBy")
+
+  // Relasi untuk transaction approval workflow
+  transactionsSubmitted Transaction[] @relation("TransactionSubmittedBy")
+  transactionsApproved  Transaction[] @relation("TransactionApprovedBy")
+  transactionsRejected  Transaction[] @relation("TransactionRejectedBy")
+  transactionsRequested Transaction[] @relation("TransactionRequestedBy")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -6,32 +6,61 @@ import {
 } from "@/lib/middleware";
 import { prisma } from "@/lib/prisma";
 import { logTransactionEvent } from "@/lib/audit";
+import { validateTransactionData } from "@/lib/validators/transaction-validator";
 
 async function handleGetTransactions(request) {
   try {
-    // Check permissions
-    if (!permissions.canViewTransactions(request.auth.user)) {
-      return errorResponse("Insufficient permissions", 403);
-    }
-
     const url = new URL(request.url);
     const page = parseInt(url.searchParams.get("page")) || 1;
     const limit = parseInt(url.searchParams.get("limit")) || 10;
     const offset = (page - 1) * limit;
+    const from = url.searchParams.get("from");
+    const to = url.searchParams.get("to");
+
+    // Build where clause with optional date filtering
+    const whereClause = {};
+
+    if (from && to) {
+      const fromDate = new Date(from);
+      fromDate.setHours(0, 0, 0, 0);
+
+      const toDate = new Date(to);
+      toDate.setHours(23, 59, 59, 999);
+
+      whereClause.booking_date = {
+        gte: fromDate,
+        lte: toDate,
+      };
+    }
 
     // Get total count for pagination
-    const totalCount = await prisma.transaction.count();
+    const totalCount = await prisma.transaction.count({ where: whereClause });
 
     const transactions = await prisma.transaction.findMany({
+      where: whereClause,
       skip: offset,
       take: limit,
       orderBy: {
         booking_date: "desc",
       },
       include: {
-        package: true,
+        package: {
+          include: {
+            hotelTiers: {
+              include: {
+                hotels: true,
+                priceRanges: true,
+              },
+            },
+          },
+        },
+        hotelTier: true,
         armada: true,
         driver: true,
+        submitted_by: { select: { name: true, email: true } },
+        approved_by: { select: { name: true, email: true } },
+        rejected_by: { select: { name: true, email: true } },
+        requested_by: { select: { name: true, email: true } },
       },
     });
 
@@ -56,97 +85,129 @@ async function handleGetTransactions(request) {
 
 async function handleCreateTransaction(request) {
   try {
-    // Check permissions
-    if (!permissions.canCreateTransaction(request.auth.user)) {
-      return errorResponse("Insufficient permissions", 403);
-    }
-
     const body = await request.json();
 
-    if (!body.armadaId || !body.driverId) {
-      return errorResponse("Armada dan Sopir wajib diisi", 400);
+    // Validate input data
+    const validation = validateTransactionData(body, false);
+    if (!validation.success) {
+      const errors = validation.error.errors.map((err) => ({
+        field: err.path.join("."),
+        message: err.message,
+      }));
+      return errorResponse({ message: "Validasi gagal", errors }, 400);
     }
 
-    const isStartingTodayOrPast =
-      new Date(body.checkout_datetime) <= new Date();
-    const armadaStatus = isStartingTodayOrPast ? "ON_TRIP" : "BOOKED";
-    const driverStatus = "ON_TRIP";
+    const validatedData = validation.data;
 
+    // Determine if admin created this transaction for auto-approval
+    const approvalMeta = request.auth.adminAutoApprove
+      ? {
+          approval_status: "APPROVED",
+          approved_at: new Date(),
+          approved_by: request.auth.user.id,
+        }
+      : {};
+
+    // Generate collision-resistant invoice code (alphanumeric only, uppercase)
+    const { nanoid } = await import("nanoid");
     const date = new Date();
     const yyyymmdd = date.toISOString().slice(0, 10).replace(/-/g, "");
-    const invoice_code = `RLM-${yyyymmdd}-${date
-      .getTime()
-      .toString()
-      .slice(-5)}`;
+    // Use only uppercase alphanumeric characters (no symbols)
+    const uniqueSuffix = nanoid(6).toUpperCase();
+    const invoice_code = `RLM-${yyyymmdd}-${uniqueSuffix}`;
 
-    const [newTransaction] = await prisma.$transaction([
-      prisma.transaction.create({
+    // Use atomic transaction with availability verification to prevent race condition
+    // NOTE: Resources are NOT locked here because transaction is in DRAFT status.
+    // Resources will be locked only when transaction is APPROVED (see approve endpoint).
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Verify armada exists (but don't check status - it can be READY, BOOKED, or ON_TRIP)
+      const armada = await tx.armada.findUnique({
+        where: {
+          id: validatedData.armadaId,
+        },
+      });
+
+      if (!armada) {
+        throw new Error("Armada tidak ditemukan.");
+      }
+
+      // 2. Verify driver exists (but don't check status - it can be READY, BOOKED, or ON_TRIP)
+      const driver = await tx.driver.findUnique({
+        where: {
+          id: validatedData.driverId,
+        },
+      });
+
+      if (!driver) {
+        throw new Error("Sopir tidak ditemukan.");
+      }
+
+      // 3. Create transaction (status default: DRAFT)
+      // Resources remain in their current status and will be locked only upon approval
+      const newTransaction = await tx.transaction.create({
         data: {
           // Customer data
-          customer_name: body.customer_name,
-          customer_phone: body.customer_phone,
+          customer_name: validatedData.customer_name,
+          customer_phone: validatedData.customer_phone,
 
           // Dates
-          booking_date: body.booking_date,
-          checkout_datetime: body.checkout_datetime,
-          checkin_datetime: body.checkin_datetime,
+          booking_date: validatedData.booking_date,
+          checkout_datetime: validatedData.checkout_datetime,
+          checkin_datetime: validatedData.checkin_datetime,
 
           // Financial data
-          all_in_rate: body.all_in_rate,
-          overtime_rate_per_hour: body.overtime_rate_per_hour,
-          dp_amount: body.dp_amount,
-          payment_status: body.payment_status || "UNPAID",
+          all_in_rate: validatedData.all_in_rate,
+          overtime_rate_per_hour: validatedData.overtime_rate_per_hour,
+          dp_amount: validatedData.dp_amount,
+          payment_status: validatedData.payment_status || "UNPAID",
 
           // Optional tour package data
-          hotel_name: body.hotel_name,
-          pax_count: body.pax_count,
+          hotel_name: validatedData.hotel_name,
+          pax_count: validatedData.pax_count,
+          hotel_tier_id: validatedData.hotel_tier_id,
+          custom_price: validatedData.custom_price,
 
           // Generated
           invoice_code: invoice_code,
 
           // Relations
-          armadaId: body.armadaId,
-          driverId: body.driverId,
-          packageId: body.packageId || null,
+          armadaId: validatedData.armadaId,
+          driverId: validatedData.driverId,
+          packageId: validatedData.packageId || null,
+          ...approvalMeta,
         },
-      }),
+      });
 
-      prisma.armada.update({
-        where: { id: body.armadaId },
-        data: { status: armadaStatus },
-      }),
-
-      prisma.driver.update({
-        where: { id: body.driverId },
-        data: { status: driverStatus },
-      }),
-    ]);
+      return newTransaction;
+    });
 
     // Log audit event
-    await logTransactionEvent(
-      request.auth.user.id,
-      "CREATE",
-      newTransaction.id,
-      newTransaction,
-      request.auth.ipAddress,
-      request.auth.userAgent
-    );
+    await logTransactionEvent(request.auth.user, "CREATE", result, request);
 
-    return successResponse(newTransaction, 201);
+    return successResponse(result, 201);
   } catch (error) {
     console.error("Error creating transaction:", error);
+
+    // Handle availability conflicts
+    if (error.message && error.message.includes("tidak tersedia")) {
+      return errorResponse(error.message, 409);
+    }
+
     if (error.code === "P2002") {
       return errorResponse("Gagal membuat invoice code unik. Coba lagi.", 409);
     }
+
     return errorResponse("Gagal membuat transaksi", 500);
   }
 }
 
-// All roles can view and create transactions
+// ADMIN and OPERATOR can view and create transactions
+// OPERATOR creates as DRAFT and must submit for approval
 export const GET = protectedRoute(handleGetTransactions, {
-  roles: ["ADMIN", "MANAGER", "OPERATOR"],
+  permissions: ["canViewTransactions"],
 });
 
 export const POST = protectedRoute(handleCreateTransaction, {
-  roles: ["ADMIN", "MANAGER", "OPERATOR"],
+  permissions: ["canCreateTransaction"],
+  adminAutoApprove: true,
 });

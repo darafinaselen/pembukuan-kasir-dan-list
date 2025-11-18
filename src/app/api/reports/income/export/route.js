@@ -15,7 +15,7 @@ import { logReportAccess } from "@/lib/audit";
  */
 async function handleExportIncomeReport(request) {
   try {
-    // Check permissions - only ADMIN and MANAGER can view reports
+    // Check permissions - only ADMIN can view reports (financial data)
     if (!permissions.canViewReports(request.auth.user)) {
       return errorResponse("Insufficient permissions", 403);
     }
@@ -46,6 +46,15 @@ async function handleExportIncomeReport(request) {
       booking_date: { gte: fromDate, lte: toDate },
       // Only include transactions that have a package (paid services)
       packageId: { not: null },
+      approval_status: "APPROVED",
+      OR: [
+        // Include completed transactions (have actual_checkin_datetime)
+        { actual_checkin_datetime: { not: null } },
+        // Include transactions with down payment
+        {
+          AND: [{ payment_status: "DOWN_PAYMENT" }, { dp_amount: { gt: 0 } }],
+        },
+      ],
     };
 
     // Add package type filter if specified
@@ -196,8 +205,8 @@ async function handleExportIncomeReport(request) {
   }
 }
 
-// Only ADMIN and MANAGER can export income reports
+// Only ADMIN can export income reports (financial data)
 export const GET = protectedRoute(handleExportIncomeReport, {
-  roles: ["ADMIN", "MANAGER"],
+  roles: ["ADMIN"],
   rateLimit: rateLimitPresets.exports, // Lower rate limit for exports
 });

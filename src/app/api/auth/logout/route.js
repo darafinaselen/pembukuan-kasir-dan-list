@@ -37,14 +37,17 @@ async function handleLogout(request) {
       data: null,
     });
 
-    // Clear session cookie
-    response.cookies.set("session", "", {
-      httpOnly: true,
-      secure: false, // Allow clearing on HTTP
-      sameSite: "lax",
-      maxAge: 0, // Expire immediately
-      path: "/",
-    });
+    // Clear all possible session cookies
+    const cookieNames = ["session", "session_admin", "session_operator"];
+    for (const cookieName of cookieNames) {
+      response.cookies.set(cookieName, "", {
+        httpOnly: true,
+        secure: false, // Allow clearing on HTTP
+        sameSite: "lax",
+        maxAge: 0, // Expire immediately
+        path: "/",
+      });
+    }
 
     return response;
   } catch (error) {

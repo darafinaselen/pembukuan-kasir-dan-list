@@ -16,13 +16,13 @@ export const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
   name: z.string().min(1),
-  role: z.enum(["ADMIN", "MANAGER", "OPERATOR"]).default("OPERATOR"),
+  role: z.enum(["ADMIN", "OPERATOR"]).default("OPERATOR"),
 });
 
 export const updateUserSchema = z.object({
   name: z.string().min(1).optional(),
   email: z.string().email().optional(),
-  role: z.enum(["ADMIN", "MANAGER", "OPERATOR"]).optional(),
+  role: z.enum(["ADMIN", "OPERATOR"]).optional(),
   isActive: z.boolean().optional(),
 });
 

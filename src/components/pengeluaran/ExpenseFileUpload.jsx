@@ -64,6 +64,7 @@ export default function ExpenseFileUpload({ expenseId }) {
   const [previewFile, setPreviewFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
 
   const fetchFiles = useCallback(async () => {
     if (!expenseId) return;
@@ -89,10 +90,14 @@ export default function ExpenseFileUpload({ expenseId }) {
   }, [expenseId]);
 
   useEffect(() => {
-    if (expenseId) {
-      fetchFiles();
+    fetchFiles();
+  }, [fetchFiles]);
+
+  useEffect(() => {
+    if (!previewDialogOpen) {
+      closePreview();
     }
-  }, [expenseId, fetchFiles]);
+  }, [previewDialogOpen]);
 
   async function handleFileUpload(e) {
     const file = e.target.files?.[0];
@@ -157,9 +162,12 @@ export default function ExpenseFileUpload({ expenseId }) {
 
   async function handleDownload(fileId, fileName) {
     try {
-      const res = await fetch(`/api/expenses/${expenseId}/files/${fileId}`, {
-        credentials: "include",
-      });
+      const res = await fetch(
+        `/api/expenses/${expenseId}/files/${fileId}?download=true`,
+        {
+          credentials: "include",
+        }
+      );
 
       if (!res.ok) {
         throw new Error("Gagal mendownload file");
@@ -181,21 +189,58 @@ export default function ExpenseFileUpload({ expenseId }) {
   }
 
   async function handlePreview(file) {
-    setPreviewFile(file);
+    console.log("🔍 Starting preview for file:", file.fileName, "ID:", file.id);
+
+    // Reset all preview states first
     setIsPreviewLoading(true);
-    setPreviewUrl(null);
     setError(null);
 
+    // Clean up previous preview if it exists
+    if (previewUrl) {
+      try {
+        window.URL.revokeObjectURL(previewUrl);
+        console.log("🧹 Revoked previous preview URL:", previewUrl);
+      } catch (err) {
+        console.error("Error revoking previous preview URL:", err);
+      }
+    }
+
+    // Clear preview URL before setting new file
+    setPreviewUrl(null);
+
+    // Small delay to ensure state is cleared
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    setPreviewFile(file);
+    setPreviewDialogOpen(true);
+
     try {
-      const res = await fetch(`/api/expenses/${expenseId}/files/${file.id}`, {
+      const previewUrl = `/api/expenses/${expenseId}/files/${file.id}`;
+      console.log("📡 Fetching preview from:", previewUrl);
+
+      const res = await fetch(previewUrl, {
         credentials: "include",
       });
 
+      console.log("📡 Response status:", res.status);
+      console.log("📡 Response ok:", res.ok);
+      console.log(
+        "📡 Response headers:",
+        Object.fromEntries(res.headers.entries())
+      );
+
       if (!res.ok) {
-        throw new Error(`Gagal memuat preview: ${res.statusText}`);
+        throw new Error(
+          `Gagal memuat preview: ${res.status} ${res.statusText}`
+        );
       }
 
       const blob = await res.blob();
+      console.log("📦 Blob received, size:", blob.size, "type:", blob.type);
+
+      if (blob.size === 0) {
+        throw new Error("Blob kosong diterima dari server");
+      }
 
       // For images and PDFs, create object URL
       if (
@@ -203,15 +248,30 @@ export default function ExpenseFileUpload({ expenseId }) {
         file.mimeType === "application/pdf"
       ) {
         const url = window.URL.createObjectURL(blob);
-        console.log("Preview URL created:", url, "for file:", file.fileName);
-        setPreviewUrl(url);
+        console.log("🔗 Object URL created:", url, "for file:", file.fileName);
+        console.log("🔗 Blob details:", {
+          size: blob.size,
+          type: blob.type,
+          url: url,
+          fileName: file.fileName,
+        });
+
+        // Use functional setState to ensure update
+        setPreviewUrl((prevUrl) => {
+          console.log("🔄 Updating preview URL from:", prevUrl, "to:", url);
+          return url;
+        });
+        console.log(
+          "✅ Preview URL state update requested for:",
+          file.fileName
+        );
       } else {
         throw new Error(
           `Tipe file tidak didukung untuk preview: ${file.mimeType}`
         );
       }
     } catch (err) {
-      console.error("Error loading preview:", err);
+      console.error("❌ Error loading preview:", err);
       setError(`Gagal memuat preview: ${err.message}`);
     } finally {
       setIsPreviewLoading(false);
@@ -219,8 +279,11 @@ export default function ExpenseFileUpload({ expenseId }) {
   }
 
   function closePreview() {
+    console.log("🔒 Closing preview dialog");
+    setPreviewDialogOpen(false);
     if (previewUrl) {
       try {
+        console.log("🧹 Revoking URL on close:", previewUrl);
         window.URL.revokeObjectURL(previewUrl);
       } catch (err) {
         console.error("Error revoking preview URL:", err);
@@ -228,6 +291,8 @@ export default function ExpenseFileUpload({ expenseId }) {
     }
     setPreviewFile(null);
     setPreviewUrl(null);
+    setError(null);
+    console.log("✅ Preview state cleared");
   }
 
   async function handleDelete(fileId) {
@@ -344,83 +409,13 @@ export default function ExpenseFileUpload({ expenseId }) {
                   <div className="flex items-center gap-2">
                     {(file.mimeType.startsWith("image/") ||
                       file.mimeType === "application/pdf") && (
-                      <Dialog
-                        onOpenChange={(open) => {
-                          if (!open) {
-                            closePreview();
-                          }
-                        }}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handlePreview(file)}
                       >
-                        <DialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handlePreview(file)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
-                          <DialogHeader>
-                            <DialogTitle className="truncate">
-                              {file.fileName}
-                            </DialogTitle>
-                          </DialogHeader>
-                          <div
-                            className="flex justify-center items-center bg-muted/50 rounded-lg overflow-auto"
-                            style={{ height: "calc(80vh - 100px)" }}
-                          >
-                            {isPreviewLoading ? (
-                              <div className="flex flex-col items-center gap-2 py-12">
-                                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                                <span className="text-sm text-muted-foreground">
-                                  Memuat preview...
-                                </span>
-                              </div>
-                            ) : previewUrl ? (
-                              file.mimeType.startsWith("image/") ? (
-                                <img
-                                  src={previewUrl}
-                                  alt={file.fileName}
-                                  className="max-w-full max-h-full object-contain p-4"
-                                  onLoad={() =>
-                                    console.log("Image loaded successfully")
-                                  }
-                                  onError={(e) => {
-                                    console.error("Image load error:", e);
-                                    setError("Gagal menampilkan gambar");
-                                  }}
-                                />
-                              ) : file.mimeType === "application/pdf" ? (
-                                <iframe
-                                  key={previewUrl}
-                                  src={`${previewUrl}#toolbar=0&navpanes=0&scrollbar=1`}
-                                  className="w-full h-full border-0"
-                                  title={file.fileName}
-                                  onError={() => {
-                                    console.error("PDF load error");
-                                    setError("Gagal menampilkan PDF");
-                                  }}
-                                />
-                              ) : null
-                            ) : (
-                              <div className="text-muted-foreground text-center py-12 px-4">
-                                <p className="font-medium">
-                                  Tidak dapat memuat preview
-                                </p>
-                                <p className="text-sm mt-2">
-                                  Type: {file.mimeType}
-                                </p>
-                                {error && (
-                                  <p className="text-sm text-red-500 mt-2">
-                                    {error}
-                                  </p>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </DialogContent>
-                      </Dialog>
+                        <Eye className="h-4 w-4" />
+                      </Button>
                     )}
                     <Button
                       variant="ghost"
@@ -444,6 +439,78 @@ export default function ExpenseFileUpload({ expenseId }) {
           )}
         </div>
       </CardContent>
+
+      {/* Preview Dialog */}
+      <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle className="truncate">
+              {previewFile?.fileName}
+            </DialogTitle>
+          </DialogHeader>
+          <div
+            className="flex justify-center items-center bg-muted/50 rounded-lg overflow-auto"
+            style={{ height: "calc(80vh - 100px)" }}
+          >
+            {(() => {
+              console.log("🎨 Rendering preview dialog:");
+              console.log("  - isPreviewLoading:", isPreviewLoading);
+              console.log("  - previewUrl:", previewUrl);
+              console.log("  - previewFile:", previewFile);
+              console.log("  - error:", error);
+              return null;
+            })()}
+            {isPreviewLoading ? (
+              <div className="flex flex-col items-center gap-2 py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <span className="text-sm text-muted-foreground">
+                  Memuat preview...
+                </span>
+              </div>
+            ) : previewUrl ? (
+              previewFile?.mimeType.startsWith("image/") ? (
+                <div className="w-full h-full flex items-center justify-center">
+                  <img
+                    key={`${previewFile?.id}-${previewUrl}`}
+                    src={previewUrl}
+                    alt={previewFile?.fileName}
+                    className="max-w-full max-h-full object-contain p-4"
+                    onLoad={() => {
+                      console.log("✅ Image loaded successfully");
+                      console.log("✅ Image src:", previewUrl);
+                      console.log("✅ Image file:", previewFile?.fileName);
+                    }}
+                    onError={(e) => {
+                      console.error("❌ Image load error:", e);
+                      console.error("❌ Image src:", previewUrl);
+                      console.error("❌ Image file:", previewFile?.fileName);
+                      console.error("❌ Event:", e.type);
+                      setError("Gagal menampilkan gambar");
+                    }}
+                  />
+                </div>
+              ) : previewFile?.mimeType === "application/pdf" ? (
+                <iframe
+                  key={previewUrl}
+                  src={`${previewUrl}#toolbar=0&navpanes=0&scrollbar=1`}
+                  className="w-full h-full border-0"
+                  title={previewFile?.fileName}
+                  onError={() => {
+                    console.error("❌ PDF load error");
+                    setError("Gagal menampilkan PDF");
+                  }}
+                />
+              ) : null
+            ) : (
+              <div className="text-muted-foreground text-center py-12 px-4">
+                <p className="font-medium">Tidak dapat memuat preview</p>
+                <p className="text-sm mt-2">Type: {previewFile?.mimeType}</p>
+                {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

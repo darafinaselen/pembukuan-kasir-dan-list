@@ -186,12 +186,11 @@ export default function UserDialog({ open, onOpenChange, user, onSuccess }) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="ADMIN">Admin</SelectItem>
-                  <SelectItem value="MANAGER">Manager</SelectItem>
                   <SelectItem value="OPERATOR">Operator</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                Admin: Full access | Manager: View & edit | Operator: View only
+                Admin: Full access | Operator: Create & view (requires approval)
               </p>
             </div>
 

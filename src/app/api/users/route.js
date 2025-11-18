@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { protectedRoute, rateLimitPresets } from "@/lib/middleware";
+import {
+  protectedRoute,
+  rateLimitPresets,
+  getClientIp,
+  getUserAgent,
+} from "@/lib/middleware";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { logUserEvent } from "@/lib/audit";
 
 // Schema validation
 const userCreateSchema = z.object({
@@ -10,7 +16,7 @@ const userCreateSchema = z.object({
   username: z.string().min(3, "Username minimal 3 karakter"),
   name: z.string().min(1, "Nama tidak boleh kosong"),
   password: z.string().min(8, "Password minimal 8 karakter"),
-  role: z.enum(["ADMIN", "MANAGER", "OPERATOR"]),
+  role: z.enum(["ADMIN", "OPERATOR"]),
 });
 
 const userUpdateSchema = z.object({
@@ -18,7 +24,7 @@ const userUpdateSchema = z.object({
   username: z.string().min(3, "Username minimal 3 karakter").optional(),
   name: z.string().min(1, "Nama tidak boleh kosong").optional(),
   password: z.string().min(8, "Password minimal 8 karakter").optional(),
-  role: z.enum(["ADMIN", "MANAGER", "OPERATOR"]).optional(),
+  role: z.enum(["ADMIN", "OPERATOR"]).optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -122,6 +128,16 @@ async function handler(req) {
           updatedAt: true,
         },
       });
+
+      // Log audit event
+      await logUserEvent(
+        req.auth.user.id,
+        "CREATE",
+        user.id,
+        { username: user.username, name: user.name, role: user.role },
+        getClientIp(req),
+        getUserAgent(req)
+      );
 
       return NextResponse.json(
         {

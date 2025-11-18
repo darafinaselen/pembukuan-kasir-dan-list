@@ -15,127 +15,183 @@ import "@testing-library/jest-dom";
 import { PackageForm } from "../../components/packages/PackageForm";
 
 // Mock all UI components
-jest.mock("@/components/ui/form", () => ({
-  Form: ({ children, ...props }) => <form {...props}>{children}</form>,
-  FormField: ({ children }) => <div>{children}</div>,
-  FormItem: ({ children }) => <div>{children}</div>,
-  FormLabel: ({ children }) => <label>{children}</label>,
-  FormControl: ({ children }) => <div>{children}</div>,
-  FormMessage: ({ children }) => <div className="text-red-500">{children}</div>,
-}));
+jest.mock("@/components/ui/form", () => {
+  const React = require("react");
+  return {
+    Form: ({ children, ...props }) =>
+      React.createElement("form", props, children),
+    FormField: ({ children }) => React.createElement("div", null, children),
+    FormItem: ({ children }) => React.createElement("div", null, children),
+    FormLabel: ({ children }) => React.createElement("label", null, children),
+    FormControl: ({ children }) => React.createElement("div", null, children),
+    FormMessage: ({ children }) =>
+      React.createElement("div", { className: "text-red-500" }, children),
+  };
+});
 
-jest.mock("@/components/ui/dialog", () => ({
-  Dialog: ({ children, open }) =>
-    open ? <div data-testid="dialog">{children}</div> : null,
-  DialogContent: ({ children }) => (
-    <div data-testid="dialog-content">{children}</div>
-  ),
-  DialogDescription: ({ children }) => <div>{children}</div>,
-  DialogHeader: ({ children }) => <div>{children}</div>,
-  DialogTitle: ({ children }) => <h2>{children}</h2>,
-}));
+jest.mock("@/components/ui/dialog", () => {
+  const React = require("react");
+  return {
+    Dialog: ({ children, open }) =>
+      open
+        ? React.createElement("div", { "data-testid": "dialog" }, children)
+        : null,
+    DialogContent: ({ children }) =>
+      React.createElement("div", { "data-testid": "dialog-content" }, children),
+    DialogDescription: ({ children }) =>
+      React.createElement("div", null, children),
+    DialogHeader: ({ children }) => React.createElement("div", null, children),
+    DialogTitle: ({ children }) => React.createElement("h2", null, children),
+  };
+});
 
-jest.mock("@/components/ui/button", () => ({
-  Button: ({ children, onClick, disabled, type, ...props }) => (
-    <button
-      type={type || "button"}
-      onClick={onClick}
-      disabled={disabled}
-      {...props}
-    >
-      {children}
-    </button>
-  ),
-}));
+jest.mock("@/components/ui/button", () => {
+  const React = require("react");
+  return {
+    Button: ({ children, onClick, disabled, type, ...props }) =>
+      React.createElement(
+        "button",
+        {
+          type: type || "button",
+          onClick,
+          disabled,
+          ...props,
+        },
+        children
+      ),
+  };
+});
 
-jest.mock("@/components/ui/input", () => ({
-  Input: ({ ...props }) => <input {...props} />,
-}));
+jest.mock("@/components/ui/input", () => {
+  const React = require("react");
+  return {
+    Input: (props) => React.createElement("input", props),
+  };
+});
 
-jest.mock("@/components/ui/currency-input", () => ({
-  CurrencyInput: ({ ...props }) => <input type="number" {...props} />,
-}));
+jest.mock("@/components/ui/currency-input", () => {
+  const React = require("react");
+  return {
+    CurrencyInput: (props) =>
+      React.createElement("input", { type: "number", ...props }),
+  };
+});
 
-jest.mock("@/components/ui/label", () => ({
-  Label: ({ children }) => <label>{children}</label>,
-}));
+jest.mock("@/components/ui/label", () => {
+  const React = require("react");
+  return {
+    Label: ({ children }) => React.createElement("label", null, children),
+  };
+});
 
-jest.mock("@/components/ui/textarea", () => ({
-  Textarea: ({ ...props }) => <textarea {...props} />,
-}));
+jest.mock("@/components/ui/textarea", () => {
+  const React = require("react");
+  return {
+    Textarea: (props) => React.createElement("textarea", props),
+  };
+});
 
-jest.mock("@/components/ui/select", () => ({
-  Select: ({ children, value, onValueChange }) => (
-    <div data-testid="select">
-      <select value={value} onChange={(e) => onValueChange(e.target.value)}>
-        {children}
-      </select>
-    </div>
-  ),
-  SelectContent: ({ children }) => <div>{children}</div>,
-  SelectItem: ({ value, children }) => (
-    <option value={value}>{children}</option>
-  ),
-  SelectTrigger: ({ children }) => <div>{children}</div>,
-  SelectValue: ({ placeholder }) => <span>{placeholder}</span>,
-}));
+jest.mock("@/components/ui/select", () => {
+  const React = require("react");
+  return {
+    Select: ({ children, value, onValueChange }) =>
+      React.createElement(
+        "div",
+        { "data-testid": "select" },
+        React.createElement(
+          "select",
+          {
+            value,
+            onChange: (e) => onValueChange(e.target.value),
+          },
+          children
+        )
+      ),
+    SelectContent: ({ children }) => React.createElement("div", null, children),
+    SelectItem: ({ value, children }) =>
+      React.createElement("option", { value }, children),
+    SelectTrigger: ({ children }) => React.createElement("div", null, children),
+    SelectValue: ({ placeholder }) =>
+      React.createElement("span", null, placeholder),
+  };
+});
 
-jest.mock("@/components/ui/tabs", () => ({
-  Tabs: ({ children, value, onValueChange }) => (
-    <div data-testid="tabs" data-value={value}>
-      {children}
-    </div>
-  ),
-  TabsContent: ({ children, value }) => (
-    <div data-testid={`tab-${value}`}>{children}</div>
-  ),
-  TabsList: ({ children }) => <div>{children}</div>,
-  TabsTrigger: ({ value, children }) => (
-    <button data-testid={`tab-trigger-${value}`}>{children}</button>
-  ),
-}));
+jest.mock("@/components/ui/tabs", () => {
+  const React = require("react");
+  return {
+    Tabs: ({ children, value, onValueChange }) =>
+      React.createElement(
+        "div",
+        { "data-testid": "tabs", "data-value": value },
+        children
+      ),
+    TabsContent: ({ children, value }) =>
+      React.createElement("div", { "data-testid": `tab-${value}` }, children),
+    TabsList: ({ children }) => React.createElement("div", null, children),
+    TabsTrigger: ({ value, children }) =>
+      React.createElement(
+        "button",
+        { "data-testid": `tab-trigger-${value}` },
+        children
+      ),
+  };
+});
 
-jest.mock("@/components/ui/switch", () => ({
-  Switch: ({ checked, onCheckedChange, ...props }) => (
-    <input
-      type="checkbox"
-      checked={checked}
-      onChange={(e) => onCheckedChange(e.target.checked)}
-      {...props}
-    />
-  ),
-}));
+jest.mock("@/components/ui/switch", () => {
+  const React = require("react");
+  return {
+    Switch: ({ checked, onCheckedChange, ...props }) =>
+      React.createElement("input", {
+        type: "checkbox",
+        checked,
+        onChange: (e) => onCheckedChange(e.target.checked),
+        ...props,
+      }),
+  };
+});
 
-jest.mock("@/components/ui/badge", () => ({
-  Badge: ({ children, ...props }) => <span {...props}>{children}</span>,
-}));
+jest.mock("@/components/ui/badge", () => {
+  const React = require("react");
+  return {
+    Badge: ({ children, ...props }) =>
+      React.createElement("span", props, children),
+  };
+});
 
-jest.mock("@/components/packages/HotelListInput", () => ({
-  HotelListInput: ({ value, onChange }) => (
-    <input
-      data-testid="hotel-list-input"
-      value={value?.join(", ") || ""}
-      onChange={(e) => onChange(e.target.value.split(", "))}
-    />
-  ),
-}));
+jest.mock("@/components/packages/HotelListInput", () => {
+  const React = require("react");
+  return {
+    HotelListInput: ({ value, onChange }) =>
+      React.createElement("input", {
+        "data-testid": "hotel-list-input",
+        value: value?.join(", ") || "",
+        onChange: (e) => onChange(e.target.value.split(", ")),
+      }),
+  };
+});
 
 // Mock react-hook-form
-jest.mock("react-hook-form", () => ({
-  useForm: jest.fn(),
-  Controller: ({ render }) =>
-    render({ field: { value: "", onChange: jest.fn() } }),
-  useFieldArray: jest.fn(),
-}));
+jest.mock("react-hook-form", () => {
+  const React = require("react");
+  return {
+    useForm: jest.fn(),
+    Controller: ({ render }) =>
+      render({ field: { value: [], onChange: jest.fn() } }),
+    useFieldArray: jest.fn(),
+  };
+});
 
 // Mock lucide icons
-jest.mock("lucide-react", () => ({
-  Plus: () => <span>+</span>,
-  Trash2: () => <span>🗑️</span>,
-  Hotel: () => <span>🏨</span>,
-  Map: () => <span>🗺️</span>,
-  Settings: () => <span>⚙️</span>,
-}));
+jest.mock("lucide-react", () => {
+  const React = require("react");
+  return {
+    Plus: () => React.createElement("span", null, "+"),
+    Trash2: () => React.createElement("span", null, "🗑️"),
+    Hotel: () => React.createElement("span", null, "🏨"),
+    Map: () => React.createElement("span", null, "🗺️"),
+    Settings: () => React.createElement("span", null, "⚙️"),
+  };
+});
 
 // Mock utils
 jest.mock("@/lib/utils", () => ({
@@ -224,7 +280,7 @@ describe("PackageForm Component", () => {
       );
 
       expect(screen.getByTestId("dialog")).toBeInTheDocument();
-      expect(screen.getByText("Tambah Paket")).toBeInTheDocument();
+      expect(screen.getByText("Tambah Paket Jasa Baru")).toBeInTheDocument();
     });
   });
 
@@ -240,7 +296,7 @@ describe("PackageForm Component", () => {
 
       expect(screen.getByText("Nama Paket")).toBeInTheDocument();
       expect(screen.getByText("Tipe Paket")).toBeInTheDocument();
-      expect(screen.getByText("Deskripsi")).toBeInTheDocument();
+      expect(screen.getByText("Deskripsi Paket")).toBeInTheDocument();
     });
 
     it("should show car rental fields for Sewa Mobil type", () => {
@@ -254,8 +310,8 @@ describe("PackageForm Component", () => {
         />
       );
 
-      expect(screen.getByText("Harga Default")).toBeInTheDocument();
-      expect(screen.getByText("Tarif Overtime")).toBeInTheDocument();
+      expect(screen.getByText("Harga Default (per PAX)")).toBeInTheDocument();
+      expect(screen.getByText("Tarif Overtime (per Jam)")).toBeInTheDocument();
     });
 
     it("should show tour package fields for Paket Tour type", () => {
@@ -269,7 +325,7 @@ describe("PackageForm Component", () => {
         />
       );
 
-      expect(screen.getByText("Durasi")).toBeInTheDocument();
+      expect(screen.getByText("Durasi (Hari)")).toBeInTheDocument();
       expect(screen.getByTestId("tab-hotel")).toBeInTheDocument();
       expect(screen.getByTestId("tab-itinerary")).toBeInTheDocument();
     });
@@ -367,8 +423,8 @@ describe("PackageForm Component", () => {
         />
       );
 
-      const addButtons = screen.getAllByText("+");
-      fireEvent.click(addButtons[0]); // Add hotel tier button
+      const addButton = screen.getByText("Tambah Tingkat Hotel");
+      fireEvent.click(addButton);
 
       expect(mockUseFieldArray.append).toHaveBeenCalled();
     });
@@ -543,6 +599,17 @@ describe("PackageForm Component", () => {
 
     it("should validate price ranges for Paket Tour", async () => {
       mockFormData.tipePaket = "Paket Tour";
+      mockFormData.tarifHotel = [
+        {
+          tingkat: "Bintang 3",
+          tarifPerPax: 1500000,
+          daftarHotel: [],
+          priceRanges: [
+            { minPax: 1, maxPax: 5, price: 1500000 },
+            { minPax: 3, maxPax: 8, price: 1400000 }, // Invalid - overlaps
+          ],
+        },
+      ];
       require("@/lib/utils").validatePriceRangesForTier.mockReturnValue({
         ok: false,
         message: "Invalid price ranges",

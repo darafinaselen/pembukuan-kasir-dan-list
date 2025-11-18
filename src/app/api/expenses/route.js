@@ -11,10 +11,6 @@ import { v4 as uuidv4 } from "uuid";
 
 async function handleGetExpenses(request) {
   try {
-    // Check permissions
-    if (!permissions.canViewExpenses(request.auth.user)) {
-      return errorResponse("Insufficient permissions", 403);
-    }
 
     const url = new URL(request.url);
     const page = parseInt(url.searchParams.get("page")) || 1;
@@ -67,10 +63,6 @@ async function handleGetExpenses(request) {
 
 async function handleCreateExpense(request) {
   try {
-    // Check permissions
-    if (!permissions.canCreateExpense(request.auth.user)) {
-      return errorResponse("Insufficient permissions", 403);
-    }
 
     const formData = await request.formData();
 
@@ -114,6 +106,14 @@ async function handleCreateExpense(request) {
       return errorResponse("Kategori 'Lainnya' tidak boleh kosong", 400);
     }
 
+    const approvalData = request.auth.adminAutoApprove
+      ? {
+          approval_status: "APPROVED",
+          approved_by_id: request.auth.user.id,
+          approved_at: new Date(),
+        }
+      : {};
+
     // Build the data object with proper Prisma relations
     const createData = {
       date: body.date,
@@ -122,6 +122,7 @@ async function handleCreateExpense(request) {
       description: body.description,
       amount: amount,
       namaPenerima: body.namaPenerima || null,
+      ...approvalData,
     };
 
     // Add optional relations using connect
@@ -204,11 +205,13 @@ async function handleCreateExpense(request) {
   }
 }
 
-// Only ADMIN and MANAGER can view and create expenses
+// ADMIN and OPERATOR can view and create expenses
+// OPERATOR creates as DRAFT and must submit for approval
 export const GET = protectedRoute(handleGetExpenses, {
-  roles: ["ADMIN", "MANAGER"],
+  permissions: ["canViewExpenses"],
 });
 
 export const POST = protectedRoute(handleCreateExpense, {
-  roles: ["ADMIN", "MANAGER"],
+  permissions: ["canCreateExpense"],
+  adminAutoApprove: true,
 });

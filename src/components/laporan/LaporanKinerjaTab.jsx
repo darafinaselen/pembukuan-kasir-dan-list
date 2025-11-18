@@ -11,8 +11,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Users, Package, TrendingUp } from "lucide-react";
+import { Loader2, Users, Package, TrendingUp, Fuel } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
+import { exportPerformanceReport } from "@/lib/excel-export";
 
 const PACKAGE_TYPE_LABELS = {
   CAR_RENTAL: "Sewa Mobil",
@@ -28,7 +31,9 @@ const PACKAGE_TYPE_COLORS = {
 
 export default function LaporanKinerjaTab({ dateRange, isLoading }) {
   const [performanceData, setPerformanceData] = useState(null);
+  const [fuelData, setFuelData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadingFuel, setLoadingFuel] = useState(true);
 
   useEffect(() => {
     if (!dateRange?.from || !dateRange?.to) return;
@@ -69,11 +74,52 @@ export default function LaporanKinerjaTab({ dateRange, isLoading }) {
     fetchPerformanceData();
   }, [dateRange]);
 
+  useEffect(() => {
+    if (!dateRange?.from || !dateRange?.to) return;
+
+    const fetchFuelAnalysis = async () => {
+      setLoadingFuel(true);
+      try {
+        const formatDate = (date) => {
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, "0");
+          const day = String(date.getDate()).padStart(2, "0");
+          return `${year}-${month}-${day}`;
+        };
+
+        const fromStr = formatDate(dateRange.from);
+        const toStr = formatDate(dateRange.to);
+
+        const res = await fetch(
+          `/api/reports/fuel-analysis?from=${fromStr}&to=${toStr}`,
+          {
+            credentials: "include",
+          }
+        );
+
+        if (!res.ok) throw new Error("Gagal mengambil data analisis BBM");
+
+        const result = await res.json();
+        const data = result.data || result;
+        setFuelData(data);
+      } catch (err) {
+        console.error("Error fetching fuel analysis:", err);
+        setFuelData(null);
+      } finally {
+        setLoadingFuel(false);
+      }
+    };
+
+    fetchFuelAnalysis();
+  }, [dateRange]);
+
   if (isLoading || loading) {
     return (
       <div className="flex items-center justify-center p-8">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        <span className="ml-2 text-muted-foreground">Memuat data kinerja...</span>
+        <span className="ml-2 text-muted-foreground">
+          Memuat data kinerja...
+        </span>
       </div>
     );
   }
@@ -89,11 +135,48 @@ export default function LaporanKinerjaTab({ dateRange, isLoading }) {
   }
 
   const { driverPerformance, packagePerformance, summary } = performanceData;
+  const fuelSummary = fuelData?.summary || {};
+  const fuelAnalysis = fuelData?.fuelAnalysis || [];
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  const handleExport = () => {
+    if (!performanceData || !fuelData) return;
+
+    try {
+      const reportDateRange = dateRange
+        ? {
+            from: dateRange.from.toISOString().split("T")[0],
+            to: dateRange.to.toISOString().split("T")[0],
+          }
+        : {
+            from: new Date().toISOString().split("T")[0],
+            to: new Date().toISOString().split("T")[0],
+          };
+
+      exportPerformanceReport(performanceData, fuelData, reportDateRange);
+    } catch (error) {
+      console.error("Export failed:", error);
+    }
+  };
 
   return (
     <div className="space-y-6">
-      {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      {/* Header with Export Button */}
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-semibold">Laporan Kinerja</h3>
+        <Button onClick={handleExport} variant="outline" size="sm">
+          <Download className="w-4 h-4 mr-2" />
+          Export Excel
+        </Button>
+      </div>
+      <div className="grid gap-4 md:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Sopir</CardTitle>
@@ -129,6 +212,25 @@ export default function LaporanKinerjaTab({ dateRange, isLoading }) {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Total Biaya BBM
+            </CardTitle>
+            <Fuel className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-xl font-bold">
+              {fuelSummary.totalFuelCost
+                ? formatCurrency(fuelSummary.totalFuelCost)
+                : "-"}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {fuelSummary.totalRefuels || 0}x pengisian
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Periode</CardTitle>
             <span className="text-xs text-muted-foreground">📅</span>
           </CardHeader>
@@ -144,9 +246,10 @@ export default function LaporanKinerjaTab({ dateRange, isLoading }) {
 
       {/* Performance Tabs */}
       <Tabs defaultValue="driver" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="driver">Kinerja Sopir</TabsTrigger>
           <TabsTrigger value="package">Kinerja Paket Jasa</TabsTrigger>
+          <TabsTrigger value="fuel">Analisis BBM</TabsTrigger>
         </TabsList>
 
         <TabsContent value="driver" className="mt-4">
@@ -269,14 +372,81 @@ export default function LaporanKinerjaTab({ dateRange, isLoading }) {
                           </Badge>
                         </TableCell>
                         <TableCell>
+                          <Badge variant="secondary">{pkg.frequency}x</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{pkg.totalTrips} trip</Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="fuel" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Analisis BBM per Armada</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loadingFuel ? (
+                <div className="flex items-center justify-center p-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  <span className="ml-2 text-muted-foreground">
+                    Memuat data analisis BBM...
+                  </span>
+                </div>
+              ) : fuelAnalysis.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Tidak ada data konsumsi BBM
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>No</TableHead>
+                      <TableHead>Nama Armada</TableHead>
+                      <TableHead>Plat Nomor</TableHead>
+                      <TableHead>Frekuensi Isi BBM</TableHead>
+                      <TableHead>Total Trip</TableHead>
+                      <TableHead>Total Biaya BBM</TableHead>
+                      <TableHead>Rata-rata per Trip</TableHead>
+                      <TableHead>Rata-rata per Isi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {fuelAnalysis.map((armada, index) => (
+                      <TableRow key={armada.armadaId}>
+                        <TableCell>{index + 1}</TableCell>
+                        <TableCell className="font-medium">
+                          {armada.armadaName}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{armada.licensePlate}</Badge>
+                        </TableCell>
+                        <TableCell>
                           <Badge variant="secondary">
-                            {pkg.frequency}x
+                            {armada.refuelCount}x
                           </Badge>
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline">
-                            {pkg.totalTrips} trip
+                            {armada.totalTrips} trip
                           </Badge>
+                        </TableCell>
+                        <TableCell className="font-semibold">
+                          {formatCurrency(armada.totalFuelCost)}
+                        </TableCell>
+                        <TableCell>
+                          {armada.totalTrips > 0
+                            ? formatCurrency(armada.averageCostPerTrip)
+                            : "-"}
+                        </TableCell>
+                        <TableCell>
+                          {formatCurrency(armada.averageCostPerRefuel)}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -290,4 +460,3 @@ export default function LaporanKinerjaTab({ dateRange, isLoading }) {
     </div>
   );
 }
-

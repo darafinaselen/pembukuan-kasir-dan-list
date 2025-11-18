@@ -145,8 +145,6 @@ export default function UsersPage() {
     switch (role) {
       case "ADMIN":
         return "default";
-      case "MANAGER":
-        return "secondary";
       case "OPERATOR":
         return "outline";
       default:

@@ -153,7 +153,7 @@ export function FleetStatusChart({ data, loading }) {
                   variant="outline"
                   className={`text-xs ${statusConfig.READY.textColor} bg-white shrink-0`}
                 >
-                  Siap Operasi
+                  Ready
                 </Badge>
               </div>
               <p

@@ -4,6 +4,8 @@
  */
 
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
+import { render, waitFor } from "@testing-library/react";
+import React from "react";
 
 // Mock XLSX library for Excel export tests
 jest.mock("xlsx", () => ({

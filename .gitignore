@@ -27,3 +27,9 @@ DEPLOYMENT_FIX.md
 SEED_DATA_DOCUMENTATION.md
 PAYMENT_MONTH_FEATURE.md
 FILE_UPLOAD_DOCUMENTATION.md
+
+/openspec/
+/.kilocode/
+/docs/
+/scripts/
+/.kiro/

@@ -73,6 +73,7 @@ async function handleUpdateStatus(request, context) {
 /**
  * PUT /api/transactions/status/[id]
  * Alias for PATCH - both methods work the same
+ * Only ADMIN can update payment status
  */
-export const PUT = protectedRoute(handleUpdateStatus);
-export const PATCH = protectedRoute(handleUpdateStatus);
+export const PUT = protectedRoute(handleUpdateStatus, ["ADMIN"]);
+export const PATCH = protectedRoute(handleUpdateStatus, ["ADMIN"]);

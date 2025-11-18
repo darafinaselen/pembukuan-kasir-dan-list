@@ -11,6 +11,7 @@ export async function GET(request) {
         {
           success: false,
           message: "Unauthorized - No token provided",
+          code: "NO_TOKEN",
         },
         { status: 401 }
       );
@@ -23,10 +24,18 @@ export async function GET(request) {
         {
           success: false,
           message: "Unauthorized - Invalid or expired token",
+          code: "INVALID_SESSION",
         },
         { status: 401 }
       );
     }
+
+    // Calculate session status
+    const now = new Date();
+    const expiresAt = new Date(session.expiresAt);
+    const timeUntilExpiry = expiresAt.getTime() - now.getTime();
+    const isExpiringSoon = timeUntilExpiry <= (5 * 60 * 1000); // 5 minutes
+    const isExpired = timeUntilExpiry <= 0;
 
     return NextResponse.json({
       success: true,
@@ -38,6 +47,12 @@ export async function GET(request) {
           name: session.user.name,
           role: session.user.role,
         },
+        session: {
+          expiresAt: session.expiresAt,
+          timeUntilExpiry,
+          isExpiringSoon,
+          isExpired,
+        },
       },
       message: "Authenticated",
     });
@@ -47,6 +62,7 @@ export async function GET(request) {
       {
         success: false,
         message: "Internal server error",
+        code: "SERVER_ERROR",
       },
       { status: 500 }
     );

@@ -113,7 +113,8 @@ async function handleCheckVehicleAvailability(request) {
   }
 }
 
+// ADMIN and OPERATOR can check vehicle availability
 export const GET = protectedRoute(handleCheckVehicleAvailability, {
-  roles: ["ADMIN", "MANAGER", "OPERATOR"],
+  roles: ["ADMIN", "OPERATOR"],
 });
 

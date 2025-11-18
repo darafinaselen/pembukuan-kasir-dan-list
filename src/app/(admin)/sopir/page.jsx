@@ -149,15 +149,20 @@ export default function SopirPage() {
                   (d.phone_number && d.phone_number.toLowerCase().includes(q))
                 );
               })
-              .map((driver) => (
-                <SopirCard
-                  key={driver.id}
-                  driver={driver}
-                  onEdit={handleEdit}
-                  onSetStatus={handleSetStatus}
-                  onDelete={handleDelete}
-                />
-              ))}
+              .map((driver) => {
+                const isDriverInUse =
+                  driver.status === "BOOKED" || driver.status === "ON_TRIP";
+                return (
+                  <SopirCard
+                    key={driver.id}
+                    driver={driver}
+                    onEdit={handleEdit}
+                    onSetStatus={handleSetStatus}
+                    onDelete={handleDelete}
+                    isDisabled={isDriverInUse}
+                  />
+                );
+              })}
           </div>
         </div>
 

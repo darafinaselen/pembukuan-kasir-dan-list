@@ -109,21 +109,35 @@ export default function LaporanPage() {
       />
 
       <Tabs defaultValue="laporan-transaksi" className="w-full">
-        <TabsList className="grid w-full grid-cols-6 md:w-[900px]">
-          <TabsTrigger value="laporan-transaksi">Laporan Transaksi</TabsTrigger>
-          <TabsTrigger value="laporan-laba-rugi">Laporan Laba Rugi</TabsTrigger>
-          <TabsTrigger value="laporan-pemasukan">Laporan Pemasukan</TabsTrigger>
-          <TabsTrigger value="laporan-pengeluaran">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-6 h-auto">
+          <TabsTrigger value="laporan-transaksi" className="text-xs md:text-sm">
+            Laporan Transaksi
+          </TabsTrigger>
+          <TabsTrigger value="laporan-laba-rugi" className="text-xs md:text-sm">
+            Laporan Laba Rugi
+          </TabsTrigger>
+          <TabsTrigger value="laporan-pemasukan" className="text-xs md:text-sm">
+            Laporan Pemasukan
+          </TabsTrigger>
+          <TabsTrigger
+            value="laporan-pengeluaran"
+            className="text-xs md:text-sm"
+          >
             Laporan Pengeluaran
           </TabsTrigger>
-          <TabsTrigger value="rekapitulasi">Rekapitulasi</TabsTrigger>
-          <TabsTrigger value="laporan-kinerja">Laporan Kinerja</TabsTrigger>
+          <TabsTrigger value="rekapitulasi" className="text-xs md:text-sm">
+            Rekapitulasi
+          </TabsTrigger>
+          <TabsTrigger value="laporan-kinerja" className="text-xs md:text-sm">
+            Laporan Kinerja
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="laporan-transaksi" className="mt-4">
           <LaporanTransaksiTab
             data={reportData?.laporanTransaksi}
             isLoading={isLoading}
+            dateRange={dateRange}
           />
         </TabsContent>
 
@@ -131,6 +145,7 @@ export default function LaporanPage() {
           <LaporanLabaRugiTab
             data={reportData?.laporanLabaRugi}
             isLoading={isLoading}
+            dateRange={dateRange}
           />
         </TabsContent>
 

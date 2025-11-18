@@ -11,6 +11,7 @@ import {
   validateTransactionFinancials,
   formatCurrency,
   formatCurrencyCompact,
+  calculateTourPackagePriceFromParams,
 } from "../accounting";
 
 describe("calculateTransactionFinancials", () => {
@@ -36,22 +37,42 @@ describe("calculateTransactionFinancials", () => {
       expect(result.labaKotor).toBe(500000);
     });
 
-    it("should use default 12 hours when package is not provided", () => {
+    it("should not calculate overtime for custom rentals without package", () => {
       const transaction = {
         checkout_datetime: "2025-11-01T08:00:00Z",
-        checkin_datetime: "2025-11-01T20:00:00Z",
+        checkin_datetime: "2025-11-01T20:00:00Z", // 12 hours rental
         all_in_rate: 500000,
         overtime_rate_per_hour: 50000,
         fuel_cost: 100000,
         driver_fee: 150000,
-        // No package
+        // No package - custom rental
       };
 
       const result = calculateTransactionFinancials(transaction);
 
       expect(result.lamaSewaJam).toBe(12);
-      expect(result.lamaOvertimeJam).toBe(0);
+      expect(result.lamaOvertimeJam).toBe(0); // No overtime for custom rentals
       expect(result.totalOvertimeFee).toBe(0);
+      expect(result.totalPendapatan).toBe(500000); // Only base rate
+    });
+
+    it("should not calculate overtime for long custom rentals without package", () => {
+      const transaction = {
+        checkout_datetime: "2025-11-01T08:00:00Z",
+        checkin_datetime: "2025-11-02T08:00:00Z", // 24 hours rental
+        all_in_rate: 1000000,
+        overtime_rate_per_hour: 50000,
+        fuel_cost: 100000,
+        driver_fee: 150000,
+        // No package - custom rental
+      };
+
+      const result = calculateTransactionFinancials(transaction);
+
+      expect(result.lamaSewaJam).toBe(24);
+      expect(result.lamaOvertimeJam).toBe(0); // No overtime even for long rentals without package
+      expect(result.totalOvertimeFee).toBe(0);
+      expect(result.totalPendapatan).toBe(1000000); // Only base rate
     });
   });
 
@@ -494,6 +515,79 @@ describe("formatCurrencyCompact", () => {
     const formatted = formatCurrencyCompact(0);
     expect(formatted).toContain("Rp");
     expect(formatted).toContain("0");
+  });
+});
+
+describe("calculateTourPackagePriceFromParams", () => {
+  const mockPackage = {
+    type: "TOUR_PACKAGE",
+    hotelTiers: [
+      {
+        id: "tier1",
+        priceRanges: [
+          { minPax: 1, maxPax: 2, price: 100000 },
+          { minPax: 3, maxPax: 5, price: 90000 },
+        ],
+      },
+      {
+        id: "tier2",
+        priceRanges: [
+          { minPax: 1, maxPax: 2, price: 150000 },
+          { minPax: 3, maxPax: 5, price: 130000 },
+        ],
+      },
+    ],
+  };
+
+  it("should calculate price correctly for valid TOUR_PACKAGE", () => {
+    const result = calculateTourPackagePriceFromParams(mockPackage, "tier1", 2);
+    expect(result).toBe(200000); // 100000 * 2
+  });
+
+  it("should calculate price for different tier and pax count", () => {
+    const result = calculateTourPackagePriceFromParams(mockPackage, "tier2", 4);
+    expect(result).toBe(520000); // 130000 * 4
+  });
+
+  it("should return 0 for non-TOUR_PACKAGE", () => {
+    const nonTourPackage = { ...mockPackage, type: "CAR_RENTAL" };
+    const result = calculateTourPackagePriceFromParams(nonTourPackage, "tier1", 2);
+    expect(result).toBe(0);
+  });
+
+  it("should return 0 for missing package", () => {
+    const result = calculateTourPackagePriceFromParams(null, "tier1", 2);
+    expect(result).toBe(0);
+  });
+
+  it("should return 0 for missing hotelTierId", () => {
+    const result = calculateTourPackagePriceFromParams(mockPackage, null, 2);
+    expect(result).toBe(0);
+  });
+
+  it("should return 0 for missing paxCount", () => {
+    const result = calculateTourPackagePriceFromParams(mockPackage, "tier1", null);
+    expect(result).toBe(0);
+  });
+
+  it("should return 0 for paxCount <= 0", () => {
+    const result = calculateTourPackagePriceFromParams(mockPackage, "tier1", 0);
+    expect(result).toBe(0);
+  });
+
+  it("should return 0 for invalid hotelTierId", () => {
+    const result = calculateTourPackagePriceFromParams(mockPackage, "invalid", 2);
+    expect(result).toBe(0);
+  });
+
+  it("should return 0 when no applicable price range", () => {
+    const result = calculateTourPackagePriceFromParams(mockPackage, "tier1", 10); // Outside ranges
+    expect(result).toBe(0);
+  });
+
+  it("should handle string paxCount", () => {
+    const result = calculateTourPackagePriceFromParams(mockPackage, "tier1", "3");
+    expect(result).toBe(270000); // 90000 * 3
   });
 });
 

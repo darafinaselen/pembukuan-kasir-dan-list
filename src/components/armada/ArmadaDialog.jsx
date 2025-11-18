@@ -19,6 +19,34 @@ import {
   SelectLabel,
 } from "@/components/ui/select";
 
+// Function to format Indonesian license plate
+const formatLicensePlate = (value) => {
+  if (!value) return "";
+
+  // Remove all spaces and convert to uppercase
+  const cleanValue = value.replace(/\s/g, "").toUpperCase();
+
+  // Indonesian license plate patterns:
+  // - 1-2 letters + 4 digits + 1-2 letters (e.g., B1234AA, DR1234AB)
+  // - 1-2 letters + 1-4 digits + 1-2 letters
+
+  // Try to match common patterns
+  if (cleanValue.length >= 5) {
+    // Pattern: 1-2 letters + space + 4 digits + space + 1-2 letters
+    const match = cleanValue.match(/^([A-Z]{1,2})(\d{1,4})([A-Z]{0,2})$/);
+    if (match) {
+      const [_, letters, numbers, suffix] = match;
+      let formatted = letters;
+      if (numbers) formatted += " " + numbers;
+      if (suffix) formatted += " " + suffix;
+      return formatted;
+    }
+  }
+
+  // If no pattern matches, just return uppercase with spaces removed
+  return cleanValue;
+};
+
 export default function ArmadaDialog({
   open,
   onOpenChange,
@@ -46,11 +74,19 @@ export default function ArmadaDialog({
             </Label>
             <Input
               id="license_plate"
-              placeholder="DR XXXX"
+              placeholder="B 1234 AA"
               value={formData.license_plate}
-              onChange={handleInputChange}
+              onChange={(e) => {
+                const formattedValue = formatLicensePlate(e.target.value);
+                handleInputChange({
+                  target: { id: "license_plate", value: formattedValue },
+                });
+              }}
               required
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              Format: [Kode Wilayah] [Angka] [Huruf] (contoh: B 1234 AA)
+            </p>
           </div>
 
           <div>
@@ -125,7 +161,7 @@ export default function ArmadaDialog({
                     <SelectLabel>Status Armada</SelectLabel>
                     <SelectItem value="READY">READY</SelectItem>
                     <SelectItem value="BOOKED">BOOKED</SelectItem>
-                    <SelectItem value="ON_TRIP">ON_TRIP</SelectItem>
+                    <SelectItem value="ON_TRIP">ON TRIP</SelectItem>
                     <SelectItem value="MAINTENANCE">MAINTENANCE</SelectItem>
                   </SelectGroup>
                 </SelectContent>

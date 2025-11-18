@@ -18,8 +18,8 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Loader2, AlertCircle, Wifi, Lock, UserX } from "lucide-react";
 
 export function LoginForm({ className, ...props }) {
   const router = useRouter();
@@ -27,7 +27,7 @@ export function LoginForm({ className, ...props }) {
     email: "",
     password: "",
   });
-  const [error, setError] = useState("");
+  const [error, setError] = useState(null); // Change to object: { message, icon, title }
   const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e) => {
@@ -36,7 +36,86 @@ export function LoginForm({ className, ...props }) {
       [e.target.name]: e.target.value,
     });
     // Clear error when user types
-    if (error) setError("");
+    if (error) setError(null);
+  };
+
+  const getErrorDetails = (error) => {
+    // Handle network errors
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      return {
+        title: "Koneksi Bermasalah",
+        message: "Tidak dapat terhubung ke server. Periksa koneksi internet Anda dan coba lagi.",
+        icon: Wifi
+      };
+    }
+
+    const message = error.message || "Terjadi kesalahan saat login";
+
+    // Handle account lock messages with remaining time
+    if (message.includes("Account is locked")) {
+      const minutesMatch = message.match(/Try again in (\d+) minutes/);
+      if (minutesMatch) {
+        const minutes = minutesMatch[1];
+        return {
+          title: "Akun Terkunci",
+          message: `Akun Anda terkunci karena terlalu banyak percobaan login gagal. Coba lagi dalam ${minutes} menit.`,
+          icon: Lock
+        };
+      }
+      return {
+        title: "Akun Terkunci",
+        message: "Akun Anda terkunci karena terlalu banyak percobaan login gagal. Coba lagi nanti.",
+        icon: Lock
+      };
+    }
+
+    // Handle failed attempts with remaining tries
+    if (message.includes("attempts remaining")) {
+      const attemptsMatch = message.match(/(\d+) attempts remaining/);
+      if (attemptsMatch) {
+        const attempts = attemptsMatch[1];
+        return {
+          title: "Login Gagal",
+          message: `Email atau password salah. Sisa percobaan: ${attempts}.`,
+          icon: AlertCircle
+        };
+      }
+    }
+
+    // Handle locked after too many attempts
+    if (message.includes("Too many failed login attempts")) {
+      return {
+        title: "Akun Terkunci",
+        message: "Terlalu banyak percobaan login gagal. Akun terkunci selama 30 menit.",
+        icon: Lock
+      };
+    }
+
+    // Map API error messages to user-friendly Indonesian messages
+    const errorMap = {
+      "Invalid username or password": {
+        title: "Kredensial Salah",
+        message: "Email atau password yang Anda masukkan salah. Silakan periksa dan coba lagi.",
+        icon: AlertCircle
+      },
+      "Account is deactivated": {
+        title: "Akun Dinonaktifkan",
+        message: "Akun Anda telah dinonaktifkan. Silakan hubungi administrator untuk bantuan.",
+        icon: UserX
+      },
+      "An error occurred during login": {
+        title: "Kesalahan Server",
+        message: "Terjadi kesalahan server. Silakan coba lagi dalam beberapa saat.",
+        icon: AlertCircle
+      }
+    };
+
+    // Return mapped error or default
+    return errorMap[message] || {
+      title: "Kesalahan Login",
+      message: message,
+      icon: AlertCircle
+    };
   };
 
   const handleSubmit = async (e) => {
@@ -47,7 +126,23 @@ export function LoginForm({ className, ...props }) {
     try {
       // Validate input
       if (!formData.email || !formData.password) {
-        setError("Email dan password harus diisi");
+        setError({
+          title: "Data Tidak Lengkap",
+          message: "Email dan password wajib diisi untuk melanjutkan login.",
+          icon: AlertCircle
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        setError({
+          title: "Format Email Salah",
+          message: "Format email tidak valid. Pastikan email Anda benar.",
+          icon: AlertCircle
+        });
         setIsLoading(false);
         return;
       }
@@ -84,7 +179,7 @@ export function LoginForm({ className, ...props }) {
       router.refresh();
     } catch (err) {
       console.error("Login error:", err);
-      setError(err.message || "Terjadi kesalahan saat login");
+      setError(getErrorDetails(err));
     } finally {
       setIsLoading(false);
     }
@@ -103,8 +198,11 @@ export function LoginForm({ className, ...props }) {
               {/* Error Alert */}
               {error && (
                 <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
+                  <error.icon className="h-4 w-4" />
+                  <div className="flex flex-col gap-1">
+                    <AlertTitle className="text-sm font-medium">{error.title}</AlertTitle>
+                    <AlertDescription>{error.message}</AlertDescription>
+                  </div>
                 </Alert>
               )}
 

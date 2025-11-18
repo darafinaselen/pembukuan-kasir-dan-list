@@ -35,11 +35,19 @@ export function getTokenFromRequest(request) {
     return authHeader.substring(7);
   }
 
-  // Try cookie
+  // Try cookies - check all possible session cookies
   const cookies = request.headers.get("cookie");
   if (cookies) {
-    const match = cookies.match(/session=([^;]+)/);
-    if (match) return match[1];
+    // Try role-specific cookies first
+    const roleCookies = ["session_admin", "session_operator"];
+    for (const cookieName of roleCookies) {
+      const match = cookies.match(new RegExp(`${cookieName}=([^;]+)`));
+      if (match) return match[1];
+    }
+
+    // Fallback to general session cookie for backward compatibility
+    const generalMatch = cookies.match(/session=([^;]+)/);
+    if (generalMatch) return generalMatch[1];
   }
 
   return null;
@@ -77,7 +85,7 @@ export async function requireAuth(request) {
 
 /**
  * Role-based authorization middleware
- * @param {array} allowedRoles - Array of allowed roles (e.g., ['ADMIN', 'MANAGER'])
+ * @param {array} allowedRoles - Array of allowed roles (e.g., ['ADMIN', 'OPERATOR'])
  */
 export function requireRole(user, allowedRoles) {
   if (!user) {
@@ -102,36 +110,43 @@ export function requireRole(user, allowedRoles) {
  */
 export const permissions = {
   // Transaction permissions
-  canViewTransactions: (user) =>
-    ["ADMIN", "MANAGER", "OPERATOR"].includes(user?.role),
-  canCreateTransaction: (user) =>
-    ["ADMIN", "MANAGER", "OPERATOR"].includes(user?.role),
-  canUpdateTransaction: (user) => ["ADMIN", "MANAGER"].includes(user?.role),
+  // OPERATOR can view and create transactions (as DRAFT), but must submit for approval
+  canViewTransactions: (user) => ["ADMIN", "OPERATOR"].includes(user?.role),
+  canCreateTransaction: (user) => ["ADMIN", "OPERATOR"].includes(user?.role),
+  // OPERATOR can update DRAFT transactions, ADMIN can update any
+  canUpdateTransaction: (user) => ["ADMIN", "OPERATOR"].includes(user?.role),
   canDeleteTransaction: (user) => ["ADMIN"].includes(user?.role),
 
   // Financial report permissions
-  canViewReports: (user) => ["ADMIN", "MANAGER"].includes(user?.role),
-  canExportReports: (user) => ["ADMIN", "MANAGER"].includes(user?.role),
+  // OPERATOR cannot view financial reports (keuangan)
+  canViewReports: (user) => ["ADMIN"].includes(user?.role),
+  canExportReports: (user) => ["ADMIN"].includes(user?.role),
 
   // Expense permissions
-  canViewExpenses: (user) => ["ADMIN", "MANAGER"].includes(user?.role),
-  canCreateExpense: (user) => ["ADMIN", "MANAGER"].includes(user?.role),
-  canUpdateExpense: (user) => ["ADMIN", "MANAGER"].includes(user?.role),
+  // OPERATOR can view and create expenses (as DRAFT), but must submit for approval
+  canViewExpenses: (user) => ["ADMIN", "OPERATOR"].includes(user?.role),
+  canCreateExpense: (user) => ["ADMIN", "OPERATOR"].includes(user?.role),
+  // ADMIN and OPERATOR can update expenses (status-based checks in handlers)
+  canUpdateExpense: (user) => ["ADMIN", "OPERATOR"].includes(user?.role),
   canDeleteExpense: (user) => ["ADMIN"].includes(user?.role),
 
   // Fleet (Armada) permissions
-  canViewFleet: (user) => ["ADMIN", "MANAGER", "OPERATOR"].includes(user?.role),
-  canManageFleet: (user) => ["ADMIN", "MANAGER"].includes(user?.role),
+  // OPERATOR can view fleet to select for transactions
+  canViewFleet: (user) => ["ADMIN", "OPERATOR"].includes(user?.role),
+  // Only ADMIN can manage (create/update/delete) fleet
+  canManageFleet: (user) => ["ADMIN"].includes(user?.role),
 
   // Driver permissions
-  canViewDrivers: (user) =>
-    ["ADMIN", "MANAGER", "OPERATOR"].includes(user?.role),
-  canManageDrivers: (user) => ["ADMIN", "MANAGER"].includes(user?.role),
+  // OPERATOR can view drivers to select for transactions
+  canViewDrivers: (user) => ["ADMIN", "OPERATOR"].includes(user?.role),
+  // Only ADMIN can manage (create/update/delete) drivers
+  canManageDrivers: (user) => ["ADMIN"].includes(user?.role),
 
   // Package permissions
-  canViewPackages: (user) =>
-    ["ADMIN", "MANAGER", "OPERATOR"].includes(user?.role),
-  canManagePackages: (user) => ["ADMIN", "MANAGER"].includes(user?.role),
+  // OPERATOR can view packages to select for transactions
+  canViewPackages: (user) => ["ADMIN", "OPERATOR"].includes(user?.role),
+  // Only ADMIN can manage (create/update/delete) packages
+  canManagePackages: (user) => ["ADMIN"].includes(user?.role),
 
   // User management permissions
   canViewUsers: (user) => ["ADMIN"].includes(user?.role),
@@ -141,7 +156,52 @@ export const permissions = {
   canViewAuditLogs: (user) => ["ADMIN"].includes(user?.role),
 
   // Dashboard permissions
-  canViewDashboard: (user) => ["ADMIN", "MANAGER"].includes(user?.role),
+  // OPERATOR cannot view dashboard (contains financial data)
+  canViewDashboard: (user) => ["ADMIN"].includes(user?.role),
+
+  // Transaction approval/rejection permissions
+  canApproveTransaction: (user) => ["ADMIN"].includes(user?.role),
+  canRejectTransaction: (user) => ["ADMIN"].includes(user?.role),
+  canCompleteTransaction: (user) => ["ADMIN"].includes(user?.role),
+  canSubmitTransaction: (user) => ["ADMIN", "OPERATOR"].includes(user?.role),
+
+  // Expense approval/rejection permissions
+  canApproveExpense: (user) => ["ADMIN"].includes(user?.role),
+  canRejectExpense: (user) => ["ADMIN"].includes(user?.role),
+  canRequestEditExpense: (user) => ["ADMIN", "OPERATOR"].includes(user?.role),
+  canRequestDeleteExpense: (user) => ["ADMIN", "OPERATOR"].includes(user?.role),
+
+  // Transaction edit approval/rejection permissions
+  canApproveTransactionEdit: (user) => ["ADMIN"].includes(user?.role),
+  canRejectTransactionEdit: (user) => ["ADMIN"].includes(user?.role),
+  canRequestTransactionEdit: (user) =>
+    ["ADMIN", "OPERATOR"].includes(user?.role),
+
+  // Transaction edit approval permissions
+  canRequestTransactionEdit: (user) =>
+    ["ADMIN", "OPERATOR"].includes(user?.role),
+  canApproveTransactionEdit: (user) => ["ADMIN"].includes(user?.role),
+  canRejectTransactionEdit: (user) => ["ADMIN"].includes(user?.role),
+
+  // Report permissions
+  canViewIncomeReports: (user) => ["ADMIN"].includes(user?.role),
+  canViewExpenseReports: (user) => ["ADMIN"].includes(user?.role),
+  canViewPerformanceReports: (user) => ["ADMIN"].includes(user?.role),
+  canViewRekapReports: (user) => ["ADMIN"].includes(user?.role),
+  canViewSummaryReports: (user) => ["ADMIN"].includes(user?.role),
+  canViewFuelAnalysisReports: (user) => ["ADMIN"].includes(user?.role),
+
+  // Staff permissions
+  canViewStaff: (user) => ["ADMIN", "OPERATOR"].includes(user?.role),
+  canManageStaff: (user) => ["ADMIN"].includes(user?.role),
+
+  // Pending transaction/expense permissions (for admin review lists)
+  canViewPendingTransactions: (user) => ["ADMIN"].includes(user?.role),
+  canViewPendingExpenses: (user) => ["ADMIN"].includes(user?.role),
+
+  // Vehicle/Armada management permissions
+  canViewVehicles: (user) => ["ADMIN", "OPERATOR"].includes(user?.role),
+  canManageVehicles: (user) => ["ADMIN"].includes(user?.role),
 };
 
 /**
@@ -341,9 +401,11 @@ export function successResponse(data, message = "Success", meta = {}) {
 export function protectedRoute(handler, options = {}) {
   const {
     roles = null, // Array of allowed roles
+    permissions: requiredPermissions = null, // Array of permission function names (e.g., ['canViewExpenses', 'canCreateExpense'])
     rateLimit: rateLimitConfig = null, // Rate limit config or null to use method-based defaults
     auditLog = true,
     method = null, // Specify method for method-specific rate limits
+    adminAutoApprove = false, // Whether to auto-approve for admin users
   } = options;
 
   return async (request, context) => {
@@ -438,12 +500,27 @@ export function protectedRoute(handler, options = {}) {
         }
       }
 
+      // Permission-based authorization
+      if (requiredPermissions) {
+        for (const permissionName of requiredPermissions) {
+          if (!permissions[permissionName] || typeof permissions[permissionName] !== 'function') {
+            console.error(`Permission function '${permissionName}' not found or not a function`);
+            return errorResponse("Server configuration error", 500);
+          }
+          if (!permissions[permissionName](user)) {
+            return errorResponse(`Insufficient permissions: ${permissionName}`, 403);
+          }
+        }
+      }
+
       // Attach context to request
       request.auth = {
         user,
         session,
         ipAddress,
         userAgent,
+        isAdmin: user.role === "ADMIN",
+        adminAutoApprove: adminAutoApprove && user.role === "ADMIN",
       };
 
       // Call the actual handler

@@ -3,8 +3,11 @@ import {
   successResponse,
   errorResponse,
   permissions,
+  getClientIp,
+  getUserAgent,
 } from "@/lib/middleware";
 import { prisma } from "@/lib/prisma";
+import { logArmadaEvent } from "@/lib/audit";
 
 async function handleGetArmadas(request) {
   try {
@@ -27,8 +30,8 @@ async function handleGetArmadas(request) {
 
 async function handleCreateArmada(request) {
   try {
-    // Check permissions - only ADMIN and MANAGER can create
-    if (!["ADMIN", "MANAGER"].includes(request.auth.user.role)) {
+    // Check permissions - only ADMIN can create
+    if (!["ADMIN"].includes(request.auth.user.role)) {
       return errorResponse("Insufficient permissions", 403);
     }
 
@@ -48,6 +51,16 @@ async function handleCreateArmada(request) {
       },
     });
 
+    // Log audit event
+    await logArmadaEvent(
+      request.auth.user.id,
+      "CREATE",
+      newArmada.id,
+      newArmada,
+      getClientIp(request),
+      getUserAgent(request)
+    );
+
     return successResponse(newArmada, 201);
   } catch (error) {
     console.error("Error creating armada:", error);
@@ -55,12 +68,12 @@ async function handleCreateArmada(request) {
   }
 }
 
-// All roles can view armadas
+// ADMIN and OPERATOR can view armadas (OPERATOR needs to select for transactions)
 export const GET = protectedRoute(handleGetArmadas, {
-  roles: ["ADMIN", "MANAGER", "OPERATOR"],
+  roles: ["ADMIN", "OPERATOR"],
 });
 
-// Only ADMIN and MANAGER can create armadas
+// Only ADMIN can create armadas
 export const POST = protectedRoute(handleCreateArmada, {
-  roles: ["ADMIN", "MANAGER"],
+  roles: ["ADMIN"],
 });

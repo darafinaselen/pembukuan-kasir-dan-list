@@ -6,7 +6,10 @@ import PengeluaranFilters from "@/components/pengeluaran/PengeluaranFilters";
 import PengeluaranTable from "@/components/pengeluaran/PengeluaranTable";
 import PengeluaranDialog from "@/components/pengeluaran/PengeluaranDialog";
 import PengeluaranDetailModal from "@/components/pengeluaran/PengeluaranDetailModal";
+import ExpenseApprovalDialog from "@/components/pengeluaran/ExpenseApprovalDialog";
+import ExpenseRequestDialog from "@/components/pengeluaran/ExpenseRequestDialog";
 import { useAlertDialog } from "@/components/ui/alert-dialog-provider";
+import { toast } from "sonner";
 import { startOfMonth, startOfYear, endOfToday } from "date-fns";
 import { Pagination } from "@/components/ui/pagination";
 
@@ -51,6 +54,8 @@ export default function PengeluaranPage() {
   const { showAlert, showConfirm } = useAlertDialog();
   const [data, setData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [userRole, setUserRole] = useState(null); // null until loaded
+  const [userRoleLoading, setUserRoleLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [quickFilter, setQuickFilter] = useState("all");
   const [dateRange, setDateRange] = useState({
@@ -73,11 +78,54 @@ export default function PengeluaranPage() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedDetailData, setSelectedDetailData] = useState(null);
 
+  // State untuk Approval Dialog (Admin)
+  const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
+  const [approvingExpense, setApprovingExpense] = useState(null);
+  const [isSubmittingApproval, setIsSubmittingApproval] = useState(false);
+
+  // State untuk Request Dialog (Operator)
+  const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
+  const [requestingExpense, setRequestingExpense] = useState(null);
+  const [requestType, setRequestType] = useState("edit"); // "edit" or "delete"
+  const [isSubmittingRequest, setIsSubmittingRequest] = useState(false);
+  const [proposedChanges, setProposedChanges] = useState(null);
+  const [updatedData, setUpdatedData] = useState(null);
+  const [loadingActions, setLoadingActions] = useState({}); // Track loading states for individual actions
+
   const [armadaList, setArmadaList] = useState([]);
   const [driverList, setDriverList] = useState([]);
   const [stafList, setStafList] = useState([]);
   const [existingAttachments, setExistingAttachments] = useState([]);
   const [isLoadingDependencies, setIsLoadingDependencies] = useState(false);
+  const [isSubmittingForm, setIsSubmittingForm] = useState(false);
+
+  // Fetch user role on mount
+  useEffect(() => {
+    async function fetchUserRole() {
+      try {
+        setUserRoleLoading(true);
+        const res = await fetch("/api/auth/me", {
+          credentials: "include",
+        });
+        if (res.ok) {
+          const result = await res.json();
+          const userData = result.data?.user || result.data || result.user;
+          if (userData?.role) {
+            setUserRole(userData.role);
+          }
+        } else {
+          // If auth fails, keep userRole as null (will show loading or redirect)
+          console.warn("Failed to fetch user role:", res.status);
+        }
+      } catch (error) {
+        console.error("Error fetching user role:", error);
+        // Keep userRole as null on error
+      } finally {
+        setUserRoleLoading(false);
+      }
+    }
+    fetchUserRole();
+  }, []);
 
   // --- Data Fetching ---
   async function fetchData(page = 1) {
@@ -400,6 +448,12 @@ export default function PengeluaranPage() {
   };
 
   const handleDelete = async (id) => {
+    // Additional safeguard: prevent delete if user role is not loaded or not admin
+    if (userRoleLoading || userRole !== "ADMIN") {
+      toast.error("Tidak memiliki izin untuk menghapus data");
+      return;
+    }
+
     const confirmed = await showConfirm({
       message: "Yakin ingin menghapus data ini?",
       title: "Konfirmasi Hapus",
@@ -409,6 +463,7 @@ export default function PengeluaranPage() {
 
     if (!confirmed) return;
 
+    setLoadingActions(prev => ({ ...prev, [`delete-${id}`]: true }));
     try {
       console.log("Menghapus data ID:", id);
       const res = await fetch(`/api/expenses/${id}`, {
@@ -419,13 +474,228 @@ export default function PengeluaranPage() {
 
       // Optimistic UI: Hapus dari state
       setData((prev) => prev.filter((item) => item.id !== id));
+      toast.success("Pengeluaran berhasil dihapus");
     } catch (err) {
       console.error("Failed to delete", err);
+      toast.error("Gagal menghapus pengeluaran");
+    } finally {
+      setLoadingActions(prev => ({ ...prev, [`delete-${id}`]: false }));
+    }
+  };
+
+  // === APPROVAL WORKFLOW HANDLERS ===
+
+  // Handler: Operator request edit
+  const handleRequestEdit = (expense) => {
+    setRequestingExpense(expense);
+    setRequestType("edit");
+    setIsRequestDialogOpen(true);
+  };
+
+  // Handler: Operator request delete
+  const handleRequestDelete = (expense) => {
+    setRequestingExpense(expense);
+    setRequestType("delete");
+    setIsRequestDialogOpen(true);
+  };
+
+  // Handler: Operator edit request from form
+  const handleOperatorEditRequest = () => {
+    if (!editingData) return;
+
+    // Calculate proposed changes (only changed fields for display)
+    const proposedChanges = {};
+    if (formData.date !== editingData.date) proposedChanges.date = formData.date;
+    if (formData.paymentMonth !== editingData.paymentMonth) proposedChanges.paymentMonth = formData.paymentMonth;
+    if (formData.category !== editingData.category) proposedChanges.category = formData.category;
+    if (formData.kategoriLainnya !== editingData.kategoriLainnya) proposedChanges.kategoriLainnya = formData.kategoriLainnya;
+    if (formData.description !== editingData.description) proposedChanges.description = formData.description;
+    if (formData.amount !== editingData.amount) proposedChanges.amount = formData.amount;
+    if (formData.armadaId !== editingData.armadaId) proposedChanges.armadaId = formData.armadaId;
+    if (formData.driverId !== editingData.driverId) proposedChanges.driverId = formData.driverId;
+    if (formData.staffId !== editingData.staffId) proposedChanges.staffId = formData.staffId;
+    if (formData.namaPenerima !== editingData.namaPenerima) proposedChanges.namaPenerima = formData.namaPenerima;
+
+    // Check if there are any changes
+    if (Object.keys(proposedChanges).length === 0) {
+      toast.error("Tidak ada perubahan yang terdeteksi", {
+        description: "Silakan ubah data sebelum mengajukan permintaan",
+      });
+      return;
+    }
+
+    // Prepare full updated data for API (all fields)
+    const updatedData = {
+      date: formData.date,
+      paymentMonth: formData.paymentMonth,
+      category: formData.category,
+      kategoriLainnya: formData.kategoriLainnya,
+      description: formData.description,
+      amount: formData.amount,
+      armadaId: formData.armadaId,
+      driverId: formData.driverId,
+      staffId: formData.staffId,
+      namaPenerima: formData.namaPenerima,
+    };
+
+    setRequestingExpense(editingData);
+    setRequestType("edit");
+    setProposedChanges(proposedChanges);
+    setUpdatedData(updatedData); // Store full data for API
+    setIsRequestDialogOpen(true);
+  };
+
+  // Handler: Submit request (edit atau delete)
+  const handleSubmitRequest = async (expenseId, reason) => {
+    setLoadingActions(prev => ({ ...prev, [`submit-request-${expenseId}`]: true }));
+    try {
+      const endpoint =
+        requestType === "edit"
+          ? `/api/expenses/${expenseId}/request-edit`
+          : `/api/expenses/${expenseId}/request-delete`;
+
+      const body =
+        requestType === "edit"
+          ? { reason, updatedData: updatedData || {} }
+          : { reason };
+
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Gagal mengajukan request");
+      }
+
+      await fetchData(currentPage); // Refresh data
+      toast.success(
+        `Permintaan ${requestType === "edit" ? "perubahan" : "penghapusan"} berhasil diajukan`,
+        {
+          description: "Menunggu persetujuan dari administrator",
+        }
+      );
+      setIsRequestDialogOpen(false);
+      setIsDialogOpen(false); // Close the edit dialog too
+      setProposedChanges(null);
+      setUpdatedData(null);
+    } catch (err) {
+      console.error("Failed to submit request:", err);
+      toast.error("Gagal Mengirim Permintaan", {
+        description: err.message,
+      });
+      throw err;
+    } finally {
+      setLoadingActions(prev => ({ ...prev, [`submit-request-${expenseId}`]: false }));
+    }
+  };
+
+  // Handler: Admin review approval
+  const handleReviewApproval = (expense) => {
+    setApprovingExpense(expense);
+    setIsApprovalDialogOpen(true);
+  };
+
+  // Handler: Admin approve edit
+  const handleApproveEdit = async (expenseId) => {
+    setIsSubmittingApproval(true);
+    try {
+      const res = await fetch(`/api/expenses/${expenseId}/approve-edit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ updatedData: {} }), // TODO: Get updated data
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Gagal menyetujui edit");
+      }
+
+      await fetchData(currentPage);
+      setIsApprovalDialogOpen(false);
+      toast.success("Permintaan Perubahan Disetujui", {
+        description: "Perubahan data telah diterapkan dengan sukses",
+      });
+    } catch (err) {
+      console.error("Failed to approve edit:", err);
+      toast.error("Gagal Menyetujui Perubahan", {
+        description: err.message,
+      });
+      throw err;
+    } finally {
+      setIsSubmittingApproval(false);
+    }
+  };
+
+  // Handler: Admin approve delete
+  const handleApproveDelete = async (expenseId) => {
+    setIsSubmittingApproval(true);
+    try {
+      const res = await fetch(`/api/expenses/${expenseId}/approve-delete`, {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Gagal menyetujui delete");
+      }
+
+      await fetchData(1); // Reset to first page
+      setIsApprovalDialogOpen(false);
+      toast.success("Permintaan Penghapusan Disetujui", {
+        description: "Data pengeluaran telah dihapus secara permanen",
+      });
+    } catch (err) {
+      console.error("Failed to approve delete:", err);
+      toast.error("Gagal Menyetujui Penghapusan", {
+        description: err.message,
+      });
+      throw err;
+    } finally {
+      setIsSubmittingApproval(false);
+    }
+  };
+
+  // Handler: Admin reject request
+  const handleReject = async (expenseId, reason) => {
+    setIsSubmittingApproval(true);
+    try {
+      const res = await fetch(`/api/expenses/${expenseId}/reject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ reason }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Gagal menolak request");
+      }
+
+      await fetchData(currentPage);
+      setIsApprovalDialogOpen(false);
+      toast.success("Permintaan Ditolak", {
+        description: "Data pengeluaran dikembalikan ke status disetujui",
+      });
+    } catch (err) {
+      console.error("Failed to reject:", err);
+      toast.error("Gagal Memproses Penolakan", {
+        description: err.message,
+      });
+      throw err;
+    } finally {
+      setIsSubmittingApproval(false);
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmittingForm(true);
     try {
       const method = editingData ? "PUT" : "POST";
       const url = editingData
@@ -454,7 +724,7 @@ export default function PengeluaranPage() {
         const monthIndex = parseInt(formData.paymentMonth, 10) - 1;
         formDataToSend.append(
           "paymentMonth",
-          new Date(year, monthIndex, 1).toISOString()
+          new Date(Date.UTC(year, monthIndex, 1)).toISOString()
         );
       }
       formDataToSend.append("category", formData.category);
@@ -539,6 +809,8 @@ export default function PengeluaranPage() {
         message: "Gagal menyimpan: " + err.message,
         type: "error",
       });
+    } finally {
+      setIsSubmittingForm(false);
     }
   };
 
@@ -560,11 +832,16 @@ export default function PengeluaranPage() {
       {/* Konten Utama (Tabel) */}
       <div className="p-4">
         <PengeluaranTable
-          isLoading={isLoading}
+          isLoading={isLoading || userRoleLoading}
           data={filteredData}
           onEdit={openEditDialog}
           onDelete={handleDelete}
           onView={openDetailModal}
+          onRequestEdit={handleRequestEdit}
+          onRequestDelete={handleRequestDelete}
+          onReviewApproval={handleReviewApproval}
+          userRole={userRole}
+          loadingActions={loadingActions}
         />
 
         {/* Pagination - hanya tampil jika tidak ada filter aktif */}
@@ -602,6 +879,10 @@ export default function PengeluaranPage() {
         isLoadingDependencies={isLoadingDependencies}
         existingAttachments={existingAttachments}
         expenseId={editingData?.id}
+        isLoading={isSubmittingForm}
+        userRole={userRole}
+        originalData={editingData}
+        onRequestApproval={handleOperatorEditRequest}
       />
 
       {/* Detail Modal */}
@@ -609,6 +890,28 @@ export default function PengeluaranPage() {
         open={isDetailModalOpen}
         onOpenChange={setIsDetailModalOpen}
         data={selectedDetailData}
+      />
+
+      {/* Approval Dialog (Admin) */}
+      <ExpenseApprovalDialog
+        isOpen={isApprovalDialogOpen}
+        onClose={() => setIsApprovalDialogOpen(false)}
+        expense={approvingExpense}
+        onApproveEdit={handleApproveEdit}
+        onApproveDelete={handleApproveDelete}
+        onReject={handleReject}
+        isSubmitting={isSubmittingApproval}
+      />
+
+      {/* Request Dialog (Operator) */}
+      <ExpenseRequestDialog
+        isOpen={isRequestDialogOpen}
+        onClose={() => setIsRequestDialogOpen(false)}
+        expense={requestingExpense}
+        requestType={requestType}
+        onSubmit={handleSubmitRequest}
+        isSubmitting={isSubmittingRequest}
+        proposedChanges={proposedChanges}
       />
     </div>
   );

@@ -1,35 +1,46 @@
-# Dependencies
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
 /node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
 
-# Prisma
-/prisma/dev.db
-/prisma/dev.db-journal
+# testing
+/coverage
 
-# Next.js
+# next.js
 /.next/
 /out/
 
-# Local Environment
-.env
-.env.local
+# production
+/build
 
-.gemini/
-.vscode/
+# misc
+.DS_Store
+*.pem
 
-RESET_PASSWORD_DOCS.md
-RESET_PASSWORD_QUICKSTART.md
-ROUTE_PROTECTION_SUMMARY.md
-SECURITY_IMPLEMENTATION.md
-SECURITY_VULNERABILITIES.md
-SECURITY.md
-DEPLOYMENT.md
-DEPLOYMENT_FIX.md
-SEED_DATA_DOCUMENTATION.md
-PAYMENT_MONTH_FEATURE.md
-FILE_UPLOAD_DOCUMENTATION.md
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
 
-/openspec/
-/.kilocode/
-/docs/
-/scripts/
-/.kiro/
+# env files (can opt-in for committing if needed)
+.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+/app/generated/prisma
+
+minio
+data/

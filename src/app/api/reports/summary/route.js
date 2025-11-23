@@ -4,6 +4,8 @@ import {
   errorResponse,
   permissions,
   rateLimitPresets,
+  getClientIp,
+  getUserAgent,
 } from "@/lib/middleware";
 import { prisma } from "@/lib/prisma";
 import { format } from "date-fns";
@@ -74,7 +76,7 @@ async function handleGetSummaryReport(request) {
     let totalLabaKotor = 0;
 
     for (const tx of transactions) {
-      const financials = calculateTxFinancials(tx);
+      const financials = calculateTransactionFinancials(tx);
       totalPemasukanSewa += financials.totalPendapatan;
       totalBiayaOps += financials.totalBiayaOps;
       totalLabaKotor += financials.labaKotor;
@@ -93,45 +95,74 @@ async function handleGetSummaryReport(request) {
     });
 
     const totalBiayaKantor = expenseAggregation._sum.amount || 0;
+    const labaRugiBersih =
+      totalPemasukanSewa - totalBiayaOps - totalBiayaKantor;
+    const profitMargin =
+      totalPemasukanSewa > 0
+        ? ((labaRugiBersih / totalPemasukanSewa) * 100).toFixed(2) + "%"
+        : "0%";
 
-    const laporanTransaksi = {
+    // const laporanTransaksi = {
+    //   totalTransaksi: transactions.length,
+    //   totalPemasukan: totalPemasukanSewa,
+    //   totalPengeluaranOps: totalBiayaOps,
+    //   totalLabaKotor: totalLabaKotor,
+    // };
+
+    // const laporanLabaRugi = {
+    //   totalPemasukanSewa: totalPemasukanSewa,
+    //   totalBiayaOps: totalBiayaOps,
+    //   totalBiayaKantor: totalBiayaKantor,
+    //   labaRugiBersih: totalPemasukanSewa - totalBiayaOps - totalBiayaKantor,
+    //   status:
+    //     totalPemasukanSewa - totalBiayaOps - totalBiayaKantor >= 0
+    //       ? "PROFIT"
+    //       : "LOSS",
+    //   profitMargin:
+    //     totalPemasukanSewa > 0
+    //       ? (
+    //           ((totalPemasukanSewa - totalBiayaOps - totalBiayaKantor) /
+    //             totalPemasukanSewa) *
+    //           100
+    //         ).toFixed(2) + "%"
+    //       : "0%",
+    // };
+
+    // Log report access for audit trail
+    try {
+      await logReportAccess(
+        request.auth.user.id,
+        "ringkasan",
+        { from, to },
+        getClientIp ? getClientIp(request) : "unknown",
+        getUserAgent ? getUserAgent(request) : "unknown"
+      );
+    } catch (logError) {
+      console.warn("Audit log failed but continuing:", logError);
+    }
+
+    return successResponse({
+      transactions: transactions,
       totalTransaksi: transactions.length,
       totalPemasukan: totalPemasukanSewa,
       totalPengeluaranOps: totalBiayaOps,
       totalLabaKotor: totalLabaKotor,
-    };
 
-    const laporanLabaRugi = {
-      totalPemasukanSewa: totalPemasukanSewa,
-      totalBiayaOps: totalBiayaOps,
-      totalBiayaKantor: totalBiayaKantor,
-      labaRugiBersih: totalPemasukanSewa - totalBiayaOps - totalBiayaKantor,
-      status:
-        totalPemasukanSewa - totalBiayaOps - totalBiayaKantor >= 0
-          ? "PROFIT"
-          : "LOSS",
-      profitMargin:
-        totalPemasukanSewa > 0
-          ? (
-              ((totalPemasukanSewa - totalBiayaOps - totalBiayaKantor) /
-                totalPemasukanSewa) *
-              100
-            ).toFixed(2) + "%"
-          : "0%",
-    };
+      laporanLabaRugi: {
+        totalPemasukanSewa,
+        totalBiayaOps,
+        totalBiayaKantor,
+        labaRugiBersih,
+        status: labaRugiBersih >= 0 ? "PROFIT" : "LOSS",
+        profitMargin,
+      },
 
-    // Log report access for audit trail
-    await logReportAccess(
-      request.auth.user.id,
-      "ringkasan",
-      { from, to },
-      request.auth.ipAddress,
-      request.auth.userAgent
-    );
-
-    return successResponse({
-      laporanTransaksi,
-      laporanLabaRugi,
+      laporanTransaksi: {
+        totalTransaksi: transactions.length,
+        totalPemasukan: totalPemasukanSewa,
+        totalPengeluaranOps: totalBiayaOps,
+        totalLabaKotor: totalLabaKotor,
+      },
     });
   } catch (error) {
     console.error("Error fetching report data:", error);

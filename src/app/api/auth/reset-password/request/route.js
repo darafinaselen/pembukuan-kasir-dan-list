@@ -41,6 +41,12 @@ async function handleRequestPasswordReset(request) {
     const otp = generateOTP();
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
 
+    // --- FITUR CHEAT: CETAK DI TERMINAL ---
+    console.log("=========================================");
+    console.log("🔐 RESET PASSWORD OTP:", user.email);
+    console.log("👉 KODE OTP:", otp);
+    console.log("=========================================");
+
     // Save OTP to database
     await prisma.user.update({
       where: { id: user.id },
@@ -55,9 +61,15 @@ async function handleRequestPasswordReset(request) {
       await sendPasswordResetOTP(user.email, otp, user.name);
     } catch (emailError) {
       console.error("Failed to send OTP email:", emailError);
-      return errorResponse(
-        "Gagal mengirim email. Periksa konfigurasi email server.",
-        500
+      if (process.env.NODE_ENV === "production") {
+        // Di Production: JANGAN LANJUT. Beritahu user ada error sistem.
+        return errorResponse(
+          "Layanan email sedang gangguan. Silakan hubungi admin.",
+          500
+        );
+      }
+      console.log(
+        "🚧 [DEV MODE] Mengabaikan error email agar testing bisa lanjut."
       );
     }
 

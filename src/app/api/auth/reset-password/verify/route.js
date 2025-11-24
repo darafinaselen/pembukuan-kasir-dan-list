@@ -1,10 +1,12 @@
+import { NextResponse } from "next/server";
 import {
   publicRoute,
-  successResponse,
+  // successResponse,
   errorResponse,
   rateLimitPresets,
 } from "@/lib/middleware";
 import { prisma } from "@/lib/prisma";
+import crypto from "crypto";
 
 async function handleVerifyOTP(request) {
   try {
@@ -49,10 +51,21 @@ async function handleVerifyOTP(request) {
       },
     });
 
-    return successResponse({
-      message: "OTP valid. Silakan masukkan password baru.",
-      resetToken: resetSessionToken,
-    });
+    console.log("✅ OTP Verified. Token:", resetSessionToken);
+
+    // return successResponse({
+    //   message: "OTP valid. Silakan masukkan password baru.",
+    //   resetToken: resetSessionToken,
+    // });
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: "OTP valid.",
+        resetToken: resetSessionToken,
+      },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Verify OTP error:", error);
     return errorResponse("Terjadi kesalahan. Silakan coba lagi.", 500);

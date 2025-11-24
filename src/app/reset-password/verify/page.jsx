@@ -110,13 +110,21 @@ function VerifyOTPForm() {
 
       const data = await response.json();
 
+      console.log("✅ Verify Response:", data);
+
       if (!response.ok) {
-        throw new Error(data.error || "OTP tidak valid");
+        throw new Error(data.message || data.error || "OTP tidak valid");
+      }
+
+      const token = data.data?.resetToken || data.resetToken;
+
+      if (!token) {
+        throw new Error("Token reset tidak ditemukan (undefined)");
       }
 
       // Redirect to new password page with reset token
       router.push(
-        `/reset-password/new?email=${encodeURIComponent(email)}&token=${data.resetToken}`
+        `/reset-password/new?email=${encodeURIComponent(email)}&token=${token}`
       );
     } catch (err) {
       setError(err.message);

@@ -76,7 +76,7 @@ function NewPasswordForm() {
 
       // Redirect to login after 3 seconds
       setTimeout(() => {
-        router.push("/login?reset=success");
+        router.push("/?reset=success");
       }, 3000);
     } catch (err) {
       setError(err.message);

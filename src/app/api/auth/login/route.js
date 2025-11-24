@@ -145,31 +145,40 @@ async function handleLogin(request) {
 
     // Set session cookie (httpOnly, secure only if HTTPS)
     const isProduction = process.env.NODE_ENV === "production";
-    const isHttps = process.env.NEXT_PUBLIC_BASE_URL?.startsWith("https://");
+    // const isHttps = process.env.NEXT_PUBLIC_BASE_URL?.startsWith("https://");
 
     const cookieOptions = {
       httpOnly: true,
-      secure: isProduction && isHttps, // Only secure if production AND using HTTPS
-      sameSite: isProduction ? "lax" : "lax",
+      //secure: isProduction && isHttps, // Only secure if production AND using HTTPS
+      secure: isProduction,
+      sameSite: "lax",
+      // sameSite: isProduction ? "lax" : "lax",
       maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
       path: "/",
     };
 
     // Use different cookie names for different roles to allow multiple sessions
-    const cookieName = `session_${user.role.toLowerCase()}`;
-    response.cookies.set(cookieName, session.token, cookieOptions);
+    // const cookieName = `session_${user.role.toLowerCase()}`;
+    // response.cookies.set(cookieName, session.token, cookieOptions);
 
     // Also set a general "session" cookie for backward compatibility
     response.cookies.set("session", session.token, cookieOptions);
 
     // Debug log
-    console.log("🍪 Setting cookie:", {
+    // console.log("🍪 Setting cookie:", {
+    //   name: "session",
+    //   value: session.token.substring(0, 20) + "...",
+    //   options: cookieOptions,
+    //   isProduction,
+    //   isHttps,
+    //   url: process.env.NEXT_PUBLIC_BASE_URL || "not set",
+    // });
+
+    console.log("🍪 COOKIE SETUP:", {
       name: "session",
-      value: session.token.substring(0, 20) + "...",
-      options: cookieOptions,
-      isProduction,
-      isHttps,
-      url: process.env.NEXT_PUBLIC_BASE_URL || "not set",
+      isProductionMode: isProduction,
+      secureFlag: cookieOptions.secure,
+      tokenLength: session.token.length,
     });
 
     return response;

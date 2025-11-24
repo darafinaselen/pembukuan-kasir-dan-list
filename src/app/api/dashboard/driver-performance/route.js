@@ -13,15 +13,21 @@ import { permissions } from "@/lib/middleware";
  */
 async function handleGetDriverPerformance(request) {
   try {
+    const user = request.auth.user;
     // Check permission
-    if (!permissions.canViewDashboard(request.auth.user)) {
-      return errorResponse("Insufficient permissions to view driver performance", 403);
-    }
+    // if (!permissions.canViewDashboard(request.auth.user)) {
+    //   return errorResponse(
+    //     "Insufficient permissions to view driver performance",
+    //     403
+    //   );
+    // }
 
     const { searchParams } = new URL(request.url);
     const period = searchParams.get("period") || "month";
     const driverIdsParam = searchParams.get("drivers");
-    const driverIds = driverIdsParam ? driverIdsParam.split(',').filter(id => id.trim()) : null;
+    const driverIds = driverIdsParam
+      ? driverIdsParam.split(",").filter((id) => id.trim())
+      : null;
 
     // Calculate date range based on period
     const now = new Date();
@@ -112,6 +118,8 @@ async function handleGetDriverPerformance(request) {
     // Calculate performance metrics per driver
     const driverPerformanceMap = new Map();
 
+    const isAdmin = user.role === "ADMIN";
+
     transactions.forEach((transaction) => {
       const driverId = transaction.driverId;
       const driverName = transaction.driver?.driver_name || "Unknown Driver";
@@ -129,7 +137,7 @@ async function handleGetDriverPerformance(request) {
       }
 
       const driverData = driverPerformanceMap.get(driverId);
-      const financials = calculateTransactionFinancials(transaction);
+      // const financials = calculateTransactionFinancials(transaction);
 
       // Increment trip count
       driverData.tripCount += 1;
@@ -141,41 +149,60 @@ async function handleGetDriverPerformance(request) {
       const timeDiff = Math.abs(actualReturn - plannedReturn);
       const hoursDiff = timeDiff / (1000 * 60 * 60);
 
-      if (hoursDiff <= 2) { // 2-hour tolerance
+      if (hoursDiff <= 2) {
+        // 2-hour tolerance
         driverData.onTimeCount += 1;
       }
 
       // Add income
-      driverData.totalIncome += financials.totalPendapatan;
+      if (isAdmin) {
+        const financials = calculateTransactionFinancials(transaction);
+        driverData.totalIncome += financials.totalPendapatan;
+      }
     });
 
     // Calculate final metrics and convert to array
-    const driverPerformance = Array.from(driverPerformanceMap.values()).map((driver) => ({
-      ...driver,
-      onTimeRate: driver.tripCount > 0 ? (driver.onTimeCount / driver.tripCount) * 100 : 0,
-    }));
+    const driverPerformance = Array.from(driverPerformanceMap.values()).map(
+      (driver) => ({
+        ...driver,
+        onTimeRate:
+          driver.tripCount > 0
+            ? (driver.onTimeCount / driver.tripCount) * 100
+            : 0,
+      })
+    );
 
     // Sort by trip count descending
     driverPerformance.sort((a, b) => b.tripCount - a.tripCount);
 
-    return successResponse({
-      driverPerformance,
-      allDrivers,
-      period,
-      dateRange: {
-        start: startDate.toISOString().split('T')[0],
-        end: now.toISOString().split('T')[0],
+    return successResponse(
+      {
+        driverPerformance,
+        allDrivers,
+        period,
+        dateRange: {
+          start: startDate.toISOString().split("T")[0],
+          end: now.toISOString().split("T")[0],
+        },
+        summary: {
+          totalDrivers: driverPerformance.length,
+          totalTrips: driverPerformance.reduce(
+            (sum, d) => sum + d.tripCount,
+            0
+          ),
+          averageOnTimeRate:
+            driverPerformance.length > 0
+              ? driverPerformance.reduce((sum, d) => sum + d.onTimeRate, 0) /
+                driverPerformance.length
+              : 0,
+          totalIncome: driverPerformance.reduce(
+            (sum, d) => sum + d.totalIncome,
+            0
+          ),
+        },
       },
-      summary: {
-        totalDrivers: driverPerformance.length,
-        totalTrips: driverPerformance.reduce((sum, d) => sum + d.tripCount, 0),
-        averageOnTimeRate: driverPerformance.length > 0
-          ? driverPerformance.reduce((sum, d) => sum + d.onTimeRate, 0) / driverPerformance.length
-          : 0,
-        totalIncome: driverPerformance.reduce((sum, d) => sum + d.totalIncome, 0),
-      },
-    }, "Driver performance data retrieved successfully");
-
+      "Driver performance data retrieved successfully"
+    );
   } catch (error) {
     console.error("Driver performance error:", error);
     return errorResponse(
@@ -187,5 +214,5 @@ async function handleGetDriverPerformance(request) {
 }
 
 export const GET = protectedRoute(handleGetDriverPerformance, {
-  roles: ["ADMIN"],
+  roles: ["ADMIN", "OPERATOR"],
 });

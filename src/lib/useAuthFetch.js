@@ -19,8 +19,14 @@ export function useAuthFetch() {
         });
 
         // Handle unauthorized access
-        if (res.status === 401 || res.status === 403) {
-          console.log("⛔ Unauthorized access, redirecting to login...");
+        // if (res.status === 401 || res.status === 403) {
+        //   console.log("⛔ Unauthorized access, redirecting to login...");
+        //   router.push("/");
+        //   return null;
+        // }
+        if (res.status === 401) {
+          // Hanya logout jika token expired/tidak valid
+          console.log("⛔ Session expired, redirecting to login...");
           router.push("/");
           return null;
         }

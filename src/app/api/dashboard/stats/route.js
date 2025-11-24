@@ -19,10 +19,11 @@ import { permissions } from "@/lib/middleware";
  */
 async function handleGetDashboardStats(request) {
   try {
+    const user = request.auth.user;
     // Check permission
-    if (!permissions.canViewDashboard(request.auth.user)) {
-      return errorResponse("Insufficient permissions to view dashboard", 403);
-    }
+    // if (!permissions.canViewDashboard(request.auth.user)) {
+    //   return errorResponse("Insufficient permissions to view dashboard", 403);
+    // }
 
     const { searchParams } = new URL(request.url);
     const period = searchParams.get("period") || "month"; // today | month | year
@@ -86,16 +87,19 @@ async function handleGetDashboardStats(request) {
     });
 
     // Calculate totals using accounting utility
+    const isAdmin = user.role === "ADMIN";
     let totalRevenue = 0;
     let totalOperationalCosts = 0;
     let totalGrossProfit = 0;
 
-    transactions.forEach((t) => {
-      const financials = calculateTransactionFinancials(t);
-      totalRevenue += financials.totalPendapatan;
-      totalOperationalCosts += financials.totalBiayaOps;
-      totalGrossProfit += financials.labaKotor;
-    });
+    if (isAdmin) {
+      transactions.forEach((t) => {
+        const financials = calculateTransactionFinancials(t);
+        totalRevenue += financials.totalPendapatan;
+        totalOperationalCosts += financials.totalBiayaOps;
+        totalGrossProfit += financials.labaKotor;
+      });
+    }
 
     const transactionCount = transactions.length;
 
@@ -144,82 +148,90 @@ async function handleGetDashboardStats(request) {
       entry.count += 1;
 
       // Calculate revenue including overtime
-      const financials = calculateTransactionFinancials(t);
-      entry.revenue += financials.totalPendapatan;
+      if (isAdmin) {
+        const financials = calculateTransactionFinancials(t);
+        entry.revenue += financials.totalPendapatan;
+      }
     });
 
     const transactionTrend = Array.from(trendMap.values()).sort((a, b) =>
       a.date.localeCompare(b.date)
     );
 
+    let fleetRevenue = [];
+    let topPackages = [];
+    let packageSummary = { totalPackages: 0, totalPackageRevenue: 0 };
+
     // Calculate fleet revenue distribution with correct revenue
-    const fleetRevenueMap = new Map();
+    if (isAdmin) {
+      const fleetRevenueMap = new Map();
 
-    transactions.forEach((t) => {
-      const licensePlate = t.armada?.license_plate || "Unknown";
-      const financials = calculateTransactionFinancials(t);
-      const revenue = financials.totalPendapatan;
+      transactions.forEach((t) => {
+        const licensePlate = t.armada?.license_plate || "Unknown";
+        const financials = calculateTransactionFinancials(t);
+        const revenue = financials.totalPendapatan;
 
-      if (!fleetRevenueMap.has(licensePlate)) {
-        fleetRevenueMap.set(licensePlate, {
-          licensePlate,
-          revenue: 0,
-          transactionCount: 0,
-        });
+        if (!fleetRevenueMap.has(licensePlate)) {
+          fleetRevenueMap.set(licensePlate, {
+            licensePlate,
+            revenue: 0,
+            transactionCount: 0,
+          });
+        }
+
+        const entry = fleetRevenueMap.get(licensePlate);
+        entry.revenue += revenue;
+        entry.transactionCount += 1;
+      });
+
+      fleetRevenue = Array.from(fleetRevenueMap.values()).sort(
+        (a, b) => b.revenue - a.revenue
+      );
+
+      // Calculate top packages income data
+      const packageIncomeMap = new Map();
+
+      // Get transactions with packages only
+      const transactionsWithPackages = transactions.filter((t) => t.packageId);
+
+      for (const t of transactionsWithPackages) {
+        if (!t.package) continue;
+
+        const packageId = t.package.id;
+        const packageName = t.package.name;
+        const packageType = t.package.type;
+
+        if (!packageIncomeMap.has(packageId)) {
+          packageIncomeMap.set(packageId, {
+            packageId,
+            packageName,
+            packageType,
+            transactionCount: 0,
+            totalRevenue: 0,
+          });
+        }
+
+        const group = packageIncomeMap.get(packageId);
+        const financials = calculateTransactionFinancials(t);
+
+        group.transactionCount += 1;
+        group.totalRevenue += financials.totalPendapatan;
       }
 
-      const entry = fleetRevenueMap.get(licensePlate);
-      entry.revenue += revenue;
-      entry.transactionCount += 1;
-    });
+      // Convert to array and sort by revenue
+      topPackages = Array.from(packageIncomeMap.values())
+        .sort((a, b) => b.totalRevenue - a.totalRevenue)
+        .slice(0, 5); // Top 5 packages
 
-    const fleetRevenue = Array.from(fleetRevenueMap.values()).sort(
-      (a, b) => b.revenue - a.revenue
-    );
-
-    // Calculate top packages income data
-    const packageIncomeMap = new Map();
-
-    // Get transactions with packages only
-    const transactionsWithPackages = transactions.filter((t) => t.packageId);
-
-    for (const t of transactionsWithPackages) {
-      if (!t.package) continue;
-
-      const packageId = t.package.id;
-      const packageName = t.package.name;
-      const packageType = t.package.type;
-
-      if (!packageIncomeMap.has(packageId)) {
-        packageIncomeMap.set(packageId, {
-          packageId,
-          packageName,
-          packageType,
-          transactionCount: 0,
-          totalRevenue: 0,
-        });
-      }
-
-      const group = packageIncomeMap.get(packageId);
-      const financials = calculateTransactionFinancials(t);
-
-      group.transactionCount += 1;
-      group.totalRevenue += financials.totalPendapatan;
+      // Calculate package summary
+      packageSummary = {
+        totalPackages: packageIncomeMap.size,
+        totalPackageRevenue: Array.from(packageIncomeMap.values()).reduce(
+          (sum, pkg) => sum + pkg.totalRevenue,
+          0
+        ),
+      };
     }
-
-    // Convert to array and sort by revenue
-    const topPackages = Array.from(packageIncomeMap.values())
-      .sort((a, b) => b.totalRevenue - a.totalRevenue)
-      .slice(0, 5); // Top 5 packages
-
-    // Calculate package summary
-    const packageSummary = {
-      totalPackages: packageIncomeMap.size,
-      totalPackageRevenue: Array.from(packageIncomeMap.values()).reduce(
-        (sum, pkg) => sum + pkg.totalRevenue,
-        0
-      ),
-    };
 
     return successResponse(
       {
@@ -247,5 +259,5 @@ async function handleGetDashboardStats(request) {
 }
 
 export const GET = protectedRoute(handleGetDashboardStats, {
-  roles: ["ADMIN"],
+  roles: ["ADMIN", "OPERATOR"],
 });
